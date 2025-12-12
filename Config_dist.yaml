@@ -1,0 +1,20 @@
+# You must restart the bot if you modify this file.
+
+# Your discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
+Token: ""
+
+Mail_server: ""
+Bot_mail_address: ""
+
+Discord_bot_owner:      ""
+Discord_server:         id_server
+Discord_chan:           id_chan
+
+IRC:
+  bot_owner:            ""
+  server:               "irc.libera.chat"
+  chan:                 "#chan"
+  nick:                 "MyBot"
+  username:             "my_bot"
+  real_name:            "My Bot"
+  exit_message:         "Something clever"
