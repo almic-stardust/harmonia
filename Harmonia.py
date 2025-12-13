@@ -8,9 +8,17 @@ from Discord_manager import bot
 import Discord_manager
 import IRC_manager
 
+###############################################################################
+# Starting the bot
+###############################################################################
+
+# Event triggered when the bot has connected to Discord
 @bot.event
 async def on_ready():
-	# Event triggered when the bot has connected to Discord
+	if len(bot.guilds) == 0:
+		print("[Discord] Bot is not yet in any server.")
+		await Discord_manager.Stop_bot(IRC_manager.Instance)
+		return
 	print(f"[Discord] Logged in as {bot.user}")
 
 async def Start_bot():

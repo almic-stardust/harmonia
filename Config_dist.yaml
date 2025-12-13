@@ -17,4 +17,4 @@ IRC:
   nick:                 "MyBot"
   username:             "my_bot"
   real_name:            "My Bot"
-  exit_message:         "Something clever"
+  quit_message:         "Something clever"

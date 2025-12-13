@@ -2,6 +2,7 @@
 
 import discord
 from discord.ext import commands
+import asyncio
 import re
 
 from Config_manager import Config
@@ -17,6 +18,15 @@ intents.messages = True
 # Allows to read the content of messages
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+###############################################################################
+# Stopping the bot
+###############################################################################
+
+async def Stop_bot(IRC_Instance):
+	await IRC_Instance.quit(Config["IRC"].get("quit_message", "That’s the end of the beans"))
+	await bot.close()
+	return
 
 ###############################################################################
 # Handling messages
@@ -39,6 +49,10 @@ async def on_message(Message):
 
 	# Initially we have only one bridged chan
 	if Message.channel.id != Config["Discord_chan"]:
+		return
+
+	if Message.content.strip() == "!quit" and Author.name == Config["Discord_bot_owner"]:
+		await Stop_bot(IRC_manager.Instance)
 		return
 
 	Content = Message.clean_content.strip()
