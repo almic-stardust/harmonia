@@ -40,4 +40,50 @@ class Connection(pydle.Client):
 			# Use textwrap to split the current line into parts, without breaking words
 			Parts = textwrap.wrap(Line, width=Max_length)
 			for Part in Parts:
+				Part = Discord_manager.Translate_Discord_formatting_to_IRC(Part)
 				await self.message(Config["IRC"]["chan"], f"<\x02{Author}\x02> {Part}")
+
+###############################################################################
+# Other functions
+###############################################################################
+
+def Translate_IRC_colors_to_Discord(Message):
+	mIRC_colors = {
+		"00": "black",
+		"01": "navy",
+		"02": "green",
+		"03": "red",
+		"04": "brown",
+		"05": "purple",
+		"06": "olive",
+		"07": "yellow",
+		"08": "lime",
+		"09": "teal",
+		"10": "aqua",
+		"11": "blue",
+		"12": "fuchsia",
+		"13": "gray",
+		"14": "silver",
+		"15": "white",
+	}
+	mIRC_color_pattern = r"\x03(\d{1,2})(?:,(\d{1,2}))?"
+	def Replace_colors(Match):
+		FG_color = Match.group(1)
+		BG_color = Match.group(2)
+		FG_name = mIRC_colors.get(FG_color.zfill(2), "default")
+		BG_name = mIRC_colors.get(BG_color.zfill(2), "default")
+		return f"[{FG_name} on {BG_name}]"
+	# Replace mIRC codes with Discord-compatible formatting
+	return re.sub(mIRC_color_pattern, Replace_colors, Message)
+
+def Translate_IRC_formatting_to_Discord(Message):
+	# Map IRC control codes to Discord MarkDown
+	Message = Message.strip()
+	Replacements = [
+		(r"\x02(.*?)\x02", r"**\1**"),  # Bold
+		(r"\x1D(.*?)\x1D", r"*\1*"),	# Italic
+		(r"\x1F(.*?)\x1F", r"__\1__"),  # Underline
+		(r"\x0F", "")]					# Reset formatting (remove it)
+	for Pattern, Replacement in Replacements:
+		Message = re.sub(Pattern, Replacement, Message)
+	return Message

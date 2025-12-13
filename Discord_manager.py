@@ -2,7 +2,6 @@
 
 import discord
 from discord.ext import commands
-import os
 import re
 
 from Config_manager import Config
@@ -55,8 +54,20 @@ async def on_message(Message):
 	# to be processed
 	await bot.process_commands(Message)
 
+def Translate_Discord_formatting_to_IRC(Message):
+	# Map Discord MarkDown to IRC control codes
+	Replacements = [
+		(r"\*\*(.*?)\*\*", "\x02\\1\x02"), # Bold
+		(r"\*(.*?)\*", "\x1D\\1\x1D"),	   # Italic
+		(r"__(.*?)__", "\x1F\\1\x1F")]	   # Underline
+	for Pattern, Replacement in Replacements:
+		# “count=0” replaces all matches
+		Message = re.sub(Pattern, Replacement, Message, count=0)
+	return Message
+
 async def Send_message(Author, Message):
 	Chan = bot.get_channel(Config["Discord_chan"])
+	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 	Message = f"<**{Author}**> {Message}"
 	await Chan.send(Message)
 
