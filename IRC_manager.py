@@ -17,6 +17,10 @@ class Connection(pydle.Client):
 		await super().on_connect()
 		await self.join(Config["irc"]["chan"])
 		print("[IRC] Connected to server and channel")
+		if Config["irc"].get("password"):
+			await self.message("NickServ",
+					f"identify {Config['irc']['nick']} {Config['irc']['password']}")
+			print("[IRC] Identified with nickserv")
 
 	async def on_nicknameinuse(self, nickname):
 		await super().on_nicknameinuse(nickname)
