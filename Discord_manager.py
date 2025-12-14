@@ -2,7 +2,7 @@
 
 import discord
 from discord.ext import commands
-import asyncio
+import aiohttp
 import re
 
 from Config_manager import Config
@@ -20,12 +20,19 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 ###############################################################################
-# Stopping the bot
+# General
 ###############################################################################
 
+HTTP_session = None
+async def Init_webhooks():
+	global HTTP_session
+	HTTP_session = aiohttp.ClientSession()
+
 async def Stop_bot(IRC_Instance):
-	await IRC_Instance.quit(Config["irc"].get("quit_message", "That’s the end of the beans"))
 	await bot.close()
+	if HTTP_session:
+		await HTTP_session.close()
+	await IRC_Instance.quit(Config["irc"].get("quit_message", "That’s the end of the beans"))
 	return
 
 ###############################################################################
@@ -43,8 +50,8 @@ async def on_message(Message):
 	# TODO history
 	#await History.Message_added(Server_id, Chan, Message)
 
-	# The bot ignores its own messages
-	if Author == bot.user:
+	# The bot ignores its own messages (including what it posted via a webhook)
+	if Author == bot.user or Message.webhook_id is not None:
 		return
 
 	# Initially we have only one bridged chan
@@ -62,7 +69,7 @@ async def on_message(Message):
 		Content += " ".join(Attachment.url for Attachment in Message.attachments)
 	print(f"[D] <{Author.name}> {Content}")
 
-	await IRC_manager.Instance.Send_message(Author.name, Content)
+	await IRC_manager.Instance.Relay_Discord_message(Author.name, Content)
 
 	# Forward the message back to the bot’s command handler, to allow messages containing commands
 	# to be processed
@@ -71,19 +78,32 @@ async def on_message(Message):
 def Translate_Discord_formatting_to_IRC(Message):
 	# Map Discord MarkDown to IRC control codes
 	Replacements = [
-		(r"\*\*(.*?)\*\*", "\x02\\1\x02"), # Bold
-		(r"\*(.*?)\*", "\x1D\\1\x1D"),	   # Italic
-		(r"__(.*?)__", "\x1F\\1\x1F")]	   # Underline
+		(r"\*\*(.*?)\*\*", "\x02\\1\x02"),	# Bold
+		(r"\*(.*?)\*", "\x1D\\1\x1D"),		# Italic
+		(r"__(.*?)__", "\x1F\\1\x1F")		# Underline
+	]
 	for Pattern, Replacement in Replacements:
 		# “count=0” replaces all matches
 		Message = re.sub(Pattern, Replacement, Message, count=0)
 	return Message
 
-async def Send_message(Author, Message):
-	Chan = bot.get_channel(Config["discord"]["chan"])
+async def Relay_IRC_message(IRC_chan, Author, Message):
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
-	Message = f"<**{Author}**> {Message}"
-	await Chan.send(Message)
+	Chan = Config["webhooks"].get(IRC_chan.lstrip("#"))
+	if Chan:
+		Webhook = discord.Webhook.from_url(Chan, session=HTTP_session)
+		Username = Author
+		Avatar = f"https://robohash.org/{Username}.png"
+		User = Config["irc_users"].get(Author)
+		if User:
+			Username = User["discord_username"]
+			# A user could request a specific username on Discord, but without requesting an avatar
+			Avatar = User.get("avatar", f"https://robohash.org/{Username}.png")
+		await Webhook.send(content=Message, username=Username, avatar_url=Avatar)
+	else:
+		Chan = bot.get_channel(Config["discord"]["chan"])
+		Message = f"<**{Author}**> {Message}"
+		await Chan.send(Message)
 
 def Split_message(Message):
 	# Discord limits message size = split the message into parts of 2000 characters or less

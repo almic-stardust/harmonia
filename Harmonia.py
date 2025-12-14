@@ -32,5 +32,6 @@ async def Start_bot():
 		tls=True,
 		tls_verify=False
 	)
+	await Discord_manager.Init_webhooks()
 	await bot.start(Config["discord"]["token"])
 asyncio.run(Start_bot())

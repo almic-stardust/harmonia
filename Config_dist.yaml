@@ -19,3 +19,15 @@ irc:
   username:             "my_bot"
   real_name:            "My Bot"
   quit_message:         "Something clever"
+
+# If you want messages on Discord displayed as coming from the users instead of the bot.
+# See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+webhooks:
+  PutHereAnIrcChan: ""
+
+irc_users:
+  PutHereAnIrcNick1:
+    discord_username:   ""
+  PutHereAnIrcNick2:
+    discord_username:   ""
+    avatar:             "https://domain.tld/path/to/Avatar.jpeg"

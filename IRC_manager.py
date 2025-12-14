@@ -26,8 +26,8 @@ class Connection(pydle.Client):
 		await super().on_nicknameinuse(nickname)
 		await self.set_nickname(self.nickname + "_")
 
-	async def on_message(self, target, Author, Message):
-		await super().on_message(target, Author, Message)
+	async def on_message(self, Chan, Author, Message):
+		await super().on_message(Chan, Author, Message)
 		# The bot ignores its own messages
 		if Author == self.nickname:
 			return
@@ -35,9 +35,9 @@ class Connection(pydle.Client):
 			await Discord_manager.Stop_bot(self)
 			return
 		print(f"[I] <{Author}> {Message}")
-		await Discord_manager.Send_message(Author, Message)
+		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
 
-	async def Send_message(self, Author, Message):
+	async def Relay_Discord_message(self, Author, Message):
 		# Maximum allowed message length (512 bytes - overhead for metadata)
 		Max_length = 400
 		# Messages on Discord can contain several lines. When it’s the case, split the message into
