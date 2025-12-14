@@ -24,7 +24,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 ###############################################################################
 
 async def Stop_bot(IRC_Instance):
-	await IRC_Instance.quit(Config["IRC"].get("quit_message", "That’s the end of the beans"))
+	await IRC_Instance.quit(Config["irc"].get("quit_message", "That’s the end of the beans"))
 	await bot.close()
 	return
 
@@ -48,10 +48,10 @@ async def on_message(Message):
 		return
 
 	# Initially we have only one bridged chan
-	if Message.channel.id != Config["Discord_chan"]:
+	if Message.channel.id != Config["discord"]["chan"]:
 		return
 
-	if Message.content.strip() == "!quit" and Author.name == Config["Discord_bot_owner"]:
+	if Message.content.strip() == "!quit" and Author.name == Config["discord"]["bot_owner"]:
 		await Stop_bot(IRC_manager.Instance)
 		return
 
@@ -80,7 +80,7 @@ def Translate_Discord_formatting_to_IRC(Message):
 	return Message
 
 async def Send_message(Author, Message):
-	Chan = bot.get_channel(Config["Discord_chan"])
+	Chan = bot.get_channel(Config["discord"]["chan"])
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 	Message = f"<**{Author}**> {Message}"
 	await Chan.send(Message)
@@ -127,7 +127,7 @@ def Split_message(Message):
 #@bot.event
 #async def on_member_remove(Leaver: discord.Member):
 #	"""When an user leaves a server"""
-#	if "log_chan" in Config:
-#		Chan = await Get_chan(bot.get_guild(Config["main_server"]), Config["log_chan"])
+#	if Config["discord"].get("log_chan"):
+#		Chan = await Get_chan(bot.get_guild(Config["discord"]["server"]), Config["discord"]["log_chan"])
 #		if Chan:
 #			await Chan.send(f"{Leaver.name} has left the server.")

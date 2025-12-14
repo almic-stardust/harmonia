@@ -23,14 +23,14 @@ async def on_ready():
 
 async def Start_bot():
 	IRC_manager.Instance = IRC_manager.Connection(
-		nickname=Config["IRC"]["nick"],
-		username=Config["IRC"]["username"],
-		realname=Config["IRC"]["real_name"]
+		nickname=Config["irc"]["nick"],
+		username=Config["irc"]["username"],
+		realname=Config["irc"]["real_name"]
 	)
 	await IRC_manager.Instance.connect(
-		hostname=Config["IRC"]["server"],
+		hostname=Config["irc"]["server"],
 		tls=False,
 		tls_verify=False
 	)
-	await bot.start(Config["Token"])
+	await bot.start(Config["discord"]["token"])
 asyncio.run(Start_bot())

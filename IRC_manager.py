@@ -15,7 +15,7 @@ class Connection(pydle.Client):
 
 	async def on_connect(self):
 		await super().on_connect()
-		await self.join(Config["IRC"]["chan"])
+		await self.join(Config["irc"]["chan"])
 		print("[IRC] Connected to server and channel")
 
 	async def on_nicknameinuse(self, nickname):
@@ -27,7 +27,7 @@ class Connection(pydle.Client):
 		# The bot ignores its own messages
 		if Author == self.nickname:
 			return
-		if Message.startswith('!quit') and Author == Config["IRC"]["bot_owner"]:
+		if Message.startswith('!quit') and Author == Config["irc"]["bot_owner"]:
 			await Discord_manager.Stop_bot(self)
 			return
 		print(f"[I] <{Author}> {Message}")
@@ -44,7 +44,7 @@ class Connection(pydle.Client):
 			Parts = textwrap.wrap(Line, width=Max_length)
 			for Part in Parts:
 				Part = Discord_manager.Translate_Discord_formatting_to_IRC(Part)
-				await self.message(Config["IRC"]["chan"], f"<\x02{Author}\x02> {Part}")
+				await self.message(Config["irc"]["chan"], f"<\x02{Author}\x02> {Part}")
 
 ###############################################################################
 # Other functions
