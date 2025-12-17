@@ -2,6 +2,8 @@
 
 import discord
 from discord.ext import commands
+import asyncio
+import time
 import aiohttp
 import re
 
@@ -19,6 +21,8 @@ intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+Users_buffers = {}
+
 ###############################################################################
 # General
 ###############################################################################
@@ -32,12 +36,47 @@ async def Stop_bot(IRC_Instance):
 	await bot.close()
 	if HTTP_session:
 		await HTTP_session.close()
-	await IRC_Instance.quit(Config["irc"].get("quit_message", "That’s the end of the beans"))
+	await IRC_Instance.quit(Config["irc"].get("quit_message", "Something clever"))
 	return
 
 ###############################################################################
 # Handling messages
 ###############################################################################
+
+async def Rate_limiter_for_IRC(User_ID, Author):
+
+	await asyncio.sleep(5)
+	Buffer = Users_buffers.get(User_ID)
+	if not Buffer:
+		return
+	Messages = []
+	for _, Message in Buffer["messages"]:
+		Messages.extend(IRC_manager.Split_into_IRC_messages(Message))
+	Messages_to_relay = None
+
+	# Discord allows messages of 2000 characters with line breaks, which makes difficult to
+	# distinguish between legitimate messages with several paragraphs, and careless copy-pastes. At
+	# least the damage will be limited to 10 lines
+	if len(Buffer["messages"]) == 1 and len(Messages) <= 10:
+		Messages_to_relay = Messages
+	else:
+		Concatenated_messages = " ".join(Messages)
+		Concatenated_messages = IRC_manager.Split_into_IRC_messages(Concatenated_messages)
+		# If the concatenation of messages sent by an user in the last 5 seconds represents less
+		# than 5 IRC messages
+		if len(Concatenated_messages) <= 5:
+			Messages_to_relay = Concatenated_messages
+	if Messages_to_relay:
+		for Message in Messages_to_relay:
+			await IRC_manager.Instance.Send_message(Author.name, Message)
+	else:
+		await bot.get_channel(Config["discord"]["chan"]).send(
+			f"{Author.mention} Too many lines or messages in a short time. "
+			"Nothing was forwarded to IRC."
+		)
+
+	# Cleanup buffer once decision is made
+	Users_buffers.pop(User_ID, None)
 
 @bot.event
 async def on_message(Message):
@@ -47,6 +86,10 @@ async def on_message(Message):
 	Server_id = Message.guild.id if Message.guild else 0
 	Chan = Message.channel
 
+	# Initially we bridge one chan only
+	if Message.channel.id != Config["discord"]["chan"]:
+		return
+
 	# TODO history
 	#await History.Message_added(Server_id, Chan, Message)
 
@@ -54,22 +97,25 @@ async def on_message(Message):
 	if Author == bot.user or Message.webhook_id is not None:
 		return
 
-	# Initially we have only one bridged chan
-	if Message.channel.id != Config["discord"]["chan"]:
-		return
+	Content = Message.clean_content.strip()
 
-	if Message.content.strip() == "!quit" and Author.name == Config["discord"]["bot_owner"]:
+	if Content == "!quit" and Author.name == Config["discord"]["bot_owner"]:
 		await Stop_bot(IRC_manager.Instance)
 		return
 
-	Content = Message.clean_content.strip()
 	# If the Discord message has attachments, add their URLs at the end of the message send on IRC
 	if Message.attachments:
-		Content += " | "
-		Content += " ".join(Attachment.url for Attachment in Message.attachments)
+		Content += " | " + " ".join(Attachment.url for Attachment in Message.attachments)
 	print(f"[D] <{Author.name}> {Content}")
 
-	await IRC_manager.Instance.Relay_Discord_message(Author.name, Content)
+	Now = time.monotonic()
+	User_ID = Author.id
+	Buffer = Users_buffers.setdefault(User_ID, {"messages": [], "task": None})
+	Buffer["messages"].append((Now, Content))
+	# Start the rate limiter only once
+	if Buffer["task"] is None:
+		# Attach the task to Discord.py’s managed loop
+		Buffer["task"] = bot.loop.create_task(Rate_limiter_for_IRC(User_ID, Author))
 
 	# Forward the message back to the bot’s command handler, to allow messages containing commands
 	# to be processed
@@ -101,9 +147,8 @@ async def Relay_IRC_message(IRC_chan, Author, Message):
 			Avatar = User.get("avatar", f"https://robohash.org/{Username}.png")
 		await Webhook.send(content=Message, username=Username, avatar_url=Avatar)
 	else:
-		Chan = bot.get_channel(Config["discord"]["chan"])
 		Message = f"<**{Author}**> {Message}"
-		await Chan.send(Message)
+		await bot.get_channel(Config["discord"]["chan"]).send(Message)
 
 def Split_message(Message):
 	# Discord limits message size = split the message into parts of 2000 characters or less

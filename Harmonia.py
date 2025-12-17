@@ -15,6 +15,9 @@ import IRC_manager
 # Event triggered when the bot has connected to Discord
 @bot.event
 async def on_ready():
+	# By default, Discord.py silently drop task errors
+	Loop = asyncio.get_running_loop()
+	Loop.set_exception_handler(lambda loop, context: print("ASYNC ERROR:", context))
 	if len(bot.guilds) == 0:
 		print("[Discord] Bot is not yet in any server.")
 		await Discord_manager.Stop_bot(IRC_manager.Instance)
