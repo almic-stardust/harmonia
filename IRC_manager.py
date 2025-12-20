@@ -67,7 +67,7 @@ def Split_into_IRC_messages(Message):
 # pydle class
 ###############################################################################
 
-class Connection(pydle.Client):
+class Connection_handler(pydle.Client):
 
 	Instance = None
 
