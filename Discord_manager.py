@@ -8,9 +8,9 @@ import aiohttp
 import re
 
 from Config_manager import Config
+import DB_manager
+import History
 import IRC_manager
-# TODO history
-#import History
 
 intents = discord.Intents.default()
 # Allows to receive member join/leave events
@@ -22,6 +22,9 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 Users_buffers = {}
+History_table = Config["db_additional"]["history_table"]
+# TODO I’ll deal with that later
+History_keep_all = True
 
 ###############################################################################
 # General
@@ -31,6 +34,16 @@ HTTP_session = None
 async def Init_webhooks():
 	global HTTP_session
 	HTTP_session = aiohttp.ClientSession()
+
+# Exceptions in the event handlers of discord.py are swallowed, unless explicitly logged.
+# As Discord bots are long-running services, it wouldn’t be acceptable for one exception in one
+# event to crash or disconnect the bot, or require it to be restarted. That’s why discord.py
+# prioritizes fault isolation over strict failure.
+# But for development, it’s a real pain. So when not in prod, we reactivate exceptions.
+@bot.event
+async def on_error(event, *args, **kwargs):
+	import traceback
+	traceback.print_exc()
 
 async def Stop_bot(IRC_Instance):
 	await bot.close()
@@ -89,6 +102,7 @@ async def Rate_limiter_for_IRC(Author):
 @bot.event
 async def on_message(Message):
 
+	global History_table
 	Author = Message.author
 	# We set 0 if it’s a DM
 	Server_id = Message.guild.id if Message.guild else 0
@@ -98,8 +112,7 @@ async def on_message(Message):
 	if Message.channel.id != Config["discord"]["chan"]:
 		return
 
-	# TODO history
-	#await History.Message_added(Server_id, Chan, Message)
+	await History.Message_added(History_table, Server_id, Chan, Message)
 
 	# The bot ignores its own messages (including what it posted via a webhook)
 	if Author == bot.user or Message.webhook_id is not None:
@@ -112,7 +125,6 @@ async def on_message(Message):
 		return
 
 	Content = Message.clean_content.strip()
-
 	# If the Discord message has attachments, add their URLs at the end of the message send on IRC
 	if Message.attachments:
 		Content += " | " + " ".join(Attachment.url for Attachment in Message.attachments)
@@ -181,18 +193,22 @@ def Split_message(Message):
 		Splitted_message.append(Current_part)
 	return Splitted_message
 
-# TODO history
-#@bot.event
-#async def on_raw_message_edit(Payload):
-#	Server_id = Payload.guild_id if bot.get_guild(Payload.guild_id) else 0
-#	Chan = await bot.fetch_channel(Payload.channel_id)
-#	Message = await Chan.fetch_message(Payload.message_id)
-#	#History.Message_edited(Server_id, Payload.message_id, Message.content)
-#
-#@bot.event
-#async def on_raw_message_delete(Payload):
-#	Server_id = Payload.guild_id if bot.get_guild(Payload.guild_id) else 0
-#	#History.Message_deleted(Server_id, Payload.message_id)
+@bot.event
+async def on_raw_message_edit(Payload):
+	global History_table
+	global History_keep_all
+	Server_id = Payload.guild_id if bot.get_guild(Payload.guild_id) else 0
+	Chan = await bot.fetch_channel(Payload.channel_id)
+	Message = await Chan.fetch_message(Payload.message_id)
+	History.Message_edited(History_table, History_keep_all,
+				Server_id, Payload.message_id, Message.content)
+
+@bot.event
+async def on_raw_message_delete(Payload):
+	global History_table
+	global History_keep_all
+	Server_id = Payload.guild_id if bot.get_guild(Payload.guild_id) else 0
+	History.Message_deleted(History_table, History_keep_all, Server_id, Payload.message_id)
 
 ###############################################################################
 # Other stuff
