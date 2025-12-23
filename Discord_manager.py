@@ -39,7 +39,7 @@ async def Init_webhooks():
 # As Discord bots are long-running services, it wouldn’t be acceptable for one exception in one
 # event to crash or disconnect the bot, or require it to be restarted. That’s why discord.py
 # prioritizes fault isolation over strict failure.
-# But for development, it’s a real pain. So when not in prod, we reactivate exceptions.
+# But for development, it’s not convenient. So when not in prod, we enable exceptions in events.
 @bot.event
 async def on_error(event, *args, **kwargs):
 	import traceback
@@ -104,7 +104,7 @@ async def on_message(Message):
 
 	global History_table
 	Author = Message.author
-	# We set 0 if it’s a DM
+	# Set 0 if it’s a DM
 	Server_id = Message.guild.id if Message.guild else 0
 	Chan = Message.channel
 

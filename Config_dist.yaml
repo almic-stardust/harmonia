@@ -1,14 +1,28 @@
 # You must restart the bot if you modify this file.
 
-mail_server:            ""
-bot_mail_address:       ""
-
 discord:
   bot_owner:            ""
   # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
   token:                ""
   server:               id_server
   chan:                 id_chan
+
+mysqlclient:
+  host:                 ""
+  user:                 ""
+  password:             ""
+  database:             ""
+  # For MariaDB in Debian 13
+  charset:              "utf8mb4"
+  collation:            "utf8mb4_unicode_520_ci"
+# Since we’re doing “MySQLdb.connect(**Config["mysqlclient"])”, adding custom parameters in
+# Config["mysqlclient"] cause a silent failure
+db_additional:
+  history_table:        "history"
+
+history_storage:        ""
+mail_server:            ""
+bot_mail_address:       ""
 
 irc:
   bot_owner:            ""
