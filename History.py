@@ -14,7 +14,7 @@ from email.mime.text import MIMEText
 from Config_manager import Config
 import DB_manager
 
-async def Message_added(Table, Server_id, Chan, Message):
+async def Message_added(Table, Author_name, Server_id, Chan, Message):
 	# Don’t record the content of the bot’s log chan
 	#if Config.get("log_chan") == str(Chan):
 	#	return
@@ -25,13 +25,17 @@ async def Message_added(Table, Server_id, Chan, Message):
 			Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
 			Server_id, Chan.id, Message.id,
 			Replied_message_id,
-			Message.author.name, Message.content
+			Author_name, Message.content
 	)
 
 def Message_edited(Table, Keep, Server_id, Message_id, New_content):
-	DB_manager.History_edition(Table, Keep,
-			Message_id, datetime.datetime.now().isoformat(), New_content
-	)
+	DB_entry = DB_manager.History_fetch_message(Table, Message_id)
+	if DB_entry:
+		DB_manager.History_edition(Table, Keep,
+				Message_id, datetime.datetime.now().isoformat(), New_content
+		)
+	else:
+		print(f"[History] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 
 def Message_deleted(Table, Keep, Server_id, Message_id):
 	DB_entry = DB_manager.History_fetch_message(Table, Message_id)

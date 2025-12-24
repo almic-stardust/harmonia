@@ -22,7 +22,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 Users_buffers = {}
-History_table = Config["db_additional"]["history_table"]
+History_table = Config["history"]["db_table"]
 # TODO I’ll deal with that later
 History_keep_all = True
 
@@ -62,7 +62,7 @@ async def quit(Context):
 # Handling messages
 ###############################################################################
 
-async def Rate_limiter_for_IRC(Author):
+async def Rate_limiter_for_IRC(Author, Author_name):
 
 	await asyncio.sleep(5)
 	Buffer = Users_buffers.get(Author.id)
@@ -90,7 +90,7 @@ async def Rate_limiter_for_IRC(Author):
 			Messages_to_relay = Concatenated_messages
 	if Messages_to_relay:
 		for Message in Messages_to_relay:
-			await IRC_manager.Instance.Send_message(Author.name, Message)
+			await IRC_manager.Instance.Send_message(Author_name, Message)
 	else:
 		await bot.get_channel(Config["discord"]["chan"]).send(
 			f"{Author.mention} Too many messages in a short time. Nothing was forwarded to IRC."
@@ -112,7 +112,16 @@ async def on_message(Message):
 	if Message.channel.id != Config["discord"]["chan"]:
 		return
 
-	await History.Message_added(History_table, Server_id, Chan, Message)
+	# Author.display_name =	server nickname if set, otherwise global display name if set, otherwise
+	# Discord username
+	Author_name = Author.display_name
+
+	# If a user has requested that the bot assign them a specific name on Discord, use it on Discord
+	# but use their IRC nick in the history and their messages transferred to IRC
+	if Config["users"]["discord_to_irc"].get(Author_name):
+		Author_name = Config["users"]["discord_to_irc"].get(Author_name)
+
+	await History.Message_added(History_table, Author_name, Server_id, Chan, Message)
 
 	# The bot ignores its own messages (including what it posted via a webhook)
 	if Author == bot.user or Message.webhook_id is not None:
@@ -128,7 +137,7 @@ async def on_message(Message):
 	# If the Discord message has attachments, add their URLs at the end of the message send on IRC
 	if Message.attachments:
 		Content += " | " + " ".join(Attachment.url for Attachment in Message.attachments)
-	print(f"[D] <{Author.name}> {Content}")
+	print(f"[D] <{Author_name}> {Content}")
 
 	# To prevent (or rather limit) flood towards IRC
 	Now = time.monotonic()
@@ -137,7 +146,7 @@ async def on_message(Message):
 	# Start the rate limiter only once
 	if Buffer["task"] is None:
 		# Attach the task to discord.py’s managed loop
-		Buffer["task"] = bot.loop.create_task(Rate_limiter_for_IRC(Author))
+		Buffer["task"] = bot.loop.create_task(Rate_limiter_for_IRC(Author, Author_name))
 
 def Is_command(Message):
 	return Message.content.startswith(tuple(bot.command_prefix))
@@ -154,21 +163,20 @@ def Translate_Discord_formatting_to_IRC(Message):
 		Message = re.sub(Pattern, Replacement, Message, count=0)
 	return Message
 
-async def Relay_IRC_message(IRC_chan, Author, Message):
+async def Relay_IRC_message(IRC_chan, Author_name, Message):
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 	Chan = Config["webhooks"].get(IRC_chan.lstrip("#"))
 	if Chan:
 		Webhook = discord.Webhook.from_url(Chan, session=HTTP_session)
-		Username = Author
-		Avatar = f"https://robohash.org/{Username}.png"
-		User = Config["irc_users"].get(Author)
+		Avatar = f"https://robohash.org/{Author_name}.png"
+		User = Config["users"]["irc_to_discord"].get(Author_name)
 		if User:
-			Username = User["discord_username"]
+			Author_name = User["discord_username"]
 			# A user could request a specific username on Discord, but without requesting an avatar
-			Avatar = User.get("avatar", f"https://robohash.org/{Username}.png")
-		await Webhook.send(content=Message, username=Username, avatar_url=Avatar)
+			Avatar = User.get("avatar", f"https://robohash.org/{Author_name}.png")
+		await Webhook.send(content=Message, username=Author_name, avatar_url=Avatar)
 	else:
-		Message = f"<**{Author}**> {Message}"
+		Message = f"<**{Author_name}**> {Message}"
 		await bot.get_channel(Config["discord"]["chan"]).send(Message)
 
 def Split_message(Message):

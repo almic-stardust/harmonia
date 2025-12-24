@@ -35,7 +35,7 @@ def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_messag
 							server_id, chan_id, message_id,
 							reply_to,
 							user_name, content)
-							VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+							VALUES (%s, %s, %s, %s, %s, %s, %s)"""
 					, (
 							Date,
 							Server_id, Chan_id, Message_id,
@@ -46,7 +46,6 @@ def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_messag
 		else:
 			print("[DB] Warning: this message was already stored in the DB.")
 		Connection.commit()
-		print("After commit")
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)

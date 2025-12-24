@@ -6,12 +6,27 @@ import yaml
 with open("Config.yaml", "r") as File:
 	Config = yaml.safe_load(File)
 
+if Config.get("irc_users"):
+	Config["users"] = {}
+	Config["users"]["irc_to_discord"] = Config["irc_users"]
+	Config["users"]["discord_to_irc"] = {
+		Data['discord_username']: Key
+		for Key, Data in Config["irc_users"].items()
+	}
+	del Config["irc_users"]
+else:
+	Config["users"] = {}
+	Config["users"]["irc_to_discord"] = {}
+	Config["users"]["discord_to_irc"] = {}
+
 if not Config.get("mysqlclient"):
-	print("Error: The basic MariaDB/MySQL parameters aren’t defined in the configuration file.")
+	print("[Config file] Error: the MariaDB/MySQL parameters aren’t specified.")
 	sys.exit(1)
-if not Config.get("db_additional"):
-	print("Error: The additional DB parameters aren’t defined in the configuration file.")
-	sys.exit(1)
-if not Config["db_additional"].get("history_table"):
-	print("Error: The table for the history isn’t defined in the configuration file.")
-	sys.exit(1)
+if Config.get("history") and Config["history"].get("active"):
+	if Config["history"].get("active") == True:
+		if not Config["history"].get("db_table"):
+			print("[Config file] Error: the history is actived, but the DB table isn’t specified.")
+			sys.exit(1)
+		if not Config["history"].get("storage_folder"):
+			print("[Config file] Error: the history is actived, but the storage folder isn’t specified.")
+			sys.exit(1)

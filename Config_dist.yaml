@@ -15,14 +15,15 @@ mysqlclient:
   # For MariaDB in Debian 13
   charset:              "utf8mb4"
   collation:            "utf8mb4_unicode_520_ci"
-# Since we’re doing “MySQLdb.connect(**Config["mysqlclient"])”, adding custom parameters in
-# Config["mysqlclient"] cause a silent failure
-db_additional:
-  history_table:        "history"
 
-history_storage:        ""
-mail_server:            ""
-bot_mail_address:       ""
+history:
+  active:               True/False
+  db_table:             ""
+  storage_folder:       ""
+
+mail:
+  server:               ""
+  bot_address:          ""
 
 irc:
   bot_owner:            ""
