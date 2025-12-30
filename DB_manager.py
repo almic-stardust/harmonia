@@ -15,7 +15,45 @@ def Connect_DB():
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
 
-def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_message_id, Discord_username, Content):
+def History_update_filename(Table, Old_filename, New_filename):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		# Check if there is an entry whose attachments field contains the value of Old_filename
+		Cursor.execute(f"""
+				SELECT message_id, attachments FROM {Table}
+				WHERE attachments LIKE %s""",
+				('%\\"' + Old_filename.replace("—", "\\\\u2014") + '\\"%',)
+		)
+		Result = Cursor.fetchone()
+		if Result:
+			Message_id = Result[0]
+			Filenames = json.loads(Result[1])
+			Updated_filenames = []
+			for Filename in Filenames:
+				if Filename == Old_filename:
+					Updated_filenames.append(New_filename)
+				else:
+					Updated_filenames.append(Filename)
+			Updated_filenames = json.dumps(Updated_filenames)
+			Cursor.execute(f"""
+					UPDATE {Table} SET attachments = %s
+					WHERE message_id = %s""",
+					(Updated_filenames, Message_id)
+			)
+		else:
+			print("[DB] Error: This attachment isn’t recorded for that message in the DB")
+		Connection.commit()
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_message_id, Discord_username, Content, Attachments):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -34,13 +72,13 @@ def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_messag
 							date_creation,
 							server_id, chan_id, message_id,
 							reply_to,
-							user_name, content)
-							VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+							user_name, content, attachments)
+							VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
 					, (
 							Date,
 							Server_id, Chan_id, Message_id,
 							Replied_message_id,
-							Discord_username, Content
+							Discord_username, Content, Attachments
 					)
 			)
 		else:
@@ -68,6 +106,7 @@ def History_fetch_message(Table, Message_id):
 					reply_to,
 					user_name,
 					content,
+					attachments,
 					reactions,
 					date_deletion
 					FROM {Table} WHERE message_id = %s""",
@@ -116,7 +155,7 @@ def History_edition(Table, Keep, Message_id, Date, New_content):
 		Cursor.close()
 		Connection.close()
 
-def History_deletion(Table, Keep, Message_id, Date):
+def History_deletion(Table, Keep, Message_id, Date, Updated_filenames):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -131,11 +170,18 @@ def History_deletion(Table, Keep, Message_id, Date):
 		Result = Cursor.fetchone()
 		if Result:
 			if Keep:
-				Cursor.execute(f"""
-						UPDATE {Table} SET date_deletion = %s
-						WHERE message_id = %s""",
-						(Date, Message_id)
-				)
+				if Updated_filenames:
+					Cursor.execute(f"""
+							UPDATE {Table} SET attachments = %s, date_deletion = %s
+							WHERE message_id = %s""",
+							(Updated_filenames, Date, Message_id)
+					)
+				else:
+					Cursor.execute(f"""
+							UPDATE {Table} SET date_deletion = %s
+							WHERE message_id = %s""",
+							(Date, Message_id)
+					)
 			else:
 				Cursor.execute(f"""
 						DELETE FROM {Table} WHERE message_id = %s""",

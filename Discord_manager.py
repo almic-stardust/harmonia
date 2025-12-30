@@ -136,7 +136,10 @@ async def on_message(Message):
 	Content = Message.clean_content.strip()
 	# If the Discord message has attachments, add their URLs at the end of the message send on IRC
 	if Message.attachments:
-		Content += " | " + " ".join(Attachment.url for Attachment in Message.attachments)
+		# If there's no message, no need to put a delimiter before the URLs
+		if Content:
+			Content += " | "
+		Content += " ".join(Attachment.url for Attachment in Message.attachments)
 	print(f"[D] <{Author_name}> {Content}")
 
 	# To prevent (or rather limit) flood towards IRC
