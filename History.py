@@ -83,17 +83,48 @@ async def Download_attachments(Table, Message):
 	Attachments_filenames = json.dumps(Attachments_filenames)
 	return Attachments_filenames
 
-async def Message_added(Table, Author_name, Server_id, Chan, Message):
+def Delete_attachments(Table, Keep, Attachments):
+	Updated_filenames = []
+	New_filename = None
+	Storage_dir = Config["history"].get("storage_folder")
+	if not os.path.exists(Storage_dir):
+		print(f"Warning: The folder where the attachments were stored isn’t accessible.")
+		return
+	for Filename in Attachments:
+		File_path = os.path.join(Storage_dir, Filename)
+		if os.path.exists(File_path):
+			if Keep:
+				Base_name, File_ext = os.path.splitext(Filename)
+				New_filename = f"{Base_name}_DELETED{File_ext}"
+				New_file_path = os.path.join(Storage_dir, New_filename)
+				os.rename(File_path, New_file_path)
+			else:
+				try:
+					os.remove(File_path)
+				except OSError as e:
+					print(f"Warning: can’t delete file {Filename}: {e}")
+		else:
+			# Keep the invalid filename in the DB, to avoid losing all reference
+			New_filename = Filename
+			print(f"Warning: File {Filename} not found.")
+		if New_filename:
+			Updated_filenames.append(New_filename)
+	return json.dumps(Updated_filenames)
+
+async def Message_added(Table, Author_name, Chan, Message):
 	# Don’t record the content of the bot’s log chan
 	#if Config.get("log_chan") == str(Chan):
 	#	return
+
+	# Set 0 if it’s a DM
+	Server_id = Message.guild.id if Message.guild else 0
+	Replied_message_id = 0
+	if Message.reference and Message.reference.resolved:
+		Replied_message_id = Message.reference.resolved.id
 	if len(Message.attachments) > 0:
 		Attachments = await Download_attachments(Table, Message)
 	else:
 		Attachments = None
-	Replied_message_id = 0
-	if Message.reference and Message.reference.resolved:
-		Replied_message_id = Message.reference.resolved.id
 	DB_manager.History_addition(Table,
 			Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
 			Server_id, Chan.id, Message.id,
@@ -101,44 +132,22 @@ async def Message_added(Table, Author_name, Server_id, Chan, Message):
 			Author_name, Message.content, Attachments
 	)
 
-def Message_edited(Table, Keep, Server_id, Message_id, New_content):
-	DB_entry = DB_manager.History_fetch_message(Table, Message_id)
+def Message_edited(Table, Keep, Message):
+	DB_entry = DB_manager.History_fetch_message(Table, Message.id)
 	if DB_entry:
 		DB_manager.History_edition(Table, Keep,
-				Message_id, datetime.datetime.now().isoformat(), New_content
+				Message.id, datetime.datetime.now().isoformat(), Message.content
 		)
 	else:
 		print(f"[History] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 
-def Message_deleted(Table, Keep, Server_id, Message_id):
+def Message_deleted(Table, Keep, Message_id):
 	DB_entry = DB_manager.History_fetch_message(Table, Message_id)
 	if DB_entry:
 		Updated_filenames = []
 		Attachments = json.loads(DB_entry[7]) if DB_entry[7] else []
 		if Attachments:
-			Storage_dir = Config["history"].get("storage_folder")
-			if not os.path.exists(Storage_dir):
-				print(f"Error: The folder where the attachments were stored isn’t accessible.")
-				return
-			for Filename in Attachments:
-				File_path = os.path.join(Storage_dir, Filename)
-				if os.path.exists(File_path):
-					if Keep:
-						Base_name, File_ext = os.path.splitext(Filename)
-						New_filename = f"{Base_name}_DELETED{File_ext}"
-						New_file_path = os.path.join(Storage_dir, New_filename)
-						os.rename(File_path, New_file_path)
-						Updated_filenames.append(New_filename)
-					else:
-						try:
-							os.remove(File_path)
-						except OSError as e:
-							print(f"Error deleting file {Filename}: {e}")
-				else:
-					# Keep the invalid filename in the DB, to avoid losing all reference
-					Updated_filenames.append(Filename)
-					print(f"Error: File {Filename} not found.")
-			Updated_filenames = json.dumps(Updated_filenames)
+			Updated_filenames = Delete_attachments(Table, Keep, Attachments)
 		DB_manager.History_deletion(Table, Keep,
 				Message_id, datetime.datetime.now().isoformat(), Updated_filenames
 		)

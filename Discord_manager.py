@@ -104,8 +104,6 @@ async def on_message(Message):
 
 	global History_table
 	Author = Message.author
-	# Set 0 if it’s a DM
-	Server_id = Message.guild.id if Message.guild else 0
 	Chan = Message.channel
 
 	# Initially we bridge one chan only
@@ -121,7 +119,7 @@ async def on_message(Message):
 	if Config["users"]["discord_to_irc"].get(Author_name):
 		Author_name = Config["users"]["discord_to_irc"].get(Author_name)
 
-	await History.Message_added(History_table, Author_name, Server_id, Chan, Message)
+	await History.Message_added(History_table, Author_name, Chan, Message)
 
 	# The bot ignores its own messages (including what it posted via a webhook)
 	if Author == bot.user or Message.webhook_id is not None:
@@ -136,10 +134,10 @@ async def on_message(Message):
 	Content = Message.clean_content.strip()
 	# If the Discord message has attachments, add their URLs at the end of the message send on IRC
 	if Message.attachments:
-		# If there's no message, no need to put a delimiter before the URLs
+		# If there's no message, no need to put a | before the URLs
 		if Content:
 			Content += " | "
-		Content += " ".join(Attachment.url for Attachment in Message.attachments)
+		Content += " | ".join(Attachment.url for Attachment in Message.attachments)
 	print(f"[D] <{Author_name}> {Content}")
 
 	# To prevent (or rather limit) flood towards IRC
@@ -208,18 +206,15 @@ def Split_message(Message):
 async def on_raw_message_edit(Payload):
 	global History_table
 	global History_keep_all
-	Server_id = Payload.guild_id if bot.get_guild(Payload.guild_id) else 0
 	Chan = await bot.fetch_channel(Payload.channel_id)
 	Message = await Chan.fetch_message(Payload.message_id)
-	History.Message_edited(History_table, History_keep_all,
-				Server_id, Payload.message_id, Message.content)
+	History.Message_edited(History_table, History_keep_all, Message)
 
 @bot.event
 async def on_raw_message_delete(Payload):
 	global History_table
 	global History_keep_all
-	Server_id = Payload.guild_id if bot.get_guild(Payload.guild_id) else 0
-	History.Message_deleted(History_table, History_keep_all, Server_id, Payload.message_id)
+	History.Message_deleted(History_table, History_keep_all, Payload.message_id)
 
 ###############################################################################
 # Other stuff
