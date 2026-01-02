@@ -28,23 +28,24 @@ def History_update_filename(Table, Old_filename, New_filename):
 				('%\\"' + Old_filename.replace("—", "\\\\u2014") + '\\"%',)
 		)
 		Result = Cursor.fetchone()
-		if Result:
-			Message_id = Result[0]
-			Filenames = json.loads(Result[1])
-			Updated_filenames = []
-			for Filename in Filenames:
-				if Filename == Old_filename:
-					Updated_filenames.append(New_filename)
-				else:
-					Updated_filenames.append(Filename)
-			Updated_filenames = json.dumps(Updated_filenames)
-			Cursor.execute(f"""
-					UPDATE {Table} SET attachments = %s
-					WHERE message_id = %s""",
-					(Updated_filenames, Message_id)
-			)
-		else:
+		if not Result:
 			print("[DB] Error: This attachment isn’t recorded for that message in the DB")
+			return
+		Message_id = Result[0]
+		Filenames = json.loads(Result[1])
+		Updated_filenames = []
+		for Filename in Filenames:
+			if Filename == Old_filename:
+				Updated_filenames.append(New_filename)
+			else:
+				Updated_filenames.append(Filename)
+		# Convert the list into a string to store it into the DB
+		Updated_filenames = json.dumps(Updated_filenames)
+		Cursor.execute(f"""
+				UPDATE {Table} SET attachments = %s
+				WHERE message_id = %s""",
+				(Updated_filenames, Message_id)
+		)
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -67,6 +68,7 @@ def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_messag
 		)
 		Result = Cursor.fetchone()
 		if not Result:
+			Attachments = json.dumps(Attachments)
 			Cursor.execute(f"""
 					INSERT INTO {Table} (
 							date_creation,
@@ -111,7 +113,9 @@ def History_fetch_message(Table, Message_id):
 					date_deletion
 					FROM {Table} WHERE message_id = %s""",
 					(Message_id,))
-		return Cursor.fetchone()
+		DB_entry = list(Cursor.fetchone())
+		DB_entry[7] = json.loads(DB_entry[7])
+		return DB_entry
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
@@ -119,7 +123,7 @@ def History_fetch_message(Table, Message_id):
 		Cursor.close()
 		Connection.close()
 
-def History_edition(Table, Keep, Message_id, Date, New_content):
+def History_edition(Table, Keep, Message_id, Date, New_content, Updated_filenames):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -132,21 +136,32 @@ def History_edition(Table, Keep, Message_id, Date, New_content):
 				(Message_id,)
 		)
 		Result = Cursor.fetchone()
-		if Result:
-			if Keep:
-				Old_content = Result[1]
-				Edited_content = f"{Old_content}\n\n<|--- Edited {Date} ---|>\n\n{New_content}"
-				Request = f"""
-						UPDATE {Table} SET content = %s, edited = TRUE
-						WHERE message_id = %s"""
-			else:
-				Edited_content = New_content
-				Request = f"""
-						UPDATE {Table} SET content = %s
-						WHERE message_id = %s"""
-			Cursor.execute(Request, (Edited_content, Message_id))
-		else:
+		if not Result:
 			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
+			return
+		if Keep:
+			Old_content = Result[1]
+			Edited_content = f"{Old_content}\n\n<|--- Edited {Date} ---|>\n\n{New_content}"
+			if Updated_filenames:
+				Updated_filenames = json.dumps(Updated_filenames)
+				Cursor.execute(f"""
+						UPDATE {Table} SET content = %s, attachments = %s, edited = TRUE
+						WHERE message_id = %s""",
+						(Edited_content, Updated_filenames, Message_id)
+				)
+			else:
+				Cursor.execute(f"""
+						UPDATE {Table} SET content = %s, edited = TRUE
+						WHERE message_id = %s""",
+						(Edited_content, Message_id)
+				)
+		else:
+			Cursor.execute(f"""
+					UPDATE {Table} SET content = %s
+					WHERE message_id = %s""",
+					(New_content, Message_id)
+			)
+
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -168,27 +183,28 @@ def History_deletion(Table, Keep, Message_id, Date, Updated_filenames):
 				(Message_id,)
 		)
 		Result = Cursor.fetchone()
-		if Result:
-			if Keep:
-				if Updated_filenames:
-					Cursor.execute(f"""
-							UPDATE {Table} SET attachments = %s, date_deletion = %s
-							WHERE message_id = %s""",
-							(Updated_filenames, Date, Message_id)
-					)
-				else:
-					Cursor.execute(f"""
-							UPDATE {Table} SET date_deletion = %s
-							WHERE message_id = %s""",
-							(Date, Message_id)
-					)
+		if not Result:
+			print(f"[DB] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
+			return
+		if Keep:
+			if Updated_filenames:
+				Updated_filenames = json.dumps(Updated_filenames)
+				Cursor.execute(f"""
+						UPDATE {Table} SET attachments = %s, date_deletion = %s
+						WHERE message_id = %s""",
+						(Updated_filenames, Date, Message_id)
+				)
 			else:
 				Cursor.execute(f"""
-						DELETE FROM {Table} WHERE message_id = %s""",
-						(Message_id,)
+						UPDATE {Table} SET date_deletion = %s
+						WHERE message_id = %s""",
+						(Date, Message_id)
 				)
 		else:
-			print(f"[DB] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
+			Cursor.execute(f"""
+					DELETE FROM {Table} WHERE message_id = %s""",
+					(Message_id,)
+			)
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
