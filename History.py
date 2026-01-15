@@ -90,6 +90,10 @@ def Delete_attachments(Table, Keep, Attachments):
 		print(f"Warning: The folder where the attachments were stored isn’t accessible.")
 		return
 	for Filename in Attachments:
+		# File already deleted: don’t tag it twice, instead keep it as it is
+		if Keep and "_DELETED" in Filename:
+			Updated_filenames.append(Filename)
+			continue
 		File_path = os.path.join(Storage_dir, Filename)
 		if Keep:
 			if os.path.exists(File_path):

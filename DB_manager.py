@@ -29,7 +29,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		)
 		Result = Cursor.fetchone()
 		if not Result:
-			print("[DB] Error: This attachment isn’t recorded for that message in the DB")
+			print("[DB] Error: There’s already a file with that name in the folder, but it wasn’t registered in the DB for that message")
 			return
 		Message_id = Result[0]
 		Filenames = json.loads(Result[1])
@@ -113,8 +113,11 @@ def History_fetch_message(Table, Message_id):
 					date_deletion
 					FROM {Table} WHERE message_id = %s""",
 					(Message_id,))
-		DB_entry = list(Cursor.fetchone())
-		DB_entry[7] = json.loads(DB_entry[7])
+		Result = Cursor.fetchone()
+		DB_entry = []
+		if Result:
+			DB_entry = list(Result)
+			DB_entry[7] = json.loads(DB_entry[7]) if DB_entry[7] else []
 		return DB_entry
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
