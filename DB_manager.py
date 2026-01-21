@@ -100,19 +100,19 @@ def History_fetch_message(Table, Message_id):
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
 		Cursor.execute(f"""
-					SELECT
-					date_creation,
-					server_id,
-					chan_id,
-					message_id,
-					reply_to,
-					user_name,
-					content,
-					attachments,
-					reactions,
-					date_deletion
-					FROM {Table} WHERE message_id = %s""",
-					(Message_id,))
+				SELECT
+				date_creation,
+				server_id,
+				chan_id,
+				message_id,
+				reply_to,
+				user_name,
+				content,
+				attachments,
+				reactions,
+				date_deletion
+				FROM {Table} WHERE message_id = %s""",
+				(Message_id,))
 		Result = Cursor.fetchone()
 		DB_entry = []
 		if Result:
@@ -122,6 +122,44 @@ def History_fetch_message(Table, Message_id):
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def History_messages_to_display(Table, Server_id, Chan_id, Before=None, Limit=50):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Request = f"""
+			SELECT
+				message_id,
+				reply_to,
+				user_name,
+				content,
+				edited,
+				attachments,
+				reactions,
+				date_creation,
+				date_deletion
+			FROM {Table}
+			WHERE server_id = %s
+				AND chan_id = %s
+				AND date_deletion IS NULL
+		"""
+		Params = [Server_id, Chan_id]
+		if Before is not None:
+			Request += " AND date_creation < %s"
+			Params.append(Before)
+		Request += " ORDER BY date_creation DESC LIMIT %s"
+		Params.append(Limit)
+		Cursor.execute(Request, Params)
+		Result = Cursor.fetchall()
+		return list(Result)
+	except MySQLdb.Error as error:
+		print(f"[DB] Error: {error}")
+		raise
 	finally:
 		Cursor.close()
 		Connection.close()

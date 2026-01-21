@@ -1,0 +1,55 @@
+html, body {
+	margin: 0;
+	padding: 0;
+}
+header, footer {
+	flex: none;						/* header and footer take natural height */
+}
+#Display_history {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+#messages {
+	display: block;					/* stack messages vertically */
+	padding: 0.5em;
+}
+#messages .message:nth-child(odd) {
+	background-color: #f6f6f6;		/* light grey */
+}
+#messages .message:nth-child(even) {
+	background-color: #ffffff
+}
+
+.message {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 2px;
+	line-height: 1.4em;
+	align-items: flex-start;		/* top-align content */
+}
+/* Meta = timestamp + username */
+.message .meta {
+	flex: none;						/* fixed width */
+	display: flex;
+	flex-direction: row;			/* stack time and user */
+	align-items: flex-start;		/* top align */
+	margin-right: 0.5em;
+	white-space: nowrap;
+}
+.message .time {
+	margin-right: 0.25em;
+}
+.message .user {
+	font-weight: bold;
+	white-space: nowrap;
+	margin-bottom: 1px;
+}
+.message .content {
+	flex: 1;
+	display: block;					/* multiline lines align under first line */
+	white-space: pre-wrap;			/* preserve spaces and line breaks */
+	word-wrap: break-word;
+	text-align: justify;
+}
