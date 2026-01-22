@@ -2,21 +2,21 @@
 	const Container = document.getElementById("messages");
 	if (!Container) return;
 
-	function Escape_HTML(str) {
+	function Escape_HTML(str){
 		const Div = document.createElement("div");
 		Div.textContent = str;
 		return Div.innerHTML;
 	}
 
-	function Normalize_content(text) {
+	function Normalize_content(text){
 		return Escape_HTML(text.trim()).replace(/\n/g, "<br>");
 	}
 
-	function Create_message_element(Message) {
+	function Create_message_element(Message){
 		const [Date_part, Time_part] = (Message.Date_creation || "").split(" ");
 		let Display_time = Time_part ? Time_part.split(":").slice(0,2).join(":") : "";
 		let Display_date = "";
-		if (Date_part) {
+		if (Date_part){
 			const [Year, Month , Day] = Date_part.split("-");
 			Display_date = `${Day}/${Month}/${Year}`;
 		}
@@ -38,7 +38,7 @@
 		return Div;
 	}
 
-	function Hydrate_initial_messages() {
+	function Hydrate_initial_messages(){
 		const Raw_nodes = Array.from(Container.children);
 		Container.innerHTML = "";
 		Raw_nodes.forEach(node => {
@@ -55,5 +55,26 @@
 		});
 	}
 
-	document.addEventListener("DOMContentLoaded", Hydrate_initial_messages);
+	document.addEventListener("DOMContentLoaded", () => {
+		Hydrate_initial_messages();
+		let Last_height = 0;
+		let Stable_frames = 0;
+		function Scroll_when_stable(){
+			const Current_height = document.body.scrollHeight;
+			if (Current_height === Last_height){
+				Stable_frames++;
+				if (Stable_frames >= 2){
+					window.scrollTo(0, Current_height);
+					return;
+				}
+			}
+			else {
+				Stable_frames = 0;
+				Last_height = Current_height;
+			}
+			requestAnimationFrame(Scroll_when_stable);
+		}
+		requestAnimationFrame(Scroll_when_stable);
+	});
+
 })();

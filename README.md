@@ -41,12 +41,12 @@ To build the package mysqlclient:
 
 Create the virtual environment:
 
-	% python3 -m venv \~/.local/pydle-python3.13
-	% \~/.local/pydle-python3.13/bin/pip install discord.py pydle PyYAML mysqlclient
+	% python3 -m venv ~/.local/pydle-python3.13
+	% ~/.local/pydle-python3.13/bin/pip install discord.py pydle PyYAML mysqlclient
 
 #### Database
 
-Create a base according to your Config.yaml, then this table:
+Create a base according to your Config.yaml, then create this table:
 
 	CREATE TABLE history (
 	    date_creation   TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00'
@@ -106,7 +106,7 @@ Then you need to configure nginx (for example), with a VirtualServer acting as a
 towards 127.0.0.1:60444. Also, it could be useful to create a service in SystemD, so that Hypercorn
 starts when the system boots.
 
-The history should now be accessible at the following address:
+The history should now be accessible at:
 
 	https://domain.tld/server_id/chan_id
 
@@ -118,10 +118,10 @@ Instead of Hypercorn, you can use uvicorn. It’s useful during development, tha
 
 Or, if you must have the very latest version:
 
-	% python3 -m venv \~/.local/uvicorn-python3.13
-	% \~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi Jinja2 PyYAML mysqlclient
-	% \~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host Local_IP --port 8080 --reload
+	% python3 -m venv ~/.local/uvicorn-python3.13
+	% ~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi Jinja2 PyYAML mysqlclient
+	% ~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host Local_IP --port 8080 --reload
 
-The history should now also be accessible at:
+Now the history should also be accessible at:
 
 	http://domain.tld:8080/server_id/chan_id
