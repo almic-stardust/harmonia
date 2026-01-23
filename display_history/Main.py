@@ -14,8 +14,11 @@ Templates = Jinja2Templates(directory="templates")
 
 History_table = Config["history"]["db_table"]
 
-@Display_history.get("/{Server_id}/{Chan_id}", response_class=HTMLResponse)
-def Chan_page(Request_object: Request, Server_id: int, Chan_id: int):
+# Server_id and Chan_id are 19-digit Discord identifiers. Their size conflits with Pydantic (used by
+# FastAPI), which enforces a 32-bit limit for integers by default. Since these are juste identifiers
+# and not numbers to be computed, we use strings.
+@Display_history.get("/chan/{Server_id}/{Chan_id}", response_class=HTMLResponse)
+def Chan_page(Request_object: Request, Server_id: str, Chan_id: str):
 	Messages = DB_manager.History_messages_to_display(History_table, Server_id, Chan_id)
 	Next_cursor = (Messages[-1]["date_creation"] if Messages else None)
 	# Reverse for chronological display
@@ -31,7 +34,7 @@ def Chan_page(Request_object: Request, Server_id: int, Chan_id: int):
 	)
 
 @Display_history.get("/api/messages")
-def API_messages(Server_id: int, Chan_id: int, Before: str|None = None):
+def API_messages(Server_id: str, Chan_id: str, Before: str|None = None):
 	Messages = DB_manager.History_messages_to_display(History_table, Server_id, Chan_id, Before)
 	Next_cursor = (Messages[-1]["date_creation"] if Messages else None)
 	Messages.reverse()

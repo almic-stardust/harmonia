@@ -8,7 +8,9 @@
 </head>
 <body>
 
-<div id="messages" tabindex="0">
+<div id="messages" tabindex="0"
+	     data-server-id="{{ Server_id }}" data-chan-id="{{ Chan_id }}"
+	     data-next-cursor="{{ Next_cursor }}">
 	{% for Message in Messages %}
 		<div class="message"
 			data-message-id="{{ Message.message_id }}"

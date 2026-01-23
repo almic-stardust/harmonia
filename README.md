@@ -108,10 +108,9 @@ starts when the system boots.
 
 The history should now be accessible at:
 
-	https://domain.tld/server_id/chan_id
+	https://domain.tld/chan/server_id/chan_id
 
-Instead of Hypercorn, you can use uvicorn. It’s useful during development, thanks to its option
---reload.
+Instead of Hypercorn, you can use uvicorn. Its option --reload made it useful during development.
 
 	# apt install uvicorn
 	% python3 -m uvicorn Main:Display_history --host Local_IP --port 8080  --reload
@@ -124,4 +123,4 @@ Or, if you must have the very latest version:
 
 Now the history should also be accessible at:
 
-	http://domain.tld:8080/server_id/chan_id
+	http://domain.tld:8080/chan/server_id/chan_id
