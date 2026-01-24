@@ -21,6 +21,9 @@ Functions specific to Discord, like handling events concerning sent/deleted mess
 IRC\_related.py  
 Functions specific to IRC, using pydle.
 
+display\_history/
+Everything related to the web display of the history
+
 # Installation
 
 I’m using the bot on Debian 13 (trixie).
@@ -81,7 +84,7 @@ Finally, you can start the bot:
 
 	% ~/.local/pydle-python3.13/bin/python3 Harmonia.py
 
-#### Generate a Web display for the history
+# Web display of the history
 
 If you need this additional feature, here is the procedure to follow.
 

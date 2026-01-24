@@ -6,6 +6,38 @@
 	let Is_loading = false;
 	// Cursor used when fetching messages older than the currently oldest one
 	let Next_cursor = Container.dataset.nextCursor || null;
+	// Date of the message at the top of the page
+	let Date_top_page = null;
+
+	function Extract_day(Date_creation){
+		if (!Date_creation)
+			return null;
+		// Normalize timestamp format between space-separated and T-separated
+		const Date_time = Date_creation.replace("T", " ");
+		// Return YYYY-MM-DD
+		return Date_time.split(" ")[0];
+	}
+
+	function Format_day(Date_part){
+		// Date_part has the format YYYY-MM-DD
+		const [Year, Month, Day] = Date_part.split("-");
+		return `${Day}/${Month}/${Year}`;
+	}
+
+	function Create_day_separator(Date_part){
+		const Div = document.createElement("div");
+		Div.className = "day_separator";
+		Div.textContent = Format_day(Date_part);
+		return Div;
+	}
+
+	function Get_message_day(Message_element){
+		const Time = Message_element.querySelector(".time");
+		if (!Time || !Time.title)
+			return null;
+		const [Date_part] = Time.title.split(" ");
+		return Date_part ? Date_part.split("/").reverse().join("-") : null;
+	}
 
 	// DOM-based HTML escape
 	function Escape_HTML(Text){
@@ -25,17 +57,14 @@
 		// - T-separated ISO-like, for JavaScript rendering of autoloaded older messages
 		const Date_time = (Message.Date_creation || "").replace("T", " ");
 		const [Date_part, Time_part] = Date_time.split(" ");
-		// Display only HH:MM in the message list
+		// Display time as HH:MM
 		let Display_time = "";
-		if (Time_part){
+		if (Time_part)
 			Display_time = Time_part.split(":").slice(0, 2).join(":");
-		}
 		// Display date as DD/MM/YYYY
 		let Display_date = "";
-		if (Date_part){
-			const [Year, Month , Day] = Date_part.split("-");
-			Display_date = `${Day}/${Month}/${Year}`;
-		}
+		if (Date_part)
+			Display_date = Format_day(Date_part)
 		// Full timestamp shown on hover
 		const Tool_tip = `${Display_date} ${Time_part || ""}`.trim();
 
@@ -57,8 +86,9 @@
 		const Raw_nodes = Array.from(Container.children);
 		// Clear original HTML to avoid duplication
 		Container.innerHTML = "";
+		let Date_previous_message = null;
 
-		Raw_nodes.forEach(Node => {
+		Raw_nodes.forEach((Node, Index) => {
 			const Message = {
 				Message_id: Node.dataset.messageId,
 				User_name: Node.dataset.userName,
@@ -71,6 +101,15 @@
 				Date_deletion: Node.dataset.dateDeletion || null,
 				Content: Node.textContent || ""
 			};
+
+			// Day separator management
+			const Current_day = Extract_day(Message.Date_creation);
+			if (Index === 0)
+				Date_top_page = Current_day;
+			else if (Current_day !== Date_previous_message)
+				Container.appendChild(Create_day_separator(Current_day));
+			Date_previous_message = Current_day;
+
 			Container.appendChild(Create_message_element(Message));
 		});
 	}
@@ -104,7 +143,19 @@
 
 		// Build messages in a document fragment to avoid repeated reflows
 		const Fragment = document.createDocumentFragment();
-		Data.Messages.forEach(Raw_message => {
+
+		// Day separator management
+		let Date_top_batch = Extract_day(Data.Messages[0].date_creation);
+		let Index_bottom_message = Data.Messages.length - 1
+		let Date_bottom_batch = Extract_day(Data.Messages[Index_bottom_message].date_creation);
+		// Before inserting any message, check for day change
+		if (Date_top_page !== null && Date_bottom_batch !== Date_top_page)
+			Fragment.appendChild(Create_day_separator(Date_bottom_batch));
+		let Date_previous_message = Date_top_batch;
+
+		Data.Messages.forEach((Raw_message, Index) => {
+			const Is_last = (Index === Data.Messages.length - 1);
+
 			// Match internal structure
 			const Message = {
 				Message_id: Raw_message.message_id,
@@ -115,16 +166,26 @@
 				Date_deletion: Raw_message.date_deletion,
 				Content: Raw_message.content || ""
 			};
+
+			// Day separator management
+			const Current_day = Extract_day(Message.Date_creation);
+			if (!Is_last && Current_day !== Date_previous_message)
+				Fragment.appendChild(Create_day_separator(Current_day));
+			Date_previous_message = Current_day;
+
 			Fragment.appendChild(Create_message_element(Message));
 		});
+
 		// Prepend older messages at the top
 		Container.prepend(Fragment);
 
-		// Update cursor to fetch the next batch later
-		Next_cursor = Data.Next_cursor;
 		// Restore scroll position so the view doesn’t jump
 		const New_scroll_height = document.body.scrollHeight;
 		window.scrollTo(0, New_scroll_height - Old_scroll_height);
+		// Update cursor to fetch the next batch later
+		Next_cursor = Data.Next_cursor;
+		// Update the day of the message at the top of the page
+		Date_top_page = Date_top_batch;
 		Is_loading = false;
 	}
 
@@ -153,9 +214,8 @@
 	});
 
 	window.addEventListener("scroll", () => {
-		if (window.scrollY <= 5){
+		if (window.scrollY <= 5)
 			Load_older_messages();
-		}
 	});
 
 })();
