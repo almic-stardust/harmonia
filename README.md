@@ -101,7 +101,7 @@ For performance, create composite indexes in the DB:
 
 The ASGI server I use is Hypercorn. On the system where you want to run it:
 
-	# apt install python3-hypercorn python3-fastapi python3-jinja2 python3-yaml python3-mysqldb
+	# apt install python3-hypercorn python3-fastapi python3-yaml python3-mysqldb
 	% cd harmonia/display_history
 	% hypercorn --certfile /path/to/cert.pem --keyfile /path/to/key.pem --bind '127.0.0.1:60444' Main:Display_history
 
@@ -121,7 +121,7 @@ Instead of Hypercorn, you can use uvicorn. Its option --reload made it useful du
 Or, if you must have the very latest version:
 
 	% python3 -m venv ~/.local/uvicorn-python3.13
-	% ~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi Jinja2 PyYAML mysqlclient
+	% ~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi PyYAML mysqlclient
 	% ~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host Local_IP --port 8080 --reload
 
 Now the history should also be accessible at:

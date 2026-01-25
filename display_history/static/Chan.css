@@ -22,6 +22,27 @@ header, footer {
 	background-color: #ffffff
 }
 
+.date_separator {
+	display: flex;
+	align-items: center;
+	margin: 0.8em 0;
+	color: #2aa198; /* teal-blue */
+	font-size: 0.9em;
+}
+.date_separator::before,
+.date_separator::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background-color: #2aa198;
+}
+.date_separator::before {
+	margin-right: 0.5em;
+}
+.date_separator::after {
+	margin-left: 0.5em;
+}
+
 .message {
 	display: flex;
 	flex-direction: row;
@@ -52,25 +73,4 @@ header, footer {
 	white-space: pre-wrap;			/* preserve spaces and line breaks */
 	word-wrap: break-word;
 	text-align: justify;
-}
-
-.day_separator {
-	display: flex;
-	align-items: center;
-	margin: 0.8em 0;
-	color: #2aa198; /* teal-blue */
-	font-size: 0.9em;
-}
-.day_separator::before,
-.day_separator::after {
-	content: "";
-	flex: 1;
-	height: 1px;
-	background-color: #2aa198;
-}
-.day_separator::before {
-	margin-right: 0.5em;
-}
-.day_separator::after {
-	margin-left: 0.5em;
 }
