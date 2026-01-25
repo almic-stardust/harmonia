@@ -31,7 +31,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		if not Result:
 			print("[DB] Error: There’s already a file with that name in the folder, but it wasn’t registered in the DB for that message")
 			return
-		Message_id = Result[0]
+		Message_ID = Result[0]
 		Filenames = json.loads(Result[1])
 		Updated_filenames = []
 		for Filename in Filenames:
@@ -44,7 +44,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Cursor.execute(f"""
 				UPDATE {Table} SET attachments = %s
 				WHERE message_id = %s""",
-				(Updated_filenames, Message_id)
+				(Updated_filenames, Message_ID)
 		)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -54,7 +54,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Cursor.close()
 		Connection.close()
 
-def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_message_id, Discord_username, Content, Attachments):
+def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_message_ID, Discord_username, Content, Attachments):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -64,7 +64,7 @@ def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_messag
 		Cursor.execute(f"""
 				SELECT message_id FROM {Table}
 				WHERE message_id = %s""",
-				(Message_id,)
+				(Message_ID,)
 		)
 		Result = Cursor.fetchone()
 		if not Result:
@@ -78,8 +78,8 @@ def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_messag
 							VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
 					, (
 							Date,
-							Server_id, Chan_id, Message_id,
-							Replied_message_id,
+							Server_ID, Chan_ID, Message_ID,
+							Replied_message_ID,
 							Discord_username, Content, Attachments
 					)
 			)
@@ -93,7 +93,7 @@ def History_addition(Table, Date, Server_id, Chan_id, Message_id, Replied_messag
 		Cursor.close()
 		Connection.close()
 
-def History_fetch_message(Table, Message_id):
+def History_fetch_message(Table, Message_ID):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -112,7 +112,7 @@ def History_fetch_message(Table, Message_id):
 				reactions,
 				date_deletion
 				FROM {Table} WHERE message_id = %s""",
-				(Message_id,))
+				(Message_ID,))
 		Result = Cursor.fetchone()
 		DB_entry = []
 		if Result:
@@ -126,7 +126,7 @@ def History_fetch_message(Table, Message_id):
 		Cursor.close()
 		Connection.close()
 
-def History_messages_to_display(Table, Server_id, Chan_id, Before=None, Limit=50):
+def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
@@ -148,7 +148,7 @@ def History_messages_to_display(Table, Server_id, Chan_id, Before=None, Limit=50
 				AND chan_id = %s
 				AND date_deletion IS NULL
 		"""
-		Params = [Server_id, Chan_id]
+		Params = [Server_ID, Chan_ID]
 		if Before is not None:
 			Request += " AND date_creation < %s"
 			Params.append(Before)
@@ -164,7 +164,7 @@ def History_messages_to_display(Table, Server_id, Chan_id, Before=None, Limit=50
 		Cursor.close()
 		Connection.close()
 
-def History_edition(Table, Keep, Message_id, Date, New_content, Updated_filenames):
+def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filenames):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -174,7 +174,7 @@ def History_edition(Table, Keep, Message_id, Date, New_content, Updated_filename
 		Cursor.execute(f"""
 				SELECT user_name, content FROM {Table}
 				WHERE message_id = %s""",
-				(Message_id,)
+				(Message_ID,)
 		)
 		Result = Cursor.fetchone()
 		if not Result:
@@ -188,19 +188,19 @@ def History_edition(Table, Keep, Message_id, Date, New_content, Updated_filename
 				Cursor.execute(f"""
 						UPDATE {Table} SET content = %s, attachments = %s, edited = TRUE
 						WHERE message_id = %s""",
-						(Edited_content, Updated_filenames, Message_id)
+						(Edited_content, Updated_filenames, Message_ID)
 				)
 			else:
 				Cursor.execute(f"""
 						UPDATE {Table} SET content = %s, edited = TRUE
 						WHERE message_id = %s""",
-						(Edited_content, Message_id)
+						(Edited_content, Message_ID)
 				)
 		else:
 			Cursor.execute(f"""
 					UPDATE {Table} SET content = %s
 					WHERE message_id = %s""",
-					(New_content, Message_id)
+					(New_content, Message_ID)
 			)
 
 		Connection.commit()
@@ -211,7 +211,7 @@ def History_edition(Table, Keep, Message_id, Date, New_content, Updated_filename
 		Cursor.close()
 		Connection.close()
 
-def History_deletion(Table, Keep, Message_id, Date, Updated_filenames):
+def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -221,7 +221,7 @@ def History_deletion(Table, Keep, Message_id, Date, Updated_filenames):
 		Cursor.execute(f"""
 				SELECT user_name FROM {Table}
 				WHERE message_id = %s""",
-				(Message_id,)
+				(Message_ID,)
 		)
 		Result = Cursor.fetchone()
 		if not Result:
@@ -233,18 +233,18 @@ def History_deletion(Table, Keep, Message_id, Date, Updated_filenames):
 				Cursor.execute(f"""
 						UPDATE {Table} SET attachments = %s, date_deletion = %s
 						WHERE message_id = %s""",
-						(Updated_filenames, Date, Message_id)
+						(Updated_filenames, Date, Message_ID)
 				)
 			else:
 				Cursor.execute(f"""
 						UPDATE {Table} SET date_deletion = %s
 						WHERE message_id = %s""",
-						(Date, Message_id)
+						(Date, Message_ID)
 				)
 		else:
 			Cursor.execute(f"""
 					DELETE FROM {Table} WHERE message_id = %s""",
-					(Message_id,)
+					(Message_ID,)
 			)
 		Connection.commit()
 	except MySQLdb.Error as Error:

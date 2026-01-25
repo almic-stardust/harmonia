@@ -119,18 +119,18 @@ async def Message_added(Table, Author_name, Chan, Message):
 	#	return
 
 	# Set 0 if it’s a DM
-	Server_id = Message.guild.id if Message.guild else 0
-	Replied_message_id = 0
+	Server_ID = Message.guild.id if Message.guild else 0
+	Replied_message_ID = 0
 	if Message.reference and Message.reference.resolved:
-		Replied_message_id = Message.reference.resolved.id
+		Replied_message_ID = Message.reference.resolved.id
 	if len(Message.attachments) > 0:
 		Attachments = await Download_attachments(Table, Message)
 	else:
 		Attachments = None
 	DB_manager.History_addition(Table,
 			Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
-			Server_id, Chan.id, Message.id,
-			Replied_message_id,
+			Server_ID, Chan.id, Message.id,
+			Replied_message_ID,
 			Author_name, Message.content, Attachments
 	)
 
@@ -173,8 +173,8 @@ def Message_edited(Table, Keep, Message):
 			Message.id, datetime.datetime.now().isoformat(), Content, Updated_filenames
 	)
 
-def Message_deleted(Table, Keep, Message_id):
-	DB_entry = DB_manager.History_fetch_message(Table, Message_id)
+def Message_deleted(Table, Keep, Message_ID):
+	DB_entry = DB_manager.History_fetch_message(Table, Message_ID)
 	if not DB_entry:
 		print(f"[History] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
 		return
@@ -183,5 +183,5 @@ def Message_deleted(Table, Keep, Message_id):
 	if Attachments:
 		Updated_filenames = Delete_attachments(Table, Keep, Attachments)
 	DB_manager.History_deletion(Table, Keep,
-			Message_id, datetime.datetime.now().isoformat(), Updated_filenames
+			Message_ID, datetime.datetime.now().isoformat(), Updated_filenames
 	)

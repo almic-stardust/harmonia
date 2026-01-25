@@ -3,4 +3,5 @@ Config.yaml
 /display_history/Config_manager.py
 /display_history/Config.yaml
 /display_history/DB_manager.py
+/display_history/static/favicon.ico
 /display_history/__pycache__/

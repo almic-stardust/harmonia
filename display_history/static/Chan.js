@@ -114,7 +114,7 @@ async function Load_messages(Initial=false){
 	// Build messages in a document fragment to avoid repeated layout recalculations
 	const Fragment = document.createDocumentFragment();
 
-    // Determine the day of the newest and oldest message in this batch
+    // Determine the date of the newest and oldest message in this batch
 	const Date_top_batch = Extract_date(Data.Messages[0].date_creation);
 	const Date_bottom_batch = Extract_date(Data.Messages.at(-1).date_creation);
 	let Date_previous_message = Date_top_batch;
@@ -130,11 +130,13 @@ async function Load_messages(Initial=false){
 	});
 
 	// Since messages are displayed from oldest to newest, but the batches are added at the top of
-	// the page, date changes can be detected within a batch. However, this non-linear order
-	// requires managing separately the date changes between the batches. So we need to check if the
-	// date has changed between the message previously at the top of the page, and the message at
-	// the bottom of the current batch. And in that case, we insert a date separator at the end of
-	// the current batch.
+	// the page:
+	// - date changes can be detected within a batch
+	// - however, this non-linear order requires managing separately the date changes between the
+	//   batches.
+	// So we check if the date has changed between the message previously at the top of the page,
+	// and the message at the bottom of the current batch. And if that’s the case, we insert a date
+	// separator at the end of the current batch.
     // Unless it’s the initial load, because in that case Date_top_page will be null.
 	if (!Initial && Date_bottom_batch !== Date_top_page)
 		Fragment.appendChild(Create_date_separator(Date_bottom_batch));
