@@ -77,8 +77,34 @@ function Normalize_content(Text){
 	return Escape_HTML(Text.trim()).replace(/\n/g, "<br>");
 }
 
+function Is_file_an_image(Path){
+	if (!Path)
+		return false;
+	return /\.(png|jpe?g|gif|webp)$/i.test(Path);
+}
+
 function Create_message_element(Message, Date_object){
 	const Date_message = Format_date(Date_object);
+
+	let Attachments_HTML = "";
+	if (Message.attachments !== null){
+		let Files;
+		try{
+			Files = JSON.parse(Message.attachments) || [];
+		}catch(Error){
+			Files = [];
+		}
+		if (!Array.isArray(Files))
+			Files = [];
+		if (Files.length && Is_file_an_image(Files[0])){
+			Attachments_HTML = `
+				<div class="attachments">
+					<img src="/attachments/${encodeURIComponent(Files[0])}" loading="lazy">
+				</div>
+			`;
+		}
+	}
+
 	const Div = document.createElement("div");
 	Div.className = "message";
 	Div.innerHTML = `
@@ -89,6 +115,7 @@ function Create_message_element(Message, Date_object){
 			<span class="user">${Escape_HTML(Message.user_name)}</span>
 		</div>
 		<span class="content">${Normalize_content(Message.content || "")}</span>
+		${Attachments_HTML}
 	`;
 	return Div;
 }

@@ -74,3 +74,11 @@ header, footer {
 	word-wrap: break-word;
 	text-align: justify;
 }
+.message .attachments img{
+	max-width: 450px;
+	max-height: 350px;
+	border-radius: 6px;
+	margin-top: 6px;
+	display: block;
+	object-fit: contain;
+}

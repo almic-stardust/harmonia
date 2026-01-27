@@ -8,7 +8,6 @@ from Config_manager import Config
 import DB_manager
 
 Display_history = FastAPI()
-Display_history.mount("/static", StaticFiles(directory="static"), name="static")
 History_table = Config["history"]["db_table"]
 
 # Server_ID and Chan_ID are 19-digit Discord identifiers. Their size conflits with Pydantic (used by

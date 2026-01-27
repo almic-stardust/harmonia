@@ -105,26 +105,30 @@ The ASGI server I use is Hypercorn. On the system where you want to run it:
 	% cd harmonia/display_history
 	% hypercorn -k uvloop -w 4 --bind localhost:60444 --certfile /path/to/cert.pem --keyfile /path/to/key.pem --access-logfile - Main:Display_history
 
-Then you need to configure nginx (for example), with a VirtualServer acting as a reverse proxy
-towards localhost:60444. The history should now be accessible at:
+Then you need to configure nginx (for example), with a site configured to act as a reverse proxy
+towards localhost:60444. You need a nginx alias /static/ for harmonia/display\_history/static/ and
+another nginx alias /attachments/ for the storage folder specified in Config.yaml. Once this is
+done, the history should be accessible at:
 
 	https://domain.tld/chan/server_id/chan_id
 
 It could be useful to create a SystemD service, so that Hypercorn starts when the system boots. If
-you read French, I wrote a [Hypercorn tutorial](https://almic.fr/blog/2026/01/19/asgi-hypercorn/)
+you read French, I wrote a
+[tutorial for Hypercorn](https://almic.fr/blog/2026/01/19/asgi-hypercorn/) (nginx configuration,
+TLS certificate, and SystemD service).
 
-Instead of Hypercorn you can use Uvicorn, which by default displays a digest log on its standard
-output. It’s useful during development.
+Instead of Hypercorn you can use Uvicorn, which displays a digest log on its standard output. It’s
+useful during development.
 
 	# apt install uvicorn
-	% python3 -m uvicorn Main:Display_history --host LAN_IP --port 8080  --reload
+	% python3 -m uvicorn Main:Display_history --host LAN_IP --port 60081 --reload
 
 Or, if you must have the very latest version:
 
 	% python3 -m venv ~/.local/uvicorn-python3.13
 	% ~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi PyYAML mysqlclient
-	% ~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host LAN_IP --port 8080 --reload
+	% ~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host LAN_IP --port 60081 --reload
 
 Now the history should also be accessible at:
 
-	http://LAN_IP:8080/chan/server_id/chan_id
+	http://LAN_IP:60081/chan/server_id/chan_id
