@@ -103,7 +103,7 @@ The ASGI server I use is Hypercorn. On the system where you want to run it:
 
 	# apt install python3-hypercorn python3-fastapi python3-yaml python3-mysqldb
 	% cd harmonia/display_history
-	% hypercorn --certfile /path/to/cert.pem --keyfile /path/to/key.pem --bind '127.0.0.1:60444' Main:Display_history
+	% hypercorn -k uvloop -w 4 --bind localhost:60444 --certfile /path/to/cert.pem --keyfile /path/to/key.pem --access-logfile - Main:Display_history
 
 Then you need to configure nginx (for example), with a VirtualServer acting as a reverse proxy
 towards localhost:60444. The history should now be accessible at:
@@ -111,9 +111,7 @@ towards localhost:60444. The history should now be accessible at:
 	https://domain.tld/chan/server_id/chan_id
 
 It could be useful to create a SystemD service, so that Hypercorn starts when the system boots. If
-you read French, I wrote a blog post about Hypercorn:
-
-	https://almic.fr/blog/2026/01/19/asgi-hypercorn/
+you read French, I wrote a [Hypercorn tutorial](https://almic.fr/blog/2026/01/19/asgi-hypercorn/)
 
 Instead of Hypercorn you can use Uvicorn, which by default displays a digest log on its standard
 output. It’s useful during development.
