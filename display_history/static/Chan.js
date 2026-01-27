@@ -25,12 +25,8 @@ function DB_to_local_time(DB_date){
 	if (isNaN(UTC_date.getTime()))
 		return null;
 	return new Date(
-		UTC_date.getFullYear(),
-		UTC_date.getMonth(),
-		UTC_date.getDate(),
-		UTC_date.getHours(),
-		UTC_date.getMinutes(),
-		UTC_date.getSeconds()
+		UTC_date.getFullYear(), UTC_date.getMonth(), UTC_date.getDate(),
+		UTC_date.getHours(), UTC_date.getMinutes(), UTC_date.getSeconds()
 	);
 }
 

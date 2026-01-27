@@ -21,7 +21,7 @@ Functions specific to Discord, like handling events concerning sent/deleted mess
 IRC\_related.py  
 Functions specific to IRC, using pydle.
 
-display\_history/
+display\_history/  
 Everything related to the web display of the history
 
 # Installation
@@ -106,24 +106,27 @@ The ASGI server I use is Hypercorn. On the system where you want to run it:
 	% hypercorn --certfile /path/to/cert.pem --keyfile /path/to/key.pem --bind '127.0.0.1:60444' Main:Display_history
 
 Then you need to configure nginx (for example), with a VirtualServer acting as a reverse proxy
-towards 127.0.0.1:60444. Also, it could be useful to create a service in SystemD, so that Hypercorn
-starts when the system boots.
-
-The history should now be accessible at:
+towards localhost:60444. The history should now be accessible at:
 
 	https://domain.tld/chan/server_id/chan_id
 
-Instead of Hypercorn, you can use uvicorn. Its option --reload made it useful during development.
+It could be useful to create a SystemD service, so that Hypercorn starts when the system boots. If
+you read French, I wrote a blog post about Hypercorn:
+
+	https://almic.fr/blog/2026/01/19/asgi-hypercorn/
+
+Instead of Hypercorn you can use Uvicorn, which by default displays a digest log on its standard
+output. It’s useful during development.
 
 	# apt install uvicorn
-	% python3 -m uvicorn Main:Display_history --host Local_IP --port 8080  --reload
+	% python3 -m uvicorn Main:Display_history --host LAN_IP --port 8080  --reload
 
 Or, if you must have the very latest version:
 
 	% python3 -m venv ~/.local/uvicorn-python3.13
 	% ~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi PyYAML mysqlclient
-	% ~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host Local_IP --port 8080 --reload
+	% ~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host LAN_IP --port 8080 --reload
 
 Now the history should also be accessible at:
 
-	http://domain.tld:8080/chan/server_id/chan_id
+	http://LAN_IP:8080/chan/server_id/chan_id
