@@ -22,7 +22,7 @@ IRC\_related.py
 Functions specific to IRC, using pydle.
 
 display\_history/  
-Everything related to the web display of the history
+Everything related to the web display of the history.
 
 # Installation
 
@@ -105,17 +105,16 @@ The ASGI server I use is Hypercorn. On the system where you want to run it:
 	% cd harmonia/display_history
 	% hypercorn -k uvloop -w 4 --bind localhost:60444 --certfile /path/to/cert.pem --keyfile /path/to/key.pem --access-logfile - Main:Display_history
 
-Then you need to configure nginx (for example), with a site configured to act as a reverse proxy
-towards localhost:60444. You need a nginx alias /static/ for harmonia/display\_history/static/ and
+Then you need to configure nginx (for example), with a site acting as a reverse proxy towards
+localhost:60444. You also need a nginx alias /static/ for harmonia/display\_history/static/ and
 another nginx alias /attachments/ for the storage folder specified in Config.yaml. Once this is
 done, the history should be accessible at:
 
 	https://domain.tld/chan/server_id/chan_id
 
-It could be useful to create a SystemD service, so that Hypercorn starts when the system boots. If
-you read French, I wrote a
-[tutorial for Hypercorn](https://almic.fr/blog/2026/01/19/asgi-hypercorn/) (nginx configuration,
-TLS certificate, and SystemD service).
+It could be useful to create a SystemD unit, so that Hypercorn starts when the system boots. If you
+read French, I wrote a [tutorial for Hypercorn](https://almic.fr/blog/2026/01/19/asgi-hypercorn/)
+(nginx configuration, TLS certificate, and SystemD service).
 
 Instead of Hypercorn you can use Uvicorn, which displays a digest log on its standard output. It’s
 useful during development.

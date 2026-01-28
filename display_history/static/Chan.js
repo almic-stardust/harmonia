@@ -88,34 +88,53 @@ function Create_message_element(Message, Date_object){
 
 	let Attachments_HTML = "";
 	if (Message.attachments !== null){
-		let Files;
+		let Files = [];
 		try{
+			// We do “|| []” to prevent the Files variable from becoming null
 			Files = JSON.parse(Message.attachments) || [];
 		}catch(Error){
 			Files = [];
 		}
-		if (!Array.isArray(Files))
-			Files = [];
-		if (Files.length && Is_file_an_image(Files[0])){
-			Attachments_HTML = `
-				<div class="attachments">
-					<img src="/attachments/${encodeURIComponent(Files[0])}" loading="lazy">
-				</div>
-			`;
+		if (Array.isArray(Files) && Files.length){
+			Attachments_HTML = `<div class="attachments">`;
+			if (Files.length == 1){
+				if (Is_file_an_image(Files[0])){
+					Attachments_HTML = `
+						<div class="one_image">
+							<img src="/attachments/${encodeURIComponent(Files[0])}" loading="lazy">
+						</div>
+					`;
+				}
+			}
+			else{
+				const Image_files = Files.filter(File => Is_file_an_image(File));
+				if (Image_files.length){
+					let Images_HTML = "";
+					Image_files.forEach(File => {
+						Images_HTML += `
+							<img src="/attachments/${encodeURIComponent(File)}" loading="lazy">
+						`;
+					});
+					Attachments_HTML += `<div class="multiple_images">${Images_HTML}</div>`;
+				}
+			}
+			Attachments_HTML += `</div>`;
 		}
 	}
 
 	const Div = document.createElement("div");
 	Div.className = "message";
 	Div.innerHTML = `
-		<div class="meta">
+		<div class="metadata">
 			<span class="time"
 				title="${Date_message.Full_timestamp}">${Date_message.Time_part}
 			</span>
 			<span class="user">${Escape_HTML(Message.user_name)}</span>
 		</div>
-		<span class="content">${Normalize_content(Message.content || "")}</span>
-		${Attachments_HTML}
+		<div class="content_block">
+			<span class="content">${Normalize_content(Message.content || "")}</span>
+			${Attachments_HTML}
+		</div>
 	`;
 	return Div;
 }
