@@ -97,26 +97,22 @@ function Create_message_element(Message, Date_object){
 		}
 		if (Array.isArray(Files) && Files.length){
 			Attachments_HTML = `<div class="attachments">`;
-			if (Files.length == 1){
-				if (Is_file_an_image(Files[0])){
-					Attachments_HTML = `
-						<div class="one_image">
-							<img src="/attachments/${encodeURIComponent(Files[0])}" loading="lazy">
-						</div>
-					`;
-				}
+			const Image_files = Files.filter(File => Is_file_an_image(File));
+			if (Image_files.length == 1){
+				Attachments_HTML = `
+					<div class="one_image">
+						<img src="/attachments/${encodeURI(Files[0])}" loading="eager">
+					</div>
+				`;
 			}
 			else{
-				const Image_files = Files.filter(File => Is_file_an_image(File));
-				if (Image_files.length){
-					let Images_HTML = "";
-					Image_files.forEach(File => {
-						Images_HTML += `
-							<img src="/attachments/${encodeURIComponent(File)}" loading="lazy">
-						`;
-					});
-					Attachments_HTML += `<div class="multiple_images">${Images_HTML}</div>`;
-				}
+				let Images_HTML = "";
+				Image_files.forEach(File => {
+					Images_HTML += `
+						<img src="/attachments/${encodeURI(File)}" loading="eager">
+					`;
+				});
+				Attachments_HTML += `<div class="multiple_images">${Images_HTML}</div>`;
 			}
 			Attachments_HTML += `</div>`;
 		}
@@ -207,11 +203,18 @@ async function Load_messages(Initial=false){
 	// Prepend the batch of older messages at the top
 	Container.prepend(Fragment);
 
-	// Restore scroll position so the view doesn’t jump
-	if (Initial)
-		window.scrollTo(0, document.body.scrollHeight);
-	else
-		window.scrollTo(0, document.body.scrollHeight - Old_scroll_height);
+	// Set scroll position so the view doesn’t jump. Use requestAnimationFrame twice to wait for
+	// full layout
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			if (Initial)
+				New_scroll_height = document.body.scrollHeight;
+			else
+				New_scroll_height = document.body.scrollHeight - Old_scroll_height;
+			window.scrollTo(0, New_scroll_height);
+		});
+	});
+
 	// Update cursor for the next request
 	Next_cursor = Data.Next_cursor;
 	// Update the date of the message now at the top of the page
