@@ -2,8 +2,8 @@ html, body {
 	margin: 0;
 	padding: 0;
 }
-header, footer {
-	flex: none;						/* header and footer take natural height */
+body.no_scroll {
+	overflow: hidden;
 }
 #Display_history {
 	display: flex;
@@ -94,4 +94,29 @@ header, footer {
 	border-radius: 0.5em;
 	object-fit: cover;
 	cursor: pointer;
+}
+#lightbox {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0,0,0,0.90);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+}
+#lightbox img {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	cursor: zoom-out;
+}
+#lightbox_image {
+	cursor: grab; /* shows hand when hover */
+	transition: transform 0.05s ease-out; /* smooth zoom */
+}
+#lightbox_image:active {
+	cursor: grabbing;
 }

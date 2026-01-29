@@ -101,7 +101,7 @@ function Create_message_element(Message, Date_object){
 			if (Image_files.length == 1){
 				Attachments_HTML = `
 					<div class="one_image">
-						<img src="/attachments/${encodeURI(Files[0])}" loading="eager">
+						<img src="/attachments/${encodeURI(Files[0])}" loading="lazy">
 					</div>
 				`;
 			}
@@ -109,7 +109,7 @@ function Create_message_element(Message, Date_object){
 				let Images_HTML = "";
 				Image_files.forEach(File => {
 					Images_HTML += `
-						<img src="/attachments/${encodeURI(File)}" loading="eager">
+						<img src="/attachments/${encodeURI(File)}" loading="lazy">
 					`;
 				});
 				Attachments_HTML += `<div class="multiple_images">${Images_HTML}</div>`;
@@ -226,6 +226,143 @@ async function Load_messages(Initial=false){
 window.addEventListener("scroll", () => {
 	if (window.scrollY <= 5)
 		Load_messages();
+});
+
+// Lightbox to show images fullscreen
+const Lightbox = document.getElementById("lightbox");
+const LB_image = document.getElementById("lightbox_image");
+let LB_images = [];
+let LB_index = -1;
+let LB_zoom = 1;
+let LB_offset_X = 0;
+let LB_offset_Y = 0;
+let LB_dragging = false;
+let LB_drag_start_X = 0;
+let LB_drag_start_Y = 0;
+function Close_lightbox(){
+	Lightbox.style.display = "none";
+	LB_image.src = "";
+	LB_image.style.transform = "";
+	document.body.classList.remove("no_scroll");
+}
+
+// Zoom in the lightbox
+Lightbox.addEventListener("wheel", (Event) => {
+	Event.preventDefault();
+	// Zoom step
+	const Zoom_factor = 0.1;
+	// Update zoom
+	if (Event.deltaY < 0)
+		// Scroll up: zoom in
+		LB_zoom *= 1 + Zoom_factor;
+	else
+		// Scroll down: zoom out
+		LB_zoom /= 1 + Zoom_factor;
+	// Limit the zoom to 10 levels
+	LB_zoom = Math.min(Math.max(LB_zoom, 1), 10);
+	// Update view with current offsets
+	LB_image.style.transform = `translate(${LB_offset_X}px, ${LB_offset_Y}px) scale(${LB_zoom})`;
+}, { passive: false });
+
+// Panning in lightbox with mouse drag
+LB_image.addEventListener("mousedown", (Event) => {
+	Event.preventDefault();
+	LB_dragging = true;
+	LB_drag_start_X = Event.clientX - LB_offset_X;
+	LB_drag_start_Y = Event.clientY - LB_offset_Y;
+});
+LB_image.addEventListener("mousemove", (Event) => {
+	if (!LB_dragging)
+		return;
+	LB_offset_X = Event.clientX - LB_drag_start_X;
+	LB_offset_Y = Event.clientY - LB_drag_start_Y;
+	LB_image.style.transform = `translate(${LB_offset_X}px, ${LB_offset_Y}px) scale(${LB_zoom})`;
+});
+LB_image.addEventListener("mouseup", () => {
+	LB_dragging = false;
+});
+
+// Close the lightbox on double-click
+Lightbox.addEventListener("dblclick", () => {
+	Close_lightbox();
+});
+
+// Mouse events
+Container.addEventListener("click", Event => {
+	// If an image is clicked, show it fullscreen in a lightbox
+	if (Event.target.tagName === "IMG"){
+		// Find parent message
+		const Message_div = Event.target.closest(".message");
+		if (!Message_div)
+			return;
+		// If the message contains multiple images, activate navigation with PageUp and PageDown
+		LB_images = Array.from(
+			Message_div.querySelectorAll(".one_image img, .multiple_images img")
+		);
+		LB_index = LB_images.indexOf(Event.target);
+		if (LB_index === -1)
+			return;
+		document.body.classList.add("no_scroll");
+		LB_image.src = Event.target.src;
+		Lightbox.style.display = "flex";
+		// Reset zoom and pan
+		LB_image.style.transform = `translate(0px, 0px) scale(1)`;
+		LB_zoom = 1;
+		LB_offset_X = 0;
+		LB_offset_Y = 0;
+	}
+});
+
+// Keyboard shortcuts
+document.addEventListener("keydown", Event => {
+	if (Lightbox.style.display !== "flex")
+		return;
+	if (Event.key === "PageDown") {
+		// Wrap-around (last → first and first ← last)
+		LB_index = (LB_index + 1) % LB_images.length;
+		LB_zoom = 1;
+		LB_offset_X = 0;
+		LB_offset_Y = 0;
+		LB_image.style.transform = "";
+		LB_image.src = LB_images[LB_index].src;
+		Event.preventDefault();
+	}
+	if (Event.key === "PageUp") {
+		LB_index = (LB_index - 1 + LB_images.length) % LB_images.length;
+		LB_zoom = 1;
+		LB_offset_X = 0;
+		LB_offset_Y = 0;
+		LB_image.style.transform = "";
+		LB_image.src = LB_images[LB_index].src;
+		Event.preventDefault();
+	}
+
+	// Panning when the lightbox is zoomed
+	const Pan_step = 50; // Each key press move the image of Pan_step pixels
+	if (LB_zoom > 1) {
+		switch (Event.key) {
+			case "ArrowUp":
+				LB_offset_Y += Pan_step;
+				break;
+			case "ArrowDown":
+				LB_offset_Y -= Pan_step;
+				break;
+			case "ArrowLeft":
+				LB_offset_X += Pan_step;
+				break;
+			case "ArrowRight":
+				LB_offset_X -= Pan_step;
+				break;
+		}
+		LB_image.style.transform = `translate(${LB_offset_X}px, ${LB_offset_Y}px) scale(${LB_zoom})`;
+		Event.preventDefault();
+	}
+
+	// Close lightbox
+	if (Event.key === "Escape"){
+		Close_lightbox();
+		Event.preventDefault();
+	}
 });
 
 // Load the last 50 messages
