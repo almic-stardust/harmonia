@@ -83,10 +83,24 @@ function Is_file_an_image(Path){
 	return /\.(png|jpe?g|gif|webp)$/i.test(Path);
 }
 
+function File_icon(Path){
+	Icon = "📎";
+	if (!Path)
+		return Icon;
+	const Extension = Path.split(".").pop().toLowerCase();
+	if (Extension === "pdf")
+		Icon = "📄";
+	if (Extension === "zip" || Extension === "rar" || Extension === "7z")
+		Icon = "🗜️";
+	if (Extension === "txt")
+		Icon = "📃";
+	return Icon;
+}
+
 function Create_message_element(Message, Date_object){
 	const Date_message = Format_date(Date_object);
 
-	let Attachments_HTML = "";
+	let HTML_attachments = "";
 	if (Message.attachments !== null){
 		let Files = [];
 		try{
@@ -96,25 +110,57 @@ function Create_message_element(Message, Date_object){
 			Files = [];
 		}
 		if (Array.isArray(Files) && Files.length){
-			Attachments_HTML = `<div class="attachments">`;
 			const Image_files = Files.filter(File => Is_file_an_image(File));
-			if (Image_files.length == 1){
-				Attachments_HTML = `
-					<div class="one_image">
-						<img src="/attachments/${encodeURI(Files[0])}" loading="lazy">
-					</div>
-				`;
-			}
-			else{
-				let Images_HTML = "";
+			const Other_files = Files.filter(File => !Is_file_an_image(File));
+			HTML_attachments = `<div class="attachments">`;
+			if (Image_files.length == 1 && !Other_files.length)
+				// Just one image = max-height 350px
+				Image_class = "one_image";
+			else
+				// Multiple images, or one image and other file(s) = 150x150px thumbnails
+				Image_class = "multiple_images";
+			if (Image_files.length){
+				let HTML_images = "";
 				Image_files.forEach(File => {
-					Images_HTML += `
-						<img src="/attachments/${encodeURI(File)}" loading="lazy">
+					let Hover_name = File.split("/").pop();
+					// If the filename starts with “YYYYMMDD—”, don’t display it on hover
+					Hover_name = Hover_name.replace(/^\d{8}—/, "");
+					Hover_name = Hover_name.replace(/_/g, " ");
+					// Remove extension
+					Hover_name = Hover_name.replace(/\.[^.]+$/, "");
+					Hover_name = Escape_HTML(Hover_name);
+					HTML_images += `<img src="/attachments/${encodeURI(File)}"
+							title="${Hover_name}" loading="lazy">`;
+				});
+				HTML_attachments += `<div class="${Image_class}">${HTML_images}</div>`;
+			}
+			// Non-image files
+			if (Other_files.length){
+				let HTML_files = `<div class="file_attachments">`;
+				Other_files.forEach(File => {
+					const Icon = File_icon(File);
+					const Filename = File.split("/").pop();
+					const Hover_name = Escape_HTML(Filename);
+					let Displayed_name = Filename.replace(/^\d{8}—/, "");
+					// Limit displayed filename to 30 characters (add ellipsis if truncated)
+					if (Displayed_name.length > 30)
+						Displayed_name = Displayed_name.slice(0, 29) + "…";
+					// Escape_HTML last, so as not to cut inside entities like &amp;
+					Displayed_name = Escape_HTML(Displayed_name);
+					HTML_files += `
+						<a class="file_attachment" href="/attachments/${encodeURI(File)}"
+								target="_blank">
+							<span class="file_icon">${Icon}</span>
+							<span class="file_name" title="${Hover_name}">
+								&nbsp;${Displayed_name}
+							</span>
+						</a>
 					`;
 				});
-				Attachments_HTML += `<div class="multiple_images">${Images_HTML}</div>`;
+				HTML_files += `</div>`;
+				HTML_attachments += HTML_files;
 			}
-			Attachments_HTML += `</div>`;
+			HTML_attachments += `</div>`;
 		}
 	}
 
@@ -129,7 +175,7 @@ function Create_message_element(Message, Date_object){
 		</div>
 		<div class="content_block">
 			<span class="content">${Normalize_content(Message.content || "")}</span>
-			${Attachments_HTML}
+			${HTML_attachments}
 		</div>
 	`;
 	return Div;

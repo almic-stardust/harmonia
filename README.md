@@ -1,6 +1,6 @@
 # Harmonia
 
-A bot to set up a bridge between Discord and IRC.
+A Discord bot that saves history, and provides a bridge towards IRC.
 
 # Code structure
 

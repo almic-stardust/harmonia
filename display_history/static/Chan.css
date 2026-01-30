@@ -23,10 +23,10 @@ body.no_scroll {
 }
 
 .date_separator {
+	margin: 0.8em 0;
 	display: flex;
 	align-items: center;
-	margin: 0.8em 0;
-	color: #2aa198;					/* teal-blue */
+	color: #2aa198;					/* teal */
 	font-size: 0.9em;
 }
 .date_separator::before, .date_separator::after {
@@ -43,18 +43,18 @@ body.no_scroll {
 }
 
 .message {
+	margin-bottom: 2px;
 	display: flex;
 	flex-direction: row;			/* metadata and content_block side by side */
 	align-items: flex-start;		/* top-align content */
-	margin-bottom: 2px;
 	line-height: 1.4em;
 }
 .message .metadata {				/* timestamp + username **/
+	margin-right: 0.5em;
 	flex: none;						/* fixed width */
 	display: flex;
 	flex-direction: row;			/* stack time and user */
-	align-items: flex-start;		/* top align */
-	margin-right: 0.5em;
+	align-items: flex-start;
 	white-space: nowrap;
 }
 .message .time {
@@ -77,22 +77,31 @@ body.no_scroll {
 }
 
 .message .content_block .attachments {
-	display: flex;
-	gap: 0.3em;
 	margin-top: 0.2em;
+	display: flex;
 	flex-wrap: wrap;
+	/* Prioritize saving vertical space, even if it means files buttons looking vertically awkward
+	   next to larger images */
+	align-items: flex-start;
+	gap: 0.3em;
 }
+
 .message .content_block .one_image img {
 	max-height: 350px;
 	width: auto;
 	border-radius: 0.5em;
-	object-fit: contain;
+	object-fit: contain;			/* display in full, maintain ratio by reducing */
+}
+.message .content_block .multiple_images {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3em;
 }
 .message .content_block .multiple_images img {
 	height: 150px;
 	width: 150px;
 	border-radius: 0.5em;
-	object-fit: cover;
+	object-fit: cover;				/* fill up container, maintain ratio by cropping */
 	cursor: pointer;
 }
 #lightbox {
@@ -114,9 +123,39 @@ body.no_scroll {
 	cursor: zoom-out;
 }
 #lightbox_image {
-	cursor: grab; /* shows hand when hover */
+	cursor: grab;					/* shows hand when hover */
 	transition: transform 0.05s ease-out; /* smooth zoom */
 }
 #lightbox_image:active {
 	cursor: grabbing;
+}
+
+.file_attachments {
+	display: flex;
+	flex-direction: row;
+	border-radius: 0.5em;
+	padding: 0.3em;
+	gap: 0.3em;
+	background: #cccccc;
+}
+.file_attachment {
+	display: flex;
+	align-items: center;
+	border-radius: 0.5em;
+	padding: 0.3em 0.5em;
+	background: white;
+	color: #0074e3;					/* blue used by Discord for attachment links */
+	text-decoration: none;
+}
+.file_attachment:hover {
+	background: #000000;
+	color: #dfffff;
+}
+.file_icon {
+	font-size: 1.4em;
+}
+.file_name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
