@@ -25,12 +25,12 @@ Users_buffers = {}
 History_table = Config["history"]["db_table"]
 # TODO I’ll deal with that later
 History_keep_all = True
+HTTP_session = None
 
 ###############################################################################
 # General
 ###############################################################################
 
-HTTP_session = None
 async def Init_webhooks():
 	global HTTP_session
 	HTTP_session = aiohttp.ClientSession()
@@ -62,6 +62,31 @@ async def quit(Context):
 # Handling messages
 ###############################################################################
 
+def Split_message(Message):
+	# Discord limits message size = split the message into parts of 2000 characters or less
+	Splitted_message = []
+	Current_part = ""
+	# If the response contains several lines, it must be split into several strings
+	Lines = Message.split("\n")
+	for Line in Lines:
+		# The +1 is for the newline character
+		if len(Current_part) + len(Line) + 1 > 2000:
+			Splitted_message.append(Current_part)
+			# Start a new part
+			Current_part = Line
+		else:
+			if Current_part:
+				Current_part += "\n" + Line
+			else:
+				Current_part = Line
+	# Add the remaining part (the string Message = X parts of 2000c + a remaining part)
+	if Current_part:
+		Splitted_message.append(Current_part)
+	return Splitted_message
+
+def Is_command(Message):
+	return Message.content.startswith(tuple(bot.command_prefix))
+
 async def Rate_limiter_for_IRC(Author, Author_name):
 
 	await asyncio.sleep(5)
@@ -92,8 +117,13 @@ async def Rate_limiter_for_IRC(Author, Author_name):
 		for Message in Messages_to_relay:
 			await IRC_manager.Instance.Send_message(Author_name, Message)
 	else:
-		await bot.get_channel(Config["discord"]["chan"]).send(
-			f"{Author.mention} Too many messages in a short time. Nothing was forwarded to IRC."
+		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
+		# Discord, meaning a network request
+		Chan = bot.get_channel(Config["discord"]["chan"])
+		if not Chan:
+			Chan = await bot.fetch_channel(Config["discord"]["chan"])
+		await Chan.send(
+				f"{Author.mention} Too many messages in a short time. Nothing was forwarded to IRC."
 		)
 
 	# Cleanup buffer once decision is made
@@ -102,7 +132,6 @@ async def Rate_limiter_for_IRC(Author, Author_name):
 @bot.event
 async def on_message(Message):
 
-	global History_table
 	Author = Message.author
 	Chan = Message.channel
 
@@ -134,7 +163,7 @@ async def on_message(Message):
 	Content = Message.clean_content.strip()
 	# If the Discord message has attachments, add their URLs at the end of the message send on IRC
 	if Message.attachments:
-		# If there's no message, no need to put a | before the URLs
+		# If there’s no message, no need to put a | before the URLs
 		if Content:
 			Content += " | "
 		Content += " | ".join(Attachment.url for Attachment in Message.attachments)
@@ -148,9 +177,6 @@ async def on_message(Message):
 	if Buffer["task"] is None:
 		# Attach the task to discord.py’s managed loop
 		Buffer["task"] = bot.loop.create_task(Rate_limiter_for_IRC(Author, Author_name))
-
-def Is_command(Message):
-	return Message.content.startswith(tuple(bot.command_prefix))
 
 def Translate_Discord_formatting_to_IRC(Message):
 	# Map Discord MarkDown to IRC control codes
@@ -175,45 +201,29 @@ async def Relay_IRC_message(IRC_chan, Author_name, Message):
 			Author_name = User["discord_username"]
 			# A user could request a specific username on Discord, but without requesting an avatar
 			Avatar = User.get("avatar", f"https://robohash.org/{Author_name}.png")
-		await Webhook.send(content=Message, username=Author_name, avatar_url=Avatar)
+		await Webhook.send(Message, username=Author_name, avatar_url=Avatar)
 	else:
 		Message = f"<**{Author_name}**> {Message}"
-		await bot.get_channel(Config["discord"]["chan"]).send(Message)
-
-def Split_message(Message):
-	# Discord limits message size = split the message into parts of 2000 characters or less
-	Splitted_message = []
-	Current_part = ""
-	# If the response contains several lines, it must be split into several strings
-	Lines = Message.split("\n")
-	for Line in Lines:
-		# The +1 is for the newline character
-		if len(Current_part) + len(Line) + 1 > 2000:
-			Splitted_message.append(Current_part)
-			# Start a new part
-			Current_part = Line
-		else:
-			if Current_part:
-				Current_part += "\n" + Line
-			else:
-				Current_part = Line
-	# Add the remaining part (the string Message = X parts of 2000c + a remaining part)
-	if Current_part:
-		Splitted_message.append(Current_part)
-	return Splitted_message
+		Chan = bot.get_channel(Config["discord"]["chan"])
+		if not Chan:
+			Chan = await bot.fetch_channel(Config["discord"]["chan"])
+		await Chan.send(Message)
 
 @bot.event
-async def on_raw_message_edit(Payload):
-	global History_table
-	global History_keep_all
-	Chan = await bot.fetch_channel(Payload.channel_id)
-	Message = await Chan.fetch_message(Payload.message_id)
-	History.Message_edited(History_table, History_keep_all, Message)
+async def on_message_edit(Old_message, New_message):
+	# Check if the text or the attachments have changed
+	Text_changed = (Old_message.content or "") != (New_message.content or "")
+	Old_files = [File.filename for File in Old_message.attachments]
+	New_files = [File.filename for File in New_message.attachments]
+	# Compare the filenames, not the attachments objects
+	Attachments_changed = set(Old_files) != set(New_files)
+	# Don’t record Discord automatic edits (resolving links, webhook normalization, etc)
+	if not Text_changed and not Attachments_changed:
+		return
+	History.Message_edited(History_table, History_keep_all, New_message)
 
 @bot.event
 async def on_raw_message_delete(Payload):
-	global History_table
-	global History_keep_all
 	History.Message_deleted(History_table, History_keep_all, Payload.message_id)
 
 ###############################################################################

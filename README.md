@@ -1,6 +1,6 @@
 # Harmonia
 
-A Discord bot that saves history, and provides a bridge towards IRC.
+A Discord bot that saves history, display it on a website, and provides a bridge towards IRC.
 
 # Code structure
 
@@ -86,7 +86,7 @@ Finally, you can start the bot:
 
 # Web display of the history
 
-If you need this additional feature, here is the procedure to follow.
+Here is the procedure to set up this feature.
 
 	% cd harmonia/display_history
 	% ln -s ../DB_manager.py

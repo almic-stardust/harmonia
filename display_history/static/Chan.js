@@ -113,11 +113,11 @@ function Create_message_element(Message, Date_object){
 			const Image_files = Files.filter(File => Is_file_an_image(File));
 			const Other_files = Files.filter(File => !Is_file_an_image(File));
 			HTML_attachments = `<div class="attachments">`;
+			// Just one image = max-height 350px
 			if (Image_files.length == 1 && !Other_files.length)
-				// Just one image = max-height 350px
 				Image_class = "one_image";
+			// Multiple images, or one image and other file(s) = 150x150px thumbnails
 			else
-				// Multiple images, or one image and other file(s) = 150x150px thumbnails
 				Image_class = "multiple_images";
 			if (Image_files.length){
 				let HTML_images = "";
@@ -297,12 +297,11 @@ Lightbox.addEventListener("wheel", (Event) => {
 	Event.preventDefault();
 	// Zoom step
 	const Zoom_factor = 0.1;
-	// Update zoom
+	// Scroll up: zoom in
 	if (Event.deltaY < 0)
-		// Scroll up: zoom in
 		LB_zoom *= 1 + Zoom_factor;
+	// Scroll down: zoom out
 	else
-		// Scroll down: zoom out
 		LB_zoom /= 1 + Zoom_factor;
 	// Limit the zoom to 10 levels
 	LB_zoom = Math.min(Math.max(LB_zoom, 1), 10);
@@ -363,7 +362,7 @@ Container.addEventListener("click", Event => {
 document.addEventListener("keydown", Event => {
 	if (Lightbox.style.display !== "flex")
 		return;
-	if (Event.key === "PageDown") {
+	if (Event.key === "PageDown" || Event.key === " ") {
 		// Wrap-around (last → first and first ← last)
 		LB_index = (LB_index + 1) % LB_images.length;
 		LB_zoom = 1;
@@ -373,7 +372,7 @@ document.addEventListener("keydown", Event => {
 		LB_image.src = LB_images[LB_index].src;
 		Event.preventDefault();
 	}
-	if (Event.key === "PageUp") {
+	if (Event.key === "PageUp" || Event.key === "Backspace") {
 		LB_index = (LB_index - 1 + LB_images.length) % LB_images.length;
 		LB_zoom = 1;
 		LB_offset_X = 0;

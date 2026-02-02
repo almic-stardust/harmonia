@@ -1,117 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import datetime
-from zoneinfo import ZoneInfo
-import aiohttp
 import os
 import re
-import glob
-import smtplib
-import email.utils
-from email.mime.text import MIMEText
 
 from Config_manager import Config
 import DB_manager
-
-async def Download_attachments(Table, Message):
-	global History_table
-	Attachments_filenames = []
-	Oversized_files = []
-	Max_size = 10485760 # 10 MB
-	Storage_dir = Config["history"].get("storage_folder")
-	if not os.path.exists(Storage_dir):
-		os.makedirs(Storage_dir)
-	for Attachment in Message.attachments:
-		async with aiohttp.ClientSession() as Session:
-			async with Session.get(Attachment.url) as Response:
-				if Response.status == 200:
-					File_size = int(Response.headers.get("Content-Length", 0))
-					if File_size > Max_size:
-						Oversized_files.append(Attachment.url)
-						Attachments_filenames.append(Attachment.url)
-					else:
-						Date = Message.created_at.astimezone(ZoneInfo("Europe/Paris")).strftime('%Y%m%d')
-						Base_name, File_ext = os.path.splitext(Attachment.filename)
-						# Discord already strips the em dashes (“—”) from filenames
-						#Base_name = Base_name.replace("—", "_")
-						Base_name = f"{Date}—" + Base_name
-						Filename = f"{Base_name}{File_ext}"
-						File_pattern = os.path.join(Storage_dir, f"{Base_name}*{File_ext}")
-						Matching_files = glob.glob(File_pattern)
-						if Matching_files:
-							# If there’s only one file, rename it to add “—1” at the end of its base
-							# name, and put “—2” in the base name of the current file
-							if len(Matching_files) == 1:
-								Stored_old_path = Matching_files[0]
-								Stored_old_name = os.path.basename(Stored_old_path)
-								Stored_old_base_name = os.path.splitext(Stored_old_path)[0]
-								Stored_new_name = f"{Base_name}—1{File_ext}"
-								# If the file was deleted but kept in storage
-								if Stored_old_base_name.endswith("_DELETED"):
-									Stored_new_name = f"{Base_name}—1_DELETED{File_ext}"
-								Stored_new_path = os.path.join(Storage_dir, Stored_new_name)
-								os.rename(Stored_old_path, Stored_new_path)
-								DB_manager.History_update_filename(Table,
-										Stored_old_name, Stored_new_name
-								)
-								Filename = f"{Base_name}—2{File_ext}"
-							# If there’s several duplicates, they will already have the format
-							# AAAAMMJJ—Name_on_Discord—Number[_DELETED].ext, therefore no need to
-							# rename them.
-							# Assign a unique number at the end of the base name of the current
-							# file, by determining the biggest suffix that has already been
-							# assigned (even if one of the duplicate files has been deleted from
-							# Discord and not kept in the storage folder).
-							else:
-								Duplicates_suffixes = []
-								for File in Matching_files:
-									Parts = os.path.splitext(os.path.basename(File))[0].split("—")
-									# Filename could be AAAAMMJJ—Name_on_Discord—Number_DELETED.ext
-									Parts[-1] = Parts[-1].replace("_DELETED", "")
-									# If the filename matches AAAAMMJJ—Name_on_Discord—Number.ext
-									if len(Parts) == 3 and Parts[-1].isdigit():
-										Duplicates_suffixes.append(int(Parts[-1]))
-								Suffix = max(Duplicates_suffixes) + 1
-								Filename = f"{Base_name}—{Suffix}{File_ext}"
-						File_path = os.path.join(Storage_dir, Filename)
-						with open(File_path, "wb") as File:
-							File.write(await Response.read())
-						Attachments_filenames.append(Filename)
-	if Oversized_files:
-		#Notification_for_oversized_files(Oversized_files)
-		print("Notification_for_oversized_files")
-	return Attachments_filenames
-
-def Delete_attachments(Table, Keep, Attachments):
-	Updated_filenames = []
-	Storage_dir = Config["history"].get("storage_folder")
-	if not os.path.exists(Storage_dir):
-		print(f"Warning: The folder where the attachments were stored isn’t accessible.")
-		return
-	for Filename in Attachments:
-		# File already deleted: don’t tag it twice, instead keep it as it is
-		if Keep and "_DELETED" in Filename:
-			Updated_filenames.append(Filename)
-			continue
-		File_path = os.path.join(Storage_dir, Filename)
-		if Keep:
-			if os.path.exists(File_path):
-				Base_name, File_ext = os.path.splitext(Filename)
-				New_filename = f"{Base_name}_DELETED{File_ext}"
-				New_file_path = os.path.join(Storage_dir, New_filename)
-				os.rename(File_path, New_file_path)
-			else:
-				print(f"Warning: File {Filename} not found.")
-				# To avoid losing all reference, keep the filename in the DB but mark it invalid
-				New_filename = f"INVALID_{Filename}"
-			Updated_filenames.append(New_filename)
-		else:
-			try:
-				os.remove(File_path)
-			except OSError as e:
-				print(f"Warning: can’t delete file {Filename}: {e}")
-	return Updated_filenames
+import Attachments_manager
 
 async def Message_added(Table, Author_name, Chan, Message):
 	# Don’t record the content of the bot’s log chan
@@ -124,14 +19,15 @@ async def Message_added(Table, Author_name, Chan, Message):
 	if Message.reference and Message.reference.resolved:
 		Replied_message_ID = Message.reference.resolved.id
 	if len(Message.attachments) > 0:
-		Attachments = await Download_attachments(Table, Message)
+		Attachments_filenames = await Attachments_manager.Download_from_Discord(Table, Message)
 	else:
-		Attachments = None
+		Attachments_filenames = []
 	DB_manager.History_addition(Table,
+			# Time in UTC without timezone (MariaDB DATETIME doesn’t support timezone offsets)
 			Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
 			Server_ID, Chan.id, Message.id,
 			Replied_message_ID,
-			Author_name, Message.content, Attachments
+			Author_name, Message.content, Attachments_filenames
 	)
 
 def Message_edited(Table, Keep, Message):
@@ -145,7 +41,7 @@ def Message_edited(Table, Keep, Message):
 	if Old_attachments:
 		New_attachments = []
 		Updated_filenames = []
-		# Must be a list because Delete_attachments() is also used by Message_deleted()
+		# Must be a list because Attachments_manager.Delete() is also used by Message_deleted()
 		Removed_attachments = []
 		for Attachment in Message.attachments:
 			New_attachments.append(Attachment.filename)
@@ -167,7 +63,7 @@ def Message_edited(Table, Keep, Message):
 			else:
 				Removed_attachments.append(Attachment)
 		if Removed_attachments:
-			Updated_filenames += Delete_attachments(Table, Keep, Removed_attachments)
+			Updated_filenames += Attachments_manager.Delete(Table, Keep, Removed_attachments)
 			Content = f"The file {Removed_attachments[0]} was deleted.\n\n{Content}"
 	DB_manager.History_edition(Table, Keep,
 			Message.id, datetime.datetime.now().isoformat(), Content, Updated_filenames
@@ -179,9 +75,9 @@ def Message_deleted(Table, Keep, Message_ID):
 		print(f"[History] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
 		return
 	Updated_filenames = []
-	Attachments = DB_entry[7] if DB_entry[7] else []
-	if Attachments:
-		Updated_filenames = Delete_attachments(Table, Keep, Attachments)
+	Attachments_filenames = DB_entry[7] if DB_entry[7] else []
+	if Attachments_filenames:
+		Updated_filenames = Attachments_manager.Delete(Table, Keep, Attachments_filenames)
 	DB_manager.History_deletion(Table, Keep,
 			Message_ID, datetime.datetime.now().isoformat(), Updated_filenames
 	)

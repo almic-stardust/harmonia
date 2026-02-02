@@ -4,6 +4,7 @@ import sys
 import yaml
 
 with open("Config.yaml", "r") as File:
+	# Config is a variable, so this file is named Config_manager.py
 	Config = yaml.safe_load(File)
 
 if Config.get("irc_users"):

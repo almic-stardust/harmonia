@@ -67,24 +67,27 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 				(Message_ID,)
 		)
 		Result = Cursor.fetchone()
-		if not Result:
-			Attachments = json.dumps(Attachments)
-			Cursor.execute(f"""
-					INSERT INTO {Table} (
-							date_creation,
-							server_id, chan_id, message_id,
-							reply_to,
-							user_name, content, attachments)
-							VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
-					, (
-							Date,
-							Server_ID, Chan_ID, Message_ID,
-							Replied_message_ID,
-							Discord_username, Content, Attachments
-					)
-			)
-		else:
+		if Result:
 			print("[DB] Warning: this message was already stored in the DB.")
+			return
+		Attachments = json.dumps(Attachments)
+		# If the list is empty, save NULL in the attachments field
+		if len(Attachments) == 0:
+			Attachments = None
+		Cursor.execute(f"""
+				INSERT INTO {Table} (
+						date_creation,
+						server_id, chan_id, message_id,
+						reply_to,
+						user_name, content, attachments)
+						VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+				, (
+						Date,
+						Server_ID, Chan_ID, Message_ID,
+						Replied_message_ID,
+						Discord_username, Content, Attachments
+				)
+		)
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
