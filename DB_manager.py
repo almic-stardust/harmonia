@@ -70,9 +70,10 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		if Result:
 			print("[DB] Warning: this message was already stored in the DB.")
 			return
-		Attachments = json.dumps(Attachments)
+		if len(Attachments) > 0:
+			Attachments = json.dumps(Attachments)
 		# If the list is empty, save NULL in the attachments field
-		if len(Attachments) == 0:
+		else:
 			Attachments = None
 		Cursor.execute(f"""
 				INSERT INTO {Table} (

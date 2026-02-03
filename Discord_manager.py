@@ -2,15 +2,17 @@
 
 import discord
 from discord.ext import commands
-import asyncio
 import time
+import asyncio
 import aiohttp
+import os
 import re
 
 from Config_manager import Config
 import DB_manager
 import History
 import IRC_manager
+import Attachments_manager
 
 intents = discord.Intents.default()
 # Allows to receive member join/leave events
@@ -191,7 +193,26 @@ def Translate_Discord_formatting_to_IRC(Message):
 	return Message
 
 async def Relay_IRC_message(IRC_chan, Author_name, Message):
+
+	Storage_dir = Config["history"].get("storage_folder") + "/other_sources"
+	Files_for_Discord = []
+
+	Pattern_any_URL = r"(https?://\S+)"
+	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
+	Images_URLs = re.findall(Pattern_image_URL, Message)
+	if Images_URLs:
+		Attachments = await Attachments_manager.Download_from_IRC(History_table, Images_URLs)
+		if Attachments:
+			for File in Attachments:
+				File_path = os.path.join(Storage_dir, File)
+				Files_for_Discord.append(discord.File(File_path))
+			# Remove images URLs from message body
+			Message = re.sub(Pattern_image_URL, "", Message).strip()
+	# Replace any remaining URLs with HTML links
+	else:
+		Message = re.sub(Pattern_any_URL, r'<a href="\1">\1</a>', Message)
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
+
 	Chan = Config["webhooks"].get(IRC_chan.lstrip("#"))
 	if Chan:
 		Webhook = discord.Webhook.from_url(Chan, session=HTTP_session)
@@ -201,13 +222,17 @@ async def Relay_IRC_message(IRC_chan, Author_name, Message):
 			Author_name = User["discord_username"]
 			# A user could request a specific username on Discord, but without requesting an avatar
 			Avatar = User.get("avatar", f"https://robohash.org/{Author_name}.png")
-		await Webhook.send(Message, username=Author_name, avatar_url=Avatar)
+		await Webhook.send(Message,
+				username=Author_name,
+				avatar_url=Avatar,
+				files=Files_for_Discord
+		)
 	else:
 		Message = f"<**{Author_name}**> {Message}"
 		Chan = bot.get_channel(Config["discord"]["chan"])
 		if not Chan:
 			Chan = await bot.fetch_channel(Config["discord"]["chan"])
-		await Chan.send(Message)
+		await Chan.send(Message, files=Files_for_Discord)
 
 @bot.event
 async def on_message_edit(Old_message, New_message):
