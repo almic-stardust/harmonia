@@ -33,7 +33,7 @@ irc:
   password:             ""
   username:             "my_bot"
   real_name:            "My Bot"
-  quit_message:         "That’s the end of the line"
+  quit_message:         "That’s the end of the beans"
 
 # If you want messages on Discord displayed as coming from the users instead of the bot.
 # See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks

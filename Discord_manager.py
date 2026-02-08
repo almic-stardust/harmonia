@@ -3,6 +3,8 @@
 import discord
 from discord.ext import commands
 import time
+import datetime
+from zoneinfo import ZoneInfo
 import asyncio
 import aiohttp
 import os
@@ -23,11 +25,11 @@ intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-Users_buffers = {}
 History_table = Config["history"]["db_table"]
 # TODO I’ll deal with that later
 History_keep_all = True
 HTTP_session = None
+Users_buffers = {}
 
 ###############################################################################
 # General
@@ -194,23 +196,32 @@ def Translate_Discord_formatting_to_IRC(Message):
 
 async def Relay_IRC_message(IRC_chan, Author_name, Message):
 
-	Storage_dir = Config["history"].get("storage_folder") + "/other_sources"
 	Files_for_Discord = []
-
-	Pattern_any_URL = r"(https?://\S+)"
 	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
 	Images_URLs = re.findall(Pattern_image_URL, Message)
+
 	if Images_URLs:
-		Attachments = await Attachments_manager.Download_from_IRC(History_table, Images_URLs)
-		if Attachments:
-			for File in Attachments:
-				File_path = os.path.join(Storage_dir, File)
+		Storage_folder = os.path.join(Config["history"].get("storage_folder"), "other_sources")
+		Date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime('%Y%m%d')
+		Max_size = 52428800 # 50 MB
+		Files_to_download = []
+		for URL in Images_URLs:
+			Filename = os.path.basename(URL.split("?")[0])
+			Filename = Filename.replace("—", "_")
+			Files_to_download.append({
+				"URL": URL,
+				"Destination_filename": Filename
+			})
+		if len(Files_to_download) > 0:
+			Downloaded_filenames = await Attachments_manager.Download(
+					History_table, Storage_folder, Date, Files_to_download, Max_size
+			)
+			for Filename in Downloaded_filenames:
+				File_path = os.path.join(Storage_folder, Filename)
 				Files_for_Discord.append(discord.File(File_path))
 			# Remove images URLs from message body
 			Message = re.sub(Pattern_image_URL, "", Message).strip()
-	# Replace any remaining URLs with HTML links
-	else:
-		Message = re.sub(Pattern_any_URL, r'<a href="\1">\1</a>', Message)
+
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 
 	Chan = Config["webhooks"].get(IRC_chan.lstrip("#"))
@@ -222,17 +233,17 @@ async def Relay_IRC_message(IRC_chan, Author_name, Message):
 			Author_name = User["discord_username"]
 			# A user could request a specific username on Discord, but without requesting an avatar
 			Avatar = User.get("avatar", f"https://robohash.org/{Author_name}.png")
-		await Webhook.send(Message,
-				username=Author_name,
-				avatar_url=Avatar,
-				files=Files_for_Discord
+		await Webhook.send(
+				Message, username=Author_name, avatar_url=Avatar, files=Files_for_Discord, 
+				# Doesn’t affect images explicitly uploaded
+				suppress_embeds=True
 		)
 	else:
 		Message = f"<**{Author_name}**> {Message}"
 		Chan = bot.get_channel(Config["discord"]["chan"])
 		if not Chan:
 			Chan = await bot.fetch_channel(Config["discord"]["chan"])
-		await Chan.send(Message, files=Files_for_Discord)
+		await Chan.send(Message, files=Files_for_Discord, suppress_embeds=True)
 
 @bot.event
 async def on_message_edit(Old_message, New_message):
