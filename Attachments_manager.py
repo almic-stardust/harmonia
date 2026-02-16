@@ -12,6 +12,7 @@ from email.mime.text import MIMEText
 
 from Config_manager import Config
 import DB_manager
+import Discord_manager
 
 # Attachments is a variable, so this file is named Attachments_manager.py
 async def Download(Table, Storage_folder, Date, Attachments, Max_size):
@@ -53,6 +54,7 @@ async def Download_from_Discord(Table, Message):
 	Attachments = []
 
 	for Attachment in Message.attachments:
+		Discord_filename = Attachment.filename
 		Base_name, File_ext = os.path.splitext(Attachment.filename)
 		# Em dashes would conflict with the handling of duplicates, but Discord already removes them
 		#Base_name = Base_name.replace("—", "_")
@@ -96,6 +98,8 @@ async def Download_from_Discord(Table, Message):
 				Suffix = max(Duplicates_suffixes) + 1
 				Destination_filename = f"{Base_name}—{Suffix}{File_ext}"
 
+		Discord_manager.Register_destination_in_MDF(Discord_filename, Destination_filename)
+
 		# Check if the filename is already present in the other_sources folder, as it may have
 		# been downloaded from another source than Discord.
 		# Discord can change filenames, so those received from Discord will not necessarily match
@@ -103,7 +107,6 @@ async def Download_from_Discord(Table, Message):
 		# we have yet no trace of the original filename, then checking here will miss some files.
 		# Nevertheless, checking here will work for the vast majority of files, and avoids writing
 		# them twice on the disk. Thus slightly reducing its wear.
-		Discord_filename = Attachment.filename
 		Other_source_file_path = os.path.join(Other_source_folder, Discord_filename)
 		if os.path.exists(Other_source_file_path):
 			Destination_path = os.path.join(Storage_folder, Destination_filename)

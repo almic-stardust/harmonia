@@ -30,6 +30,7 @@ History_table = Config["history"]["db_table"]
 History_keep_all = True
 HTTP_session = None
 Users_buffers = {}
+Map_downloaded_filenames = {}
 
 ###############################################################################
 # General
@@ -194,8 +195,21 @@ def Translate_Discord_formatting_to_IRC(Message):
 		Message = re.sub(Pattern, Replacement, Message, count=0)
 	return Message
 
+# Register the original filename in Map_downloaded_filenames
+def Register_original_in_MDF(Discord_filename, Original_filename):
+	global Map_downloaded_filenames
+	Entry = Map_downloaded_filenames.setdefault(Discord_filename, {})
+	Entry["Original_filename"] = Original_filename
+
+# Register the destination filename in Map_downloaded_filenames
+def Register_destination_in_MDF(Discord_filename, Destination_filename):
+	global Map_downloaded_filenames
+	Entry = Map_downloaded_filenames.setdefault(Discord_filename, {})
+	Entry["Destination_filename"] = Destination_filename
+
 async def Relay_IRC_message(IRC_chan, Author_name, Message):
 
+	global Map_downloaded_filenames
 	Files_for_Discord = []
 	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
 	Images_URLs = re.findall(Pattern_image_URL, Message)
@@ -233,17 +247,41 @@ async def Relay_IRC_message(IRC_chan, Author_name, Message):
 			Author_name = User["discord_username"]
 			# A user could request a specific username on Discord, but without requesting an avatar
 			Avatar = User.get("avatar", f"https://robohash.org/{Author_name}.png")
-		await Webhook.send(
-				Message, username=Author_name, avatar_url=Avatar, files=Files_for_Discord, 
+		Sent_message = await Webhook.send(
+				Message, username=Author_name, avatar_url=Avatar, files=Files_for_Discord,
 				# Doesn’t affect images explicitly uploaded
-				suppress_embeds=True
+				suppress_embeds=True,
+				# Otherwise Discord doesn’t return the created message
+				wait=True
 		)
 	else:
 		Message = f"<**{Author_name}**> {Message}"
 		Chan = bot.get_channel(Config["discord"]["chan"])
 		if not Chan:
 			Chan = await bot.fetch_channel(Config["discord"]["chan"])
-		await Chan.send(Message, files=Files_for_Discord, suppress_embeds=True)
+		Sent_message = await Chan.send(Message, files=Files_for_Discord, suppress_embeds=True)
+
+	if Sent_message and len(Sent_message.attachments) > 0:
+		for Index, Attachment in enumerate(Sent_message.attachments):
+			# Files_for_Discord was built in the same order since Discord preserves attachment order
+			Discord_filename = Attachment.filename
+			# In this case, Destination_filename points to the original filename in other_sources
+			Original_filename = Files_to_download[Index]["Destination_filename"]
+			Register_original_in_MDF(Discord_filename, Original_filename)
+		Storage_folder = Config["history"].get("storage_folder")
+		Other_sources = os.path.join(Storage_folder, "other_sources")
+		for Attachment in Sent_message.attachments:
+			Discord_filename = Attachment.filename
+			# .pop() because once this file has been processed, its key will no longer be needed
+			Mapped_file = Map_downloaded_filenames.pop(Discord_filename)
+			if not Mapped_file or "Original_filename" not in Mapped_file \
+					or "Destination_filename" not in Mapped_file:
+				continue
+			Original_path = os.path.join(Other_sources, Mapped_file["Original_filename"])
+			Destination_path = os.path.join(Storage_folder, Mapped_file["Destination_filename"])
+			if os.path.exists(Original_path):
+				# Replace the file downloaded from Discord with the original one
+				os.replace(Original_path, Destination_path)
 
 @bot.event
 async def on_message_edit(Old_message, New_message):
