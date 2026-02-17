@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 import aiohttp
 import glob
 import os
-import shutil
 import smtplib
 import email.utils
 from email.mime.text import MIMEText
@@ -49,7 +48,7 @@ async def Download_from_Discord(Table, Message):
 
 	Storage_folder = Config["history"].get("storage_folder")
 	Other_source_folder = os.path.join(Storage_folder, "other_sources")
-	Date = Message.created_at.astimezone(ZoneInfo("Europe/Paris")).strftime('%Y%m%d')
+	Date = Message.created_at.astimezone(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
 	Downloaded_filenames = []
 	Attachments = []
 
@@ -98,19 +97,24 @@ async def Download_from_Discord(Table, Message):
 				Suffix = max(Duplicates_suffixes) + 1
 				Destination_filename = f"{Base_name}—{Suffix}{File_ext}"
 
-		Discord_manager.Register_destination_in_MDF(Discord_filename, Destination_filename)
+		# When Discord changes the filename, duplicates (see comment just below) can only be handled
+		# in Discord_manager.py
+		Discord_manager.Register_destination_in_MPD(Discord_filename, Destination_filename)
 
 		# Check if the filename is already present in the other_sources folder, as it may have
-		# been downloaded from another source than Discord.
-		# Discord can change filenames, so those received from Discord will not necessarily match
-		# the original filenames. And since on_message() from Discord_manager.py brings us here when
-		# we have yet no trace of the original filename, then checking here will miss some files.
-		# Nevertheless, checking here will work for the vast majority of files, and avoids writing
-		# them twice on the disk. Thus slightly reducing its wear.
+		# been downloaded from another source than Discord. And if the attachments are images, the
+		# version we receive from Discord has gone through their processing, which can recompress
+		# images. Since the original is already on the disk, there’s no point in keeping a version
+		# potentially degraded by Discord.
+		# Discord can change filenames, so those received from Discord won’t necessarily match the
+		# original filenames. And since on_message() from Discord_manager.py brings us here at a
+		# time when we have yet no trace of the original filename, that means the following check
+		# will miss some files. Nevertheless, checking here will work for the majority of files, and
+		# avoids writing them twice on the disk.
 		Other_source_file_path = os.path.join(Other_source_folder, Discord_filename)
 		if os.path.exists(Other_source_file_path):
 			Destination_path = os.path.join(Storage_folder, Destination_filename)
-			shutil.move(Other_source_file_path, Destination_path)
+			os.replace(Other_source_file_path, Destination_path)
 			Downloaded_filenames.append(Destination_filename)
 			continue
 		else:
@@ -120,15 +124,18 @@ async def Download_from_Discord(Table, Message):
 			})
 
 	if len(Attachments) > 0:
+		# The same message may contain files with names changed or not by Discord, and
+		# Downloaded_filenames can already contain filenames not changed. Therefore a temporary list
 		# Max_size = 0 because Discord sets its own limit on attachments’ size (today it’s 10 MB)
-		Downloaded_filenames = await Download(Table, Storage_folder, Date, Attachments, 0)
+		Temp_list = await Download(Table, Storage_folder, Date, Attachments, 0)
+		Downloaded_filenames.extend(Temp_list)
 	return Downloaded_filenames
 
 def Delete(Table, Keep, Attachments):
 	Updated_filenames = []
 	Storage_folder = Config["history"].get("storage_folder")
 	if not os.path.exists(Storage_folder):
-		print(f"Warning: The folder where the attachments were stored isn’t accessible.")
+		print(f"[Attachments] Warning: The folder for the attachments isn’t accessible.")
 		return
 	for Filename in Attachments:
 		# File already deleted: don’t tag it twice, instead keep it as it is

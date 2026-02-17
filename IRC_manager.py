@@ -91,7 +91,7 @@ class Connection_handler(pydle.Client):
 		# The bot ignores its own messages
 		if Author == self.nickname:
 			return
-		if Message.startswith('!quit') and Author == Config["irc"]["bot_owner"]:
+		if Message.startswith("!quit") and Author == Config["irc"]["bot_owner"]:
 			await Discord_manager.Stop_bot(self)
 			return
 		print(f"[I] <{Author}> {Message}")

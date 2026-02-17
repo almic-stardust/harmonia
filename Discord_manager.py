@@ -2,6 +2,7 @@
 
 import discord
 from discord.ext import commands
+from discord.ext import tasks
 import time
 import datetime
 from zoneinfo import ZoneInfo
@@ -30,7 +31,7 @@ History_table = Config["history"]["db_table"]
 History_keep_all = True
 HTTP_session = None
 Users_buffers = {}
-Map_downloaded_filenames = {}
+Map_pending_downloads = {}
 
 ###############################################################################
 # General
@@ -66,6 +67,52 @@ async def quit(Context):
 ###############################################################################
 # Handling messages
 ###############################################################################
+
+# Handling files whose names have been changed by Discord: check once a day if there are files in
+# the folder other_sources, and if so, overwrite the Discord version with the original file.
+#	The files whose names aren’t modified by Discord will be managed in Attachments_manager.py, but
+#	others will remain in the folder other_sources. Original filenames can’t be known from
+#	Attachments_manager.py, it’s called by on_message() via History.Message_added(). And handling
+#	files with modified names here in Discord_manager.py, either inside on_message() or at the end
+#	of Relay_IRC_message(), that comes across a race condition.
+@tasks.loop(hours=24)
+async def Reconcile_downloaded_files():
+	global Map_pending_downloads
+	Storage_folder = Config["history"].get("storage_folder")
+	Other_sources = os.path.join(Storage_folder, "other_sources")
+	if not os.path.exists(Storage_folder):
+		print(f"[Discord_m] Warning: The folder for the attachments isn’t accessible.")
+		return
+	if not os.path.exists(Other_sources):
+		print(f"[Discord_m] Warning: The folder for other sources attachments isn’t accessible.")
+		return
+	try:
+		# list() prevents runtime modification errors
+		for Discord_filename, Filenames_map in list(Map_pending_downloads.items()):
+			if not Filenames_map or "Original_filename" not in Filenames_map \
+					or "Destination_filename" not in Filenames_map:
+				continue
+			Original_path = os.path.join(Other_sources, Filenames_map["Original_filename"])
+			Destination_path = os.path.join(Storage_folder, Filenames_map["Destination_filename"])
+			# Address the rare cases where the task runs precisely when a file with a name modified
+			# by Discord is being processed in Attachments_manager.py. If the file has already been
+			# downloaded in other_sources, but hasn’t yet passed through Discord, then the task
+			# could move the original from other_sources to Storage_folder, just before the version
+			# from Discord arrives in Storage_folder.
+			# If this confluence of circumstances occurs, don’t deal with this file this time. It’ll
+			# be processed during the next execution of the task.
+			if not os.path.exists(Destination_path):
+				continue
+			if os.path.exists(Original_path):
+				# Replace the file downloaded from Discord with the original one
+				os.replace(Original_path, Destination_path)
+			# If the file was in other_sources: once processed, its key is no longer needed.
+			# If the file wasn’t there: that means its name wasn’t changed by Discord, and it had
+			# already been moved in Storage_folder by Attachments_manager.py. So we can also delete
+			# its key.
+			del Map_pending_downloads[Discord_filename]
+	except Exception as Error:
+		print(f"[Discord_m] Warning: Reconcile_downloaded_files(): {Error}")
 
 def Split_message(Message):
 	# Discord limits message size = split the message into parts of 2000 characters or less
@@ -195,28 +242,28 @@ def Translate_Discord_formatting_to_IRC(Message):
 		Message = re.sub(Pattern, Replacement, Message, count=0)
 	return Message
 
-# Register the original filename in Map_downloaded_filenames
-def Register_original_in_MDF(Discord_filename, Original_filename):
-	global Map_downloaded_filenames
-	Entry = Map_downloaded_filenames.setdefault(Discord_filename, {})
+# Register the original filename in Map_pending_downloads
+def Register_original_in_MPD(Discord_filename, Original_filename):
+	global Map_pending_downloads
+	Entry = Map_pending_downloads.setdefault(Discord_filename, {})
 	Entry["Original_filename"] = Original_filename
 
-# Register the destination filename in Map_downloaded_filenames
-def Register_destination_in_MDF(Discord_filename, Destination_filename):
-	global Map_downloaded_filenames
-	Entry = Map_downloaded_filenames.setdefault(Discord_filename, {})
+# Register the destination filename in Map_pending_downloads
+def Register_destination_in_MPD(Discord_filename, Destination_filename):
+	global Map_pending_downloads
+	Entry = Map_pending_downloads.setdefault(Discord_filename, {})
 	Entry["Destination_filename"] = Destination_filename
 
 async def Relay_IRC_message(IRC_chan, Author_name, Message):
 
-	global Map_downloaded_filenames
+	global Map_pending_downloads
 	Files_for_Discord = []
 	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
 	Images_URLs = re.findall(Pattern_image_URL, Message)
 
 	if Images_URLs:
 		Storage_folder = os.path.join(Config["history"].get("storage_folder"), "other_sources")
-		Date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime('%Y%m%d')
+		Date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
 		Max_size = 52428800 # 50 MB
 		Files_to_download = []
 		for URL in Images_URLs:
@@ -267,21 +314,7 @@ async def Relay_IRC_message(IRC_chan, Author_name, Message):
 			Discord_filename = Attachment.filename
 			# In this case, Destination_filename points to the original filename in other_sources
 			Original_filename = Files_to_download[Index]["Destination_filename"]
-			Register_original_in_MDF(Discord_filename, Original_filename)
-		Storage_folder = Config["history"].get("storage_folder")
-		Other_sources = os.path.join(Storage_folder, "other_sources")
-		for Attachment in Sent_message.attachments:
-			Discord_filename = Attachment.filename
-			# .pop() because once this file has been processed, its key will no longer be needed
-			Mapped_file = Map_downloaded_filenames.pop(Discord_filename)
-			if not Mapped_file or "Original_filename" not in Mapped_file \
-					or "Destination_filename" not in Mapped_file:
-				continue
-			Original_path = os.path.join(Other_sources, Mapped_file["Original_filename"])
-			Destination_path = os.path.join(Storage_folder, Mapped_file["Destination_filename"])
-			if os.path.exists(Original_path):
-				# Replace the file downloaded from Discord with the original one
-				os.replace(Original_path, Destination_path)
+			Register_original_in_MPD(Discord_filename, Original_filename)
 
 @bot.event
 async def on_message_edit(Old_message, New_message):

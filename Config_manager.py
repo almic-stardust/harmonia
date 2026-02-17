@@ -11,7 +11,7 @@ if Config.get("irc_users"):
 	Config["users"] = {}
 	Config["users"]["irc_to_discord"] = Config["irc_users"]
 	Config["users"]["discord_to_irc"] = {
-		Data['discord_username']: Key
+		Data["discord_username"]: Key
 		for Key, Data in Config["irc_users"].items()
 	}
 	del Config["irc_users"]
