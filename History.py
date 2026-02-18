@@ -8,7 +8,7 @@ from Config_manager import Config
 import DB_manager
 import Attachments_manager
 
-async def Message_added(Table, Author_name, Chan, Message):
+async def Message_added(Table, Author_name, Chan, Message, Text):
 	# Don’t record the content of the bot’s log chan
 	#if Config.get("log_chan") == str(Chan):
 	#	return
@@ -27,7 +27,7 @@ async def Message_added(Table, Author_name, Chan, Message):
 			Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
 			Server_ID, Chan.id, Message.id,
 			Replied_message_ID,
-			Author_name, Message.content, Attachments_filenames
+			Author_name, Text, Attachments_filenames
 	)
 
 def Message_edited(Table, Keep, Message):

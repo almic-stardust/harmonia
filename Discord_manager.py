@@ -186,6 +186,7 @@ async def on_message(Message):
 
 	Author = Message.author
 	Chan = Message.channel
+	Text = Message.content
 
 	# Initially we bridge one chan only
 	if Message.channel.id != Config["discord"]["chan"]:
@@ -194,37 +195,40 @@ async def on_message(Message):
 	# Author.display_name =	server nickname if set, otherwise global display name if set, otherwise
 	# Discord username
 	Author_name = Author.display_name
-
 	# If a user has requested that the bot assign them a specific name on Discord, use it on Discord
 	# but use their IRC nick in the history and their messages transferred to IRC
 	if Config["users"]["discord_to_irc"].get(Author_name):
 		Author_name = Config["users"]["discord_to_irc"].get(Author_name)
-
-	await History.Message_added(History_table, Author_name, Chan, Message)
+	# If the message comes from IRC without a webhook
+	if Author == bot.user and Text.startswith("<**"):
+		Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
+		if Match:
+			Author_name = Match.group(1)
+			Text = Match.group(2)
+	await History.Message_added(History_table, Author_name, Chan, Message, Text)
 
 	# The bot ignores its own messages (including what it posted via a webhook)
 	if Author == bot.user or Message.webhook_id is not None:
 		return
-
 	# Exempt commands from buffering
 	if Is_command(Message):
 		# Forward the message to the bot’s command handler
 		await bot.process_commands(Message)
 		return
 
-	Content = Message.clean_content.strip()
-	# If the Discord message has attachments, add their URLs at the end of the message send on IRC
+	# Prepare the message and send it to IRC
+	Text = Message.clean_content.strip()
+	# If the Discord message has attachments, add their URLs at the end
 	if Message.attachments:
 		# If there’s no message, no need to put a | before the URLs
-		if Content:
-			Content += " | "
-		Content += " | ".join(Attachment.url for Attachment in Message.attachments)
-	print(f"[D] <{Author_name}> {Content}")
-
+		if Text:
+			Text += " | "
+		Text += " | ".join(Attachment.url for Attachment in Message.attachments)
+	print(f"[D] <{Author_name}> {Text}")
 	# To prevent (or rather limit) flood towards IRC
 	Now = time.monotonic()
 	Buffer = Users_buffers.setdefault(Author.id, {"messages": [], "task": None})
-	Buffer["messages"].append((Now, Content))
+	Buffer["messages"].append((Now, Text))
 	# Start the rate limiter only once
 	if Buffer["task"] is None:
 		# Attach the task to discord.py’s managed loop
