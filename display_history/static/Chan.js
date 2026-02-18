@@ -72,9 +72,54 @@ function Escape_HTML(Text){
 	return Div.innerHTML;
 }
 
-// Trim whitespaces and preserve line breaks
 function Normalize_content(Text){
-	return Escape_HTML(Text.trim()).replace(/\n/g, "<br>");
+	if (!Text)
+		return "";
+	// Trim whitespaces and escape
+	let Safe = Escape_HTML(Text.trim());
+	// Convert URLs into links
+	const URL_regex = /\b(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+	Safe = Safe.replace(URL_regex, Match => {
+		// Separate trailing punctuation
+		let Target = Match;
+		let Trailing = "";
+		const Ending_punctuation = Match.match(/[.…,!?;:]+$/);
+		if (Ending_punctuation){
+			Trailing = Ending_punctuation[0];
+			Target = Match.slice(0, -Trailing.length);
+		}
+		// Only strip unmatched closing parentheses, to avoid breaking links that contain them
+		if (Target.includes("(") || Target.includes(")")) {
+			let Open_parentheses = 0;
+			for (let Index = 0; Index < Target.length; Index++) {
+				if (Target[Index] === "(") Open_parentheses++;
+				else if (Target[Index] === ")") Open_parentheses--;
+			}
+			// If there are unmatched closing parentheses at the end
+			while (Open_parentheses < 0 && Target.endsWith(")")) {
+				Trailing = ")" + Trailing;
+				Target = Target.slice(0, -1);
+				Open_parentheses++;
+			}
+		}
+		let Text_link = Target;
+		// If the URL starts with www prepend https://
+		if (!/^https?:\/\//i.test(Target))
+			Target = "https://" + Target;
+		const Escaped_target = Target.replace(/"/g, "&quot;");
+		let Title = "";
+		if (Target.length < 100)
+			Text_link = Target;
+		// Shorten displayed text
+		else{
+			Text_link = Target.slice(0, 97) + "…";
+			Title = `title="${Escaped_target}"`;
+		}
+		return `<a href="${Escaped_target}" ${Title} target="_blank" rel="noopener noreferrer">${Text_link}</a>${Trailing}`;
+	});
+	// Preserve line breaks
+	Safe = Safe.replace(/\n/g, "<br>");
+	return Safe
 }
 
 function Is_file_an_image(Path){
