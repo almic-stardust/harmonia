@@ -10,6 +10,7 @@ import asyncio
 import aiohttp
 import os
 import re
+from urllib.parse import quote
 
 from Config_manager import Config
 import DB_manager
@@ -223,7 +224,19 @@ async def on_message(Message):
 		# If there’s no message, no need to put a | before the URLs
 		if Text:
 			Text += " | "
-		Text += " | ".join(Attachment.url for Attachment in Message.attachments)
+		Storage_base = Config["history"].get("storage_url")
+		# Ensure base ends with exactly one "/"
+		Storage_base = Storage_base.rstrip("/") + "/"
+		Urls = []
+		for Attachment in Message.attachments:
+			Filenames_map = Map_pending_downloads.get(Attachment.filename)
+			if Filenames_map:
+				# URL-encode safely
+				URL = Storage_base + quote(Filenames_map["Destination_filename"])
+			else:
+				URL = Attachment.url
+			Urls.append(URL)
+		Text += " | ".join(Urls)
 	print(f"[D] <{Author_name}> {Text}")
 	# To prevent (or rather limit) flood towards IRC
 	Now = time.monotonic()
