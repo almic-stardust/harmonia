@@ -224,15 +224,15 @@ async def on_message(Message):
 		# If there’s no message, no need to put a | before the URLs
 		if Text:
 			Text += " | "
-		Storage_base = Config["history"].get("storage_url")
+		URL_base = Config["history"].get("storage_url")
 		# Ensure base ends with exactly one "/"
-		Storage_base = Storage_base.rstrip("/") + "/"
+		URL_base = URL_base.rstrip("/") + "/"
 		Urls = []
 		for Attachment in Message.attachments:
 			Filenames_map = Map_pending_downloads.get(Attachment.filename)
 			if Filenames_map:
 				# URL-encode safely
-				URL = Storage_base + quote(Filenames_map["Destination_filename"])
+				URL = URL_base + quote(Filenames_map["Destination_filename"])
 			else:
 				URL = Attachment.url
 			Urls.append(URL)
@@ -271,7 +271,25 @@ def Register_destination_in_MPD(Discord_filename, Destination_filename):
 	Entry = Map_pending_downloads.setdefault(Discord_filename, {})
 	Entry["Destination_filename"] = Destination_filename
 
-async def Relay_IRC_message(IRC_chan, Author_name, Message):
+async def Get_replacement_avatar(Author_name, Discord_ID=None):
+	Avatars_folder = os.path.join(Config["history"].get("storage_folder"), "avatars")
+	if not os.path.exists(Avatars_folder):
+		os.makedirs(Avatars_folder)
+	Filename = f"{Author_name}.png"
+	Avatar_path = os.path.join(Avatars_folder, Filename)
+	if os.path.exists(Avatar_path):
+		return Filename
+	# Generate RoboHash URL: can use username, ID, or any stable seed
+	# Styles are available: robohash.org/<Seed>.png?set=setX (1 = robots, default. 2 = monsters)
+	Avatar_URL = f"https://robohash.org/{Author_name}.png?size=150x150"
+	async with aiohttp.ClientSession() as Session:
+		async with Session.get(Avatar_URL) as Response:
+			if Response.status == 200:
+				with open(Avatar_path, "wb") as f:
+					f.write(await Response.read())
+	return Filename
+
+async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
 	global Map_pending_downloads
 	Files_for_Discord = []
@@ -305,21 +323,31 @@ async def Relay_IRC_message(IRC_chan, Author_name, Message):
 	Chan = Config["webhooks"].get(IRC_chan.lstrip("#"))
 	if Chan:
 		Webhook = discord.Webhook.from_url(Chan, session=HTTP_session)
-		Avatar = f"https://robohash.org/{Author_name}.png"
-		User = Config["users"]["irc_to_discord"].get(Author_name)
+		Author_name = IRC_nick
+		Avatar_URL = None
+		User = Config["users"]["irc_to_discord"].get(IRC_nick)
 		if User:
-			Author_name = User["discord_username"]
-			# A user could request a specific username on Discord, but without requesting an avatar
-			Avatar = User.get("avatar", f"https://robohash.org/{Author_name}.png")
+			Author_name = User.get("discord_display_name")
+			Discord_username = User.get("discord_username")
+			Avatar_URL = User.get("avatar")
+			if not Avatar_URL:
+				Server = bot.get_guild(Config["discord"]["server"])
+				Discord_user = discord.utils.get(Server.members, name=Discord_username)
+				if Discord_user:
+					Avatar_URL = Discord_user.display_avatar.url
+		if not Avatar_URL:
+			Avatar_filename = await Get_replacement_avatar(IRC_nick)
+			Avatar_URL = Config["history"].get("storage_url").rstrip("/") + "/avatars/" \
+					+ quote(Avatar_filename)
 		Sent_message = await Webhook.send(
-				Message, username=Author_name, avatar_url=Avatar, files=Files_for_Discord,
+				Message, username=Author_name, avatar_url=Avatar_URL, files=Files_for_Discord,
 				# Doesn’t affect images explicitly uploaded
 				suppress_embeds=True,
 				# Otherwise Discord doesn’t return the created message
 				wait=True
 		)
 	else:
-		Message = f"<**{Author_name}**> {Message}"
+		Message = f"<**{IRC_nick}**> {Message}"
 		Chan = bot.get_channel(Config["discord"]["chan"])
 		if not Chan:
 			Chan = await bot.fetch_channel(Config["discord"]["chan"])

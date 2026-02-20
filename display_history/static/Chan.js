@@ -174,7 +174,7 @@ function Create_message_element(Message, Date_object){
 					// Remove extension
 					Hover_name = Hover_name.replace(/\.[^.]+$/, "");
 					Hover_name = Escape_HTML(Hover_name);
-					HTML_images += `<img src="/attachments/${encodeURI(File)}"
+					HTML_images += `<img src="/bot_files/${encodeURI(File)}"
 							title="${Hover_name}" loading="lazy">`;
 				});
 				HTML_attachments += `<div class="${Image_class}">${HTML_images}</div>`;
@@ -193,7 +193,7 @@ function Create_message_element(Message, Date_object){
 					// Escape_HTML last, so as not to cut inside entities like &amp;
 					Displayed_name = Escape_HTML(Displayed_name);
 					HTML_files += `
-						<a class="file_attachment" href="/attachments/${encodeURI(File)}"
+						<a class="file_attachment" href="/bot_files/${encodeURI(File)}"
 								target="_blank">
 							<span class="file_icon">${Icon}</span>
 							<span class="file_name" title="${Hover_name}">
