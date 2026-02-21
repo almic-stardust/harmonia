@@ -20,8 +20,13 @@ if Config.get("history") and Config["history"].get("active"):
 			print("[Config file] Error: the history is actived, but the storage folder isn’t specified.")
 			sys.exit(1)
 
-if not Config.get("webhooks"):
-	Config["webhooks"] = {}
+if Config.get("irc_bridges"):
+	#Go from: irc_chan = {discord_chan: X, webhook: Y}
+	#to:	  irc_chan = {irc_chan: "irc_chan", discord_chan: X, webhook: Y}
+	for IRC_chan in Config["irc_bridges"].keys():
+		Config["irc_bridges"][IRC_chan]["irc_chan"] = f"#{IRC_chan}"
+else:
+	Config["irc_bridges"] = {}
 
 Config["users"] = {
 	"irc_to_discord": {},

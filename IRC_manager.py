@@ -75,9 +75,10 @@ class Connection_handler(pydle.Client):
 
 	async def on_connect(self):
 		await super().on_connect()
-		await self.join(Config["irc"]["chan"])
-		print("[IRC] Connected to server and channel")
-		if Config["irc"].get("password"):
+		for Bridge in Config["irc_bridges"]:
+			await self.join(Config["irc_bridges"][Bridge]["irc_chan"])
+		print("[IRC] Connected to server and chans")
+		if Config["irc_info"].get("password"):
 			await self.message("NickServ",
 					f"identify {Config['irc']['nick']} {Config['irc']['password']}")
 			print("[IRC] Identified with nickserv")
@@ -91,11 +92,11 @@ class Connection_handler(pydle.Client):
 		# The bot ignores its own messages
 		if Author == self.nickname:
 			return
-		if Message.startswith("!quit") and Author == Config["irc"]["bot_owner"]:
+		if Message.startswith("!quit") and Author == Config["irc_info"]["bot_owner"]:
 			await Discord_manager.Stop_bot(self)
 			return
 		print(f"[I] <{Author}> {Message}")
 		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
 
-	async def Send_message(self, Author, Message):
-		await self.message(Config["irc"]["chan"], f"<\x02{Author}\x02> {Message}")
+	async def Send_message(self, Chan, Author, Message):
+		await self.message(Chan, f"<\x02{Author}\x02> {Message}")

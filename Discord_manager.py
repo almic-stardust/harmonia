@@ -66,6 +66,19 @@ async def quit(Context):
 		return
 
 ###############################################################################
+# Handling chans
+###############################################################################
+
+def Get_bridge_by_Discord_chan(Discord_chan_ID):
+	for Bridge in Config["irc_bridges"]:
+		if Config["irc_bridges"][Bridge]["discord_chan"] == Discord_chan_ID:
+			return Config["irc_bridges"][Bridge]
+	return None
+
+def Get_bridge_by_IRC_chan(IRC_chan):
+    return Config["irc_bridges"].get(IRC_chan.lstrip("#"))
+
+###############################################################################
 # Handling messages
 ###############################################################################
 
@@ -140,10 +153,10 @@ def Split_message(Message):
 def Is_command(Message):
 	return Message.content.startswith(tuple(bot.command_prefix))
 
-async def Rate_limiter_for_IRC(Author, Author_name):
+async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 
 	await asyncio.sleep(5)
-	Buffer = Users_buffers.get(Author.id)
+	Buffer = Users_buffers.get(Buffer_key)
 	if not Buffer:
 		return
 	Messages = []
@@ -168,33 +181,32 @@ async def Rate_limiter_for_IRC(Author, Author_name):
 			Messages_to_relay = Concatenated_messages
 	if Messages_to_relay:
 		for Message in Messages_to_relay:
-			await IRC_manager.Instance.Send_message(Author_name, Message)
+			await IRC_manager.Instance.Send_message(Bridge["irc_chan"], Author_name, Message)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request
-		Chan = bot.get_channel(Config["discord"]["chan"])
+		Chan = bot.get_channel(Bridge["discord_chan"])
 		if not Chan:
-			Chan = await bot.fetch_channel(Config["discord"]["chan"])
+			Chan = await bot.fetch_channel(Bridge["discord_chan"])
 		await Chan.send(
 				f"{Author.mention} Too many messages in a short time. Nothing was forwarded to IRC."
 		)
 
 	# Cleanup buffer once decision is made
-	Users_buffers.pop(Author.id, None)
+	Users_buffers.pop(Buffer_key, None)
 
 @bot.event
 async def on_message(Message):
 
 	Author = Message.author
-	Chan = Message.channel
 	Text = Message.content
 
-	# Initially we bridge one chan only
-	if Message.channel.id != Config["discord"]["chan"]:
+	Bridge = Get_bridge_by_Discord_chan(Message.channel.id)
+	if not Bridge:
 		return
 
-	# Author.display_name =	server nickname if set, otherwise global display name if set, otherwise
-	# Discord username
+	# Author.display_name = the server nickname if set, otherwise the global display name if set,
+	# otherwise the Discord username
 	Author_name = Author.display_name
 	# If a user has requested that the bot assign them a specific name on Discord, use it on Discord
 	# but use their IRC nick in the history and their messages transferred to IRC
@@ -206,7 +218,7 @@ async def on_message(Message):
 		if Match:
 			Author_name = Match.group(1)
 			Text = Match.group(2)
-	await History.Message_added(History_table, Author_name, Chan, Message, Text)
+	await History.Message_added(History_table, Author_name, Bridge["discord_chan"], Message, Text)
 
 	# The bot ignores its own messages (including what it posted via a webhook)
 	if Author == bot.user or Message.webhook_id is not None:
@@ -240,12 +252,15 @@ async def on_message(Message):
 	print(f"[D] <{Author_name}> {Text}")
 	# To prevent (or rather limit) flood towards IRC
 	Now = time.monotonic()
-	Buffer = Users_buffers.setdefault(Author.id, {"messages": [], "task": None})
+	Buffer_key = (Author.id, Bridge["discord_chan"])
+	Buffer = Users_buffers.setdefault(Buffer_key, {"messages": [], "task": None})
 	Buffer["messages"].append((Now, Text))
 	# Start the rate limiter only once
 	if Buffer["task"] is None:
 		# Attach the task to discord.py’s managed loop
-		Buffer["task"] = bot.loop.create_task(Rate_limiter_for_IRC(Author, Author_name))
+		Buffer["task"] = bot.loop.create_task(
+				Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name)
+		)
 
 def Translate_Discord_formatting_to_IRC(Message):
 	# Map Discord MarkDown to IRC control codes
@@ -293,9 +308,13 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
 	global Map_pending_downloads
 	Files_for_Discord = []
+
+	Bridge = Get_bridge_by_IRC_chan(IRC_chan)
+	if not Bridge:
+		return
+
 	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
 	Images_URLs = re.findall(Pattern_image_URL, Message)
-
 	if Images_URLs:
 		Storage_folder = os.path.join(Config["history"].get("storage_folder"), "other_sources")
 		Date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
@@ -320,9 +339,9 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 
-	Chan = Config["webhooks"].get(IRC_chan.lstrip("#"))
-	if Chan:
-		Webhook = discord.Webhook.from_url(Chan, session=HTTP_session)
+	Webhook_URL = Bridge.get("webhook")
+	if Webhook_URL:
+		Webhook = discord.Webhook.from_url(Webhook_URL, session=HTTP_session)
 		Author_name = IRC_nick
 		Avatar_URL = None
 		User = Config["users"]["irc_to_discord"].get(IRC_nick)
@@ -347,10 +366,10 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 				wait=True
 		)
 	else:
-		Message = f"<**{IRC_nick}**> {Message}"
-		Chan = bot.get_channel(Config["discord"]["chan"])
+		Chan = bot.get_channel(Bridge["discord_chan"])
 		if not Chan:
-			Chan = await bot.fetch_channel(Config["discord"]["chan"])
+			Chan = await bot.fetch_channel(Bridge["discord_chan"])
+		Message = f"<**{IRC_nick}**> {Message}"
 		Sent_message = await Chan.send(Message, files=Files_for_Discord, suppress_embeds=True)
 
 	if Sent_message and len(Sent_message.attachments) > 0:

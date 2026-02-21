@@ -30,12 +30,12 @@ async def on_ready():
 
 async def Start_bot():
 	IRC_manager.Instance = IRC_manager.Connection_handler(
-		nickname=Config["irc"]["nick"],
-		username=Config["irc"]["username"],
-		realname=Config["irc"]["real_name"]
+		nickname=Config["irc_info"]["nick"],
+		username=Config["irc_info"]["username"],
+		realname=Config["irc_info"]["real_name"]
 	)
 	await IRC_manager.Instance.connect(
-		hostname=Config["irc"]["server"],
+		hostname=Config["irc_info"]["server"],
 		tls=True,
 		tls_verify=False
 	)
