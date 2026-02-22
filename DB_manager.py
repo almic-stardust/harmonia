@@ -257,3 +257,36 @@ def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 	finally:
 		Cursor.close()
 		Connection.close()
+
+def Get_chans_for_server(Table, Server_ID):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"""
+				SELECT DISTINCT chan_id
+				FROM {Table}
+				WHERE server_id = %s
+				ORDER BY chan_id
+		""", (Server_ID,))
+		Result = Cursor.fetchall()
+		if Result:
+			List_chans = []
+			IRC_bridges = Config.get("irc_bridges", {})
+			for Row in Result:
+				Chan_ID = Row[0]
+				for IRC_chan in IRC_bridges:
+					if IRC_bridges[IRC_chan]["discord_chan"] == Chan_ID:
+						Chan_name = IRC_bridges[IRC_chan]["irc_chan"]
+				List_chans.append({
+						"chan_id": Chan_ID,
+						"name": Chan_name,
+				})
+		return List_chans
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()

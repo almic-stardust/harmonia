@@ -10,6 +10,11 @@ import DB_manager
 Display_history = FastAPI()
 History_table = Config["history"]["db_table"]
 
+@Display_history.get("/api/server/{Server_ID}/chans")
+def API_channels(Server_ID: str):
+	Chans = DB_manager.Get_chans_for_server(History_table, Server_ID)
+	return {"Chans": Chans}
+
 # Server_ID and Chan_ID are 19-digit Discord identifiers. Their size conflits with Pydantic (used by
 # FastAPI), which enforces a 32-bit limit for integers by default. Since these are juste identifiers
 # and not numbers to be computed, we use strings.
