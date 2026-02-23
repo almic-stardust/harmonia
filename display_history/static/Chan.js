@@ -1,18 +1,40 @@
 (() => {
 
-const Container = document.getElementById("messages");
-if (!Container)
+const Messages_container = document.getElementById("messages");
+if (!Messages_container)
 	return;
+
+const Messages = document.getElementById("messages");
 // Retrieve variables from URL: domain.tld/chan/<Server_ID>/<Chan_ID>
-const Path = window.location.pathname.split("/");
-const Server_ID = Path[2];
-const Chan_ID = Path[3];
+const URL_variables = window.location.pathname.split("/");
+const Server_ID = URL_variables[2];
+const Chan_ID = URL_variables[3];
 // Prevent concurrent loads when the user scrolls quickly and hits the top repeatedly
 let Is_loading = false;
 // Cursor used when fetching messages older than the currently oldest one
 let Next_cursor = null;
 // Date of the message at the top of the page
 let UTaM_top_page = null;
+
+async function Load_chans(){
+	const Response = await fetch(`/api/server/${Server_ID}/chans`);
+	if (!Response.ok)
+		return;
+	const Data = await Response.json();
+	const Chans_panel = document.getElementById("chans_panel");
+	Chans_panel.innerHTML = "";
+	Data.Chans.forEach(Chan => {
+		const Div = document.createElement("div");
+		Div.className = "chan_entry";
+		Div.textContent = Chan.name;
+		if (Chan.id === Chan_ID)
+			Div.classList.add("active");
+		Div.addEventListener("click", () => {
+			window.location.href = `/chan/${Server_ID}/${Chan.id}`;
+		});
+		Chans_panel.appendChild(Div);
+	});
+}
 
 // Convert a UTC timestamp string from the DB to a Date object in the browser’s local timezone
 function DB_to_local_time(DB_date){
@@ -242,7 +264,7 @@ async function Load_messages(Initial=false){
 		Params.append("Before", Next_cursor);
 
 	// Save current scroll height so we can restore position after prepending the older messages
-	const Old_scroll_height = document.body.scrollHeight;
+	const Old_scroll_height = Messages_container.scrollHeight;
 
 	const Response = await fetch(`/api/messages?${Params}`);
 	if (!Response.ok){
@@ -254,7 +276,7 @@ async function Load_messages(Initial=false){
 	if (!Data.Messages || !Data.Messages.length){
 		Next_cursor = null;
 		Is_loading = false;
-		window.removeEventListener("scroll", Load_messages);
+		Messages_container.removeEventListener("scroll", On_scroll);
 		return;
 	}
 
@@ -292,17 +314,17 @@ async function Load_messages(Initial=false){
 		Fragment.appendChild(Create_date_separator(Date_bottom_batch));
 
 	// Prepend the batch of older messages at the top
-	Container.prepend(Fragment);
+	Messages_container.prepend(Fragment);
 
 	// Set scroll position so the view doesn’t jump. Use requestAnimationFrame twice to wait for
 	// full layout
 	requestAnimationFrame(() => {
 		requestAnimationFrame(() => {
 			if (Initial)
-				New_scroll_height = document.body.scrollHeight;
+				New_scroll_height = Messages_container.scrollHeight;
 			else
-				New_scroll_height = document.body.scrollHeight - Old_scroll_height;
-			window.scrollTo(0, New_scroll_height);
+				New_scroll_height = Messages_container.scrollHeight - Old_scroll_height;
+			Messages_container.scrollTo(0, New_scroll_height);
 		});
 	});
 
@@ -314,10 +336,11 @@ async function Load_messages(Initial=false){
 }
 
 // When the user scrolls near the top, load older messages
-window.addEventListener("scroll", () => {
-	if (window.scrollY <= 5)
-		Load_messages();
-});
+function On_scroll() {
+    if (Messages_container.scrollTop <= 5)
+        Load_messages();
+}
+Messages_container.addEventListener("scroll", On_scroll);
 
 // Lightbox to show images fullscreen
 const Lightbox = document.getElementById("lightbox");
@@ -378,7 +401,7 @@ Lightbox.addEventListener("dblclick", () => {
 });
 
 // Mouse events
-Container.addEventListener("click", Event => {
+Messages_container.addEventListener("click", Event => {
 	// If an image is clicked, show it fullscreen in a lightbox
 	if (Event.target.tagName === "IMG"){
 		// Find parent message
@@ -455,7 +478,9 @@ document.addEventListener("keydown", Event => {
 	}
 });
 
+Load_chans();
 // Load the last 50 messages
 Load_messages(true);
+Messages_container.focus();
 
 })();

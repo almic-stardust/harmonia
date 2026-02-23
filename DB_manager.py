@@ -280,7 +280,7 @@ def Get_chans_for_server(Table, Server_ID):
 					if IRC_bridges[IRC_chan]["discord_chan"] == Chan_ID:
 						Chan_name = IRC_bridges[IRC_chan]["irc_chan"]
 				List_chans.append({
-						"chan_id": Chan_ID,
+						"id": str(Chan_ID),
 						"name": Chan_name,
 				})
 		return List_chans

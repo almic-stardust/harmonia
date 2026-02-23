@@ -3,23 +3,48 @@ html, body {
 	padding: 0;
 }
 body.no_scroll {
-	overflow: hidden;
+	overflow: hidden;				/* for the lightbox */
 }
-#Display_history {
+#layout {
 	display: flex;
-	flex-direction: column;
-	height: 100%;
+	height: 100vh;
+}
+
+#chans_panel {
+	width: 8em;
+	border-right: 1px solid #ccc;
+	overflow-y: auto;
+	padding: 0.2em;
+	background-color: #f4f4f4;		/* less lighter grey */
+}
+.chan_entry {
+	border-radius: 0.5em;
+	padding: 0.2em;
+	cursor: pointer;
+	font-size: 0.7em;
+	color: #777777;					/* grey */
+}
+.chan_entry:hover {
+	background: white;
+}
+.chan_entry.active {
+	background: #ddd;
+	color: black;
 }
 
 #messages {
-	display: block;					/* stack messages vertically */
+	flex: 1;
+	overflow-y: auto;
 	padding: 0.5em;
 }
+#messages:focus {
+	outline: none;					/* the focus ring on the messages container is kinda ugly */
+}
 #messages .message:nth-child(odd) {
-	background-color: #f6f6f6;		/* light grey */
+	background-color: #f9f9f9;		/* very light grey */
 }
 #messages .message:nth-child(even) {
-	background-color: #ffffff
+	background-color: white;
 }
 
 .date_separator {
@@ -81,7 +106,7 @@ body.no_scroll {
 	display: flex;
 	flex-wrap: wrap;
 	/* Prioritize saving vertical space, even if it means files buttons looking vertically awkward
-	   next to larger images */
+	 * next to larger images */
 	align-items: flex-start;
 	gap: 0.3em;
 }
