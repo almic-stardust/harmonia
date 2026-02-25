@@ -57,12 +57,13 @@ Create a base according to your Config.yaml, then create this table:
 	    chan_id         BIGINT NOT NULL,
 	    message_id      BIGINT NOT NULL PRIMARY KEY,
 	    reply_to        BIGINT NULL,
-	    user_name       VARCHAR(32) NOT NULL,
+	    user            VARCHAR(32) NOT NULL,
 	    content         TEXT NOT NULL,
 	    edited          BOOLEAN NOT NULL DEFAULT FALSE,
 	    attachments     TEXT NULL,
 	    reactions       TEXT NULL,
-	    date_deletion   TIMESTAMP NULL
+	    date_deletion   TIMESTAMP NULL,
+	    expired         BOOLEAN NOT NULL DEFAULT FALSE
 	);
 
 Creating the field date\_creation with “TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00'” is

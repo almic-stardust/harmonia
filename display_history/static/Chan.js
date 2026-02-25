@@ -238,7 +238,7 @@ function Create_message_element(Message, Date_object){
 			<span class="time"
 				title="${Date_message.Full_timestamp}">${Date_message.Time_part}
 			</span>
-			<span class="user">${Escape_HTML(Message.user_name)}</span>
+			<span class="user">${Escape_HTML(Message.user)}</span>
 		</div>
 		<div class="content_block">
 			<span class="content">${Normalize_content(Message.content || "")}</span>

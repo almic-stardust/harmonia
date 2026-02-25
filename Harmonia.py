@@ -7,6 +7,7 @@ from Config_manager import Config
 from Discord_manager import bot
 import Discord_manager
 from Discord_manager import Reconcile_downloaded_files
+from Discord_manager import Delete_expired_messages
 import IRC_manager
 
 ###############################################################################
@@ -24,6 +25,8 @@ async def on_ready():
 		await Discord_manager.Stop_bot(IRC_manager.Instance)
 		return
 	# Tasks
+	if not Delete_expired_messages.is_running():
+		Delete_expired_messages.start()
 	if not Reconcile_downloaded_files.is_running():
 		Reconcile_downloaded_files.start()
 	print(f"[Discord] Logged in as {bot.user}")

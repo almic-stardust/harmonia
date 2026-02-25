@@ -76,11 +76,53 @@ def Get_bridge_by_Discord_chan(Discord_chan_ID):
 	return None
 
 def Get_bridge_by_IRC_chan(IRC_chan):
-    return Config["irc_bridges"].get(IRC_chan.lstrip("#"))
+	return Config["irc_bridges"].get(IRC_chan.lstrip("#"))
+
+###############################################################################
+# Handling users
+###############################################################################
+
+def Expiration_for_user(User):
+	# Default is one year
+	Days = 365
+	Config_user = Config["users"]["irc_to_discord"].get(User)
+	if Config_user:
+		Expiration = Config_user.get("discord_expiration")
+		if Expiration == "1m":
+			Days = 31
+		if Expiration == "never":
+			Days = None
+	return Days
 
 ###############################################################################
 # Handling messages
 ###############################################################################
+
+@tasks.loop(hours=24)
+async def Delete_expired_messages():
+	Now = datetime.datetime.now(datetime.timezone.utc)
+	Rows = DB_manager.Messages_potentially_expired(History_table)
+	for Row in Rows:
+		Expiration = Expiration_for_user(Row["user"])
+		if Expiration is None:
+			continue
+		Date_creation = Row["date_creation"].replace(tzinfo=datetime.timezone.utc)
+		if Date_creation + datetime.timedelta(days=Expiration) <= Now:
+			try:
+				Chan = bot.get_channel(Row["chan_id"])
+				if not Chan:
+					Chan = await bot.fetch_channel(Row["chan_id"])
+				Message_ID = Row["message_id"]
+				Message = await Chan.fetch_message(Message_ID)
+				# Only delete messages transmitted from IRC by the bot, but not those posted on
+				# Discord by the bot itself
+				if (Message.author.id == bot.user or Message.webhook_id is not None) and \
+						Row["user"] != bot.user:
+					await Message.delete()
+					DB_manager.Mark_message_expired(History_table, Message_ID)
+					print(f"Deleted message {Message_ID}")
+			except Exception as e:
+				print(f"[Discord_m] Delete_expired_messages: {e}")
 
 # Handling files whose names have been changed by Discord: check once a day if there are files in
 # the folder other_sources, and if so, overwrite the Discord version with the original file.

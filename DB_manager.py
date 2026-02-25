@@ -80,7 +80,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 						date_creation,
 						server_id, chan_id, message_id,
 						reply_to,
-						user_name, content, attachments)
+						user, content, attachments)
 						VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
 				, (
 						Date,
@@ -110,7 +110,7 @@ def History_fetch_message(Table, Message_ID):
 				chan_id,
 				message_id,
 				reply_to,
-				user_name,
+				user,
 				content,
 				attachments,
 				reactions,
@@ -140,7 +140,7 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 			SELECT
 				message_id,
 				reply_to,
-				user_name,
+				user,
 				content,
 				edited,
 				attachments,
@@ -176,7 +176,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filename
 			raise ValueError("[DB] Error: invalid table name.")
 		# Check if the message is in the DB
 		Cursor.execute(f"""
-				SELECT user_name, content FROM {Table}
+				SELECT user, content FROM {Table}
 				WHERE message_id = %s""",
 				(Message_ID,)
 		)
@@ -223,7 +223,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 			raise ValueError("[DB] Error: invalid table name.")
 		# Check if the message is in the DB
 		Cursor.execute(f"""
-				SELECT user_name FROM {Table}
+				SELECT user FROM {Table}
 				WHERE message_id = %s""",
 				(Message_ID,)
 		)
@@ -265,11 +265,11 @@ def Get_chans_for_server(Table, Server_ID):
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
 		Cursor.execute(f"""
-				SELECT DISTINCT chan_id
-				FROM {Table}
+				SELECT DISTINCT chan_id FROM {Table}
 				WHERE server_id = %s
-				ORDER BY chan_id
-		""", (Server_ID,))
+				ORDER BY chan_id""",
+				(Server_ID,)
+		)
 		Result = Cursor.fetchall()
 		if Result:
 			List_chans = []
@@ -284,6 +284,58 @@ def Get_chans_for_server(Table, Server_ID):
 						"name": Chan_name,
 				})
 		return List_chans
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+# Return the messages corresponding to the two expiration periods: after one month, and after one
+# year (plus a delay as safety margin)
+def Messages_potentially_expired(Table):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Messages = []
+		Cursor.execute(f"""
+				SELECT date_creation, chan_id, message_id, user FROM {Table}
+				WHERE date_creation <= NOW() - INTERVAL 1 MONTH
+				  AND date_creation >= NOW() - INTERVAL 13 MONTH
+				  AND expired = FALSE
+				ORDER BY date_creation ASC"""
+		)
+		Result = Cursor.fetchall()
+		if Result:
+			for Row in Result:
+				Messages.append({
+						"date_creation": Row[0],
+						"chan_id": Row[1],
+						"message_id": Row[2],
+						"user": Row[3],
+				})
+		return Messages
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def Mark_message_expired(Table, Message_ID):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"""
+				UPDATE {Table} SET expired = TRUE
+				WHERE message_id = %s""",
+				(Message_ID,)
+		)
+		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
