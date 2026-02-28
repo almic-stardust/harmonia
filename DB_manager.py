@@ -54,7 +54,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Cursor.close()
 		Connection.close()
 
-def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_message_ID, Discord_username, Content, Attachments):
+def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_message_ID, Discord_username, Content, Attachments, Relayed):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -80,13 +80,13 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 						date_creation,
 						server_id, chan_id, message_id,
 						reply_to,
-						user, content, attachments)
-						VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+						user, content, attachments, relayed)
+						VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 				, (
 						Date,
 						Server_ID, Chan_ID, Message_ID,
 						Replied_message_ID,
-						Discord_username, Content, Attachments
+						Discord_username, Content, Attachments, Relayed
 				)
 		)
 		Connection.commit()
@@ -149,8 +149,8 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 				date_deletion
 			FROM {Table}
 			WHERE server_id = %s
-				AND chan_id = %s
-				AND date_deletion IS NULL
+			AND chan_id = %s
+			AND date_deletion IS NULL
 		"""
 		Params = [Server_ID, Chan_ID]
 		if Before is not None:
@@ -302,10 +302,10 @@ def Messages_potentially_expired(Table):
 		Messages = []
 		Cursor.execute(f"""
 				SELECT date_creation, chan_id, message_id, user FROM {Table}
-				WHERE date_creation <= NOW() - INTERVAL 1 MONTH
-				  AND date_creation >= NOW() - INTERVAL 13 MONTH
-				  AND expired = FALSE
-				ORDER BY date_creation ASC"""
+				WHERE relayed = TRUE
+				AND expired = FALSE
+				AND date_creation BETWEEN UTC_TIMESTAMP() - INTERVAL 13 MONTH
+						AND UTC_TIMESTAMP() - INTERVAL 1 MONTH"""
 		)
 		Result = Cursor.fetchall()
 		if Result:

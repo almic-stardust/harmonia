@@ -52,7 +52,7 @@ Create the virtual environment:
 Create a base according to your Config.yaml, then create this table:
 
 	CREATE TABLE history (
-	    date_creation   TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00'
+	    date_creation   TIMESTAMP NOT NULL DEFAULT current_timestamp(),
 	    server_id       BIGINT NOT NULL,
 	    chan_id         BIGINT NOT NULL,
 	    message_id      BIGINT NOT NULL PRIMARY KEY,
@@ -62,14 +62,10 @@ Create a base according to your Config.yaml, then create this table:
 	    edited          BOOLEAN NOT NULL DEFAULT FALSE,
 	    attachments     TEXT NULL,
 	    reactions       TEXT NULL,
-	    date_deletion   TIMESTAMP NULL,
-	    expired         BOOLEAN NOT NULL DEFAULT FALSE
+	    relayed         BOOLEAN NOT NULL DEFAULT FALSE,
+	    expired         BOOLEAN NOT NULL DEFAULT FALSE,
+	    date_deletion   TIMESTAMP NULL
 	);
-
-Creating the field date\_creation with “TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00'” is
-necessary. Otherwise, MariaDB automatically assigns the following attributes to the column: “DEFAULT
-CURRENT\_TIMESTAMP ON UPDATE CURRENT\_TIMESTAMP”, which would cause the message’s creation date to
-be lost with any changes to the field.
 
 #### Last steps
 
@@ -99,6 +95,7 @@ For performance, create composite indexes in the DB:
 	CREATE INDEX Index_messages ON history (server_id, chan_id, date_creation);
 	CREATE INDEX Index_replies ON history (reply_to);
 	CREATE INDEX Index_deletions ON history (server_id, chan_id, date_deletion);
+	CREATE INDEX Index_expiration ON history (relayed, expired, date_creation);
 
 The ASGI server I use is Hypercorn. On the system where you want to run it:
 

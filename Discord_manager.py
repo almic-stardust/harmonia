@@ -98,6 +98,8 @@ def Expiration_for_user(User):
 # Handling messages
 ###############################################################################
 
+# Automatically delete messages relayed from IRC to Discord by the bot. Depending on the user’s
+# request : either after one month, one year, or not at all
 @tasks.loop(hours=24)
 async def Delete_expired_messages():
 	Now = datetime.datetime.now(datetime.timezone.utc)
@@ -114,13 +116,9 @@ async def Delete_expired_messages():
 					Chan = await bot.fetch_channel(Row["chan_id"])
 				Message_ID = Row["message_id"]
 				Message = await Chan.fetch_message(Message_ID)
-				# Only delete messages transmitted from IRC by the bot, but not those posted on
-				# Discord by the bot itself
-				if (Message.author.id == bot.user or Message.webhook_id is not None) and \
-						Row["user"] != bot.user:
-					await Message.delete()
-					DB_manager.Mark_message_expired(History_table, Message_ID)
-					print(f"Deleted message {Message_ID}")
+				await Message.delete()
+				DB_manager.Mark_message_expired(History_table, Message_ID)
+				print(f"Deleted message {Message_ID}")
 			except Exception as e:
 				print(f"[Discord_m] Delete_expired_messages: {e}")
 
@@ -254,16 +252,25 @@ async def on_message(Message):
 	# but use their IRC nick in the history and their messages transferred to IRC
 	if Config["users"]["discord_to_irc"].get(Author_name):
 		Author_name = Config["users"]["discord_to_irc"].get(Author_name)
+
+	Relayed_message = False
+	# If the message comes from IRC through a webhook
+	if Message.webhook_id is not None:
+		Relayed_message = True
 	# If the message comes from IRC without a webhook
 	if Author == bot.user and Text.startswith("<**"):
 		Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
 		if Match:
+			Relayed_message = True
 			Author_name = Match.group(1)
 			Text = Match.group(2)
-	await History.Message_added(History_table, Author_name, Bridge["discord_chan"], Message, Text)
 
-	# The bot ignores its own messages (including what it posted via a webhook)
-	if Author == bot.user or Message.webhook_id is not None:
+	await History.Message_added(History_table,
+			Author_name, Bridge["discord_chan"], Message, Text, Relayed_message
+	)
+
+	# The bot ignores its own messages (including what it relayed)
+	if Author == bot.user or Relayed_message:
 		return
 	# Exempt commands from buffering
 	if Is_command(Message):
