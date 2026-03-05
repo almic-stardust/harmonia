@@ -53,10 +53,16 @@ async def on_error(event, *args, **kwargs):
 	traceback.print_exc()
 
 async def Stop_bot(IRC_Instance):
-	await bot.close()
+	global HTTP_session
+	await IRC_Instance.Shutdown()
 	if HTTP_session:
 		await HTTP_session.close()
-	await IRC_Instance.quit(Config["irc"].get("quit_message", "Something clever"))
+		if HTTP_session.closed:
+			print("HTTP session closed")
+		# Prevent reuse after closing
+		HTTP_session = None
+	print("[Discord] Shutting down…")
+	await bot.close()
 	return
 
 @bot.command()
@@ -102,25 +108,25 @@ def Expiration_for_user(User):
 # request : either after one month, one year, or not at all
 @tasks.loop(hours=24)
 async def Delete_expired_messages():
-	Now = datetime.datetime.now(datetime.timezone.utc)
-	Rows = DB_manager.Messages_potentially_expired(History_table)
-	for Row in Rows:
-		Expiration = Expiration_for_user(Row["user"])
-		if Expiration is None:
-			continue
-		Date_creation = Row["date_creation"].replace(tzinfo=datetime.timezone.utc)
-		if Date_creation + datetime.timedelta(days=Expiration) <= Now:
-			try:
-				Chan = bot.get_channel(Row["chan_id"])
-				if not Chan:
-					Chan = await bot.fetch_channel(Row["chan_id"])
-				Message_ID = Row["message_id"]
-				Message = await Chan.fetch_message(Message_ID)
-				await Message.delete()
-				DB_manager.Mark_message_expired(History_table, Message_ID)
-				print(f"Deleted message {Message_ID}")
-			except Exception as e:
-				print(f"[Discord_m] Delete_expired_messages: {e}")
+	try:
+		Now = datetime.datetime.now(datetime.timezone.utc)
+		Rows = DB_manager.Messages_potentially_expired(History_table)
+		for Row in Rows:
+			Expiration = Expiration_for_user(Row["user"])
+			if Expiration is None:
+				continue
+			Date_creation = Row["date_creation"].replace(tzinfo=datetime.timezone.utc)
+			if Date_creation + datetime.timedelta(days=Expiration) <= Now:
+					Chan = bot.get_channel(Row["chan_id"])
+					if not Chan:
+						Chan = await bot.fetch_channel(Row["chan_id"])
+					Message_ID = Row["message_id"]
+					Message = await Chan.fetch_message(Message_ID)
+					await Message.delete()
+					DB_manager.Mark_message_expired(History_table, Message_ID)
+					print(f"Deleted message {Message_ID}")
+	except Exception as Error:
+		print(f"[Discord_m] Delete_expired_messages(): {Error}")
 
 # Handling files whose names have been changed by Discord: check once a day if there are files in
 # the folder other_sources, and if so, overwrite the Discord version with the original file.
@@ -131,16 +137,16 @@ async def Delete_expired_messages():
 #	of Relay_IRC_message(), that comes across a race condition.
 @tasks.loop(hours=24)
 async def Reconcile_downloaded_files():
-	global Map_pending_downloads
-	Storage_folder = Config["history"].get("storage_folder")
-	Other_sources = os.path.join(Storage_folder, "other_sources")
-	if not os.path.exists(Storage_folder):
-		print(f"[Discord_m] Warning: The folder for the attachments isn’t accessible.")
-		return
-	if not os.path.exists(Other_sources):
-		print(f"[Discord_m] Warning: The folder for other sources attachments isn’t accessible.")
-		return
 	try:
+		global Map_pending_downloads
+		Storage_folder = Config["history"].get("storage_folder")
+		Other_sources = os.path.join(Storage_folder, "other_sources")
+		if not os.path.exists(Storage_folder):
+			print(f"[Discord_m] Warning: The folder for the attachments isn’t accessible.")
+			return
+		if not os.path.exists(Other_sources):
+			print(f"[Discord_m] Warning: The folder for other sources attachments isn’t accessible.")
+			return
 		# list() prevents runtime modification errors
 		for Discord_filename, Filenames_map in list(Map_pending_downloads.items()):
 			if not Filenames_map or "Original_filename" not in Filenames_map \
@@ -166,7 +172,7 @@ async def Reconcile_downloaded_files():
 			# its key.
 			del Map_pending_downloads[Discord_filename]
 	except Exception as Error:
-		print(f"[Discord_m] Warning: Reconcile_downloaded_files(): {Error}")
+		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
 
 def Split_message(Message):
 	# Discord limits message size = split the message into parts of 2000 characters or less

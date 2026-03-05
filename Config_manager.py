@@ -21,8 +21,8 @@ if Config.get("history") and Config["history"].get("active"):
 			sys.exit(1)
 
 if Config.get("irc_bridges"):
-	#Go from: irc_chan = {discord_chan: X, webhook: Y}
-	#to:	  irc_chan = {irc_chan: "irc_chan", discord_chan: X, webhook: Y}
+	# Modify from: irc_chan = {discord_chan: X, webhook: Y}
+	# 		   to: irc_chan = {discord_chan: X, webhook: Y, irc_chan: "irc_chan"}
 	for IRC_chan in Config["irc_bridges"].keys():
 		Config["irc_bridges"][IRC_chan]["irc_chan"] = f"#{IRC_chan}"
 else:

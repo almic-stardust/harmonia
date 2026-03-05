@@ -39,8 +39,7 @@ async def Start_bot():
 	)
 	await IRC_manager.Instance.connect(
 		hostname=Config["irc_info"]["server"],
-		tls=True,
-		tls_verify=False
+		tls=True, tls_verify=False
 	)
 	await Discord_manager.Init_webhooks()
 	await bot.start(Config["discord"]["token"])

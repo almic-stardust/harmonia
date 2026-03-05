@@ -72,9 +72,13 @@ def Split_into_IRC_messages(Message):
 class Connection_handler(pydle.Client):
 
 	Instance = None
+	Current_delay = 5
+	Max_reconnect_delay = 300
+	Shutting_down = False
 
 	async def on_connect(self):
 		await super().on_connect()
+		self.Current_delay = 5
 		for Bridge in Config["irc_bridges"]:
 			await self.join(Config["irc_bridges"][Bridge]["irc_chan"])
 		print("[IRC] Connected to server and chans")
@@ -82,6 +86,32 @@ class Connection_handler(pydle.Client):
 			await self.message("NickServ",
 					f"identify {Config['irc']['nick']} {Config['irc']['password']}")
 			print("[IRC] Identified with nickserv")
+
+	async def Shutdown(self):
+		self.Shutting_down = True
+		print("[IRC] Shutting down…")
+		await self.quit(Config["irc_info"].get("quit_message", "Something clever"))
+
+	async def on_disconnect(self, expected):
+		await super().on_disconnect(expected)
+		if self.Shutting_down:
+			return
+		Next_delay = self.Current_delay
+		print(f"[IRC] Disconnected. Reconnecting in {Next_delay}s")
+		await self.eventloop.sleep(Next_delay)
+		try:
+			await self.connect(
+				Config["irc_info"]["server"],
+				tls=True, tls_verify=False
+			)
+		except Exception as Error:
+			print(f"[IRC] Reconnect failed: {Error}")
+		if Next_delay < self.Max_reconnect_delay:
+			# Add random jitter to the delay to avoid synchronized retries (many clients hitting the
+			# server at the same moment)
+			self.Current_delay = random(Next_delay, Next_delay*2)
+		else:
+			self.Current_delay = self.Max_reconnect_delay
 
 	async def on_nicknameinuse(self, nickname):
 		await super().on_nicknameinuse(nickname)
