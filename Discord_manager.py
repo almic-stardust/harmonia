@@ -235,7 +235,7 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 		if not Chan:
 			Chan = await bot.fetch_channel(Bridge["discord_chan"])
 		await Chan.send(
-				f"{Author.mention} Too many messages in a short time. Nothing was forwarded to IRC."
+				f"{Author.mention} What you typed resulted in too many messages to send on IRC in a short time. Therefore nothing was forwarded."
 		)
 
 	# Cleanup buffer once decision is made
@@ -316,18 +316,6 @@ async def on_message(Message):
 		Buffer["task"] = bot.loop.create_task(
 				Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name)
 		)
-
-def Translate_Discord_formatting_to_IRC(Message):
-	# Map Discord MarkDown to IRC control codes
-	Replacements = [
-		(r"\*\*(.*?)\*\*", "\x02\\1\x02"),	# Bold
-		(r"\*(.*?)\*", "\x1D\\1\x1D"),		# Italic
-		(r"__(.*?)__", "\x1F\\1\x1F")		# Underline
-	]
-	for Pattern, Replacement in Replacements:
-		# “count=0” replaces all matches
-		Message = re.sub(Pattern, Replacement, Message, count=0)
-	return Message
 
 # Register the original filename in Map_pending_downloads
 def Register_original_in_MPD(Discord_filename, Original_filename):

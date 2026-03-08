@@ -2,7 +2,6 @@
 
 import pydle
 import re
-import textwrap
 
 from Config_manager import Config
 import Discord_manager
@@ -52,17 +51,70 @@ def Translate_IRC_formatting_to_Discord(Message):
 		Message = re.sub(Pattern, Replacement, Message)
 	return Message
 
+def Translate_Discord_formatting_to_IRC(Message):
+	# Map Discord MarkDown to IRC control codes
+	Replacements = [
+		(r"\*\*(.*?)\*\*", "\x02\\1\x02"),	# Bold
+		(r"\*(.*?)\*", "\x1D\\1\x1D"),		# Italic
+		(r"__(.*?)__", "\x1F\\1\x1F")		# Underline
+	]
+	for Pattern, Replacement in Replacements:
+		# “count=0” replaces all matches
+		Message = re.sub(Pattern, Replacement, Message, count=0)
+	return Message
+
 def Split_into_IRC_messages(Message):
-	# Maximum allowed message length (512 bytes - overhead for metadata)
-	IRC_message_length = 400
+	# IRC has a variable message length: 512 - (control bytes + len(nick+user+host+channel))
+	# Control bytes = 14 | Safety buffer in case of unexpected syntax added by a server = 10
+	# Worst case scenario for the variable parts: nick = 20 | user = 20 | host = 63 | channel = 32
+	# Source https://ircv3.net/specs/extensions/multiline
+	# Maximum allowed message length: 512 - (14+10+20+20+63+32) = 353
+	IRC_message_limit = 353
 	Lines = []
+	Message = Translate_Discord_formatting_to_IRC(Message)
 	# Messages on Discord can contain several lines. When that’s the case, start by splitting the
 	# Discord message along the breaking lines, before possibly splitting each line again if it
-	# exceeds the limit of an IRC message
+	# exceeds the limit
 	for Line in Message.splitlines():
-		# Use textwrap to split the current line, without breaking words
-		Line = Discord_manager.Translate_Discord_formatting_to_IRC(Line)
-		Lines.extend(textwrap.wrap(Line, IRC_message_length))
+		Current_fragment = ""
+		# Split the line into words using spaces as separators, then add the words one by one until
+		# the limit is reached.
+		# IRC limits messages by bytes, so the length must be measured after UTF-8 encoding. The
+		# same strings will be encoded many times, but encoding such strings is very fast, and this
+		# function runs only when messages are sent. Let’s leave micro-optimizations for later
+		for Word in Line.split(" "):
+			# The candidate string resulting from adding the next word to the current fragment
+			if not Current_fragment:
+				Candidate = Word
+			else:
+				Candidate = Current_fragment + " " + Word
+			# The candidate string fits within the limit, so add the word to the current fragment
+			if len(Candidate.encode("utf-8")) <= IRC_message_limit:
+				Current_fragment = Candidate
+			# Either the current fragment has reached the limit, or maybe even the current word
+			# exceeds the limit by itself
+			else:
+				# First, if the current fragment isn’t empty, flush it
+				if Current_fragment:
+					Lines.append(Current_fragment)
+					Current_fragment = ""
+				# If the word itself exceeds the limit, split it
+				if len(Word.encode("utf-8")) > IRC_message_limit:
+					Remaining = Word
+					while Remaining:
+						Word_fragment = Remaining
+						# Shrink the fragment until its UTF-8 byte length fits within the limit
+						while len(Word_fragment.encode("utf-8")) > IRC_message_limit:
+							Word_fragment = Word_fragment[:-1]
+						Lines.append(Word_fragment)
+						# Remove the fragment from the remaining text
+						Remaining = Remaining[len(Word_fragment):]
+				# Start a new fragment, beginning with the word that did not fit
+				else:
+					Current_fragment = Word
+		# Add the last fragment, containing the remainder of the message
+		if Current_fragment:
+			Lines.append(Current_fragment)
 	return Lines
 
 ###############################################################################
