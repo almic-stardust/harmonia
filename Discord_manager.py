@@ -52,6 +52,11 @@ async def on_error(event, *args, **kwargs):
 	import traceback
 	traceback.print_exc()
 
+# Global command error handler, so that errors are visible instead of being silently ignored
+@bot.event
+async def on_command_error(Context, Error):
+	await Context.send(f"Command error: {Error}")
+
 async def Stop_bot(IRC_Instance):
 	global HTTP_session
 	await IRC_Instance.Shutdown()
@@ -256,20 +261,23 @@ async def on_message(Message):
 	Author_name = Author.display_name
 	# If a user has requested that the bot assign them a specific name on Discord, use it on Discord
 	# but use their IRC nick in the history and their messages transferred to IRC
-	if Config["users"]["discord_to_irc"].get(Author_name):
-		Author_name = Config["users"]["discord_to_irc"].get(Author_name)
+	Author_name = Config["users"]["discord_to_irc"].get(Author_name, Author_name)
 
 	Relayed_message = False
 	# If the message comes from IRC through a webhook
 	if Message.webhook_id is not None:
 		Relayed_message = True
-	# If the message comes from IRC without a webhook
-	if Author == bot.user and Text.startswith("<**"):
-		Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
-		if Match:
-			Relayed_message = True
-			Author_name = Match.group(1)
-			Text = Match.group(2)
+	if Author == bot.user:
+		# If the message comes from IRC without a webhook
+		if Text.startswith("<**"):
+			Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
+			if Match:
+				Relayed_message = True
+				Author_name = Match.group(1)
+				Text = Match.group(2)
+		# It’s the bot, responding to someone or saying something by itself
+		else:
+			Author_name = Config["discord"].get("bot_name", "Bot")
 
 	await History.Message_added(History_table,
 			Author_name, Bridge["discord_chan"], Message, Text, Relayed_message

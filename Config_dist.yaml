@@ -4,6 +4,7 @@ discord:
   bot_owner:            ""
   # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
   token:                ""
+  bot_name:             "name for the bot to display in the history"
   server:               id_server
 
 mysqlclient:
