@@ -56,6 +56,11 @@ async def on_error(event, *args, **kwargs):
 @bot.event
 async def on_command_error(Context, Error):
 	await Context.send(f"Command error: {Error}")
+	IRC_chan = Get_bridge_by_Discord_chan(Context.channel.id)["irc_chan"]
+	if IRC_chan:
+		Author = Context.author.display_name
+		await IRC_manager.Instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
+		await IRC_manager.Instance.message(IRC_chan, f"Command error: {Error}")
 
 async def Stop_bot(IRC_Instance):
 	global HTTP_session
@@ -232,7 +237,7 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 			Messages_to_relay = Concatenated_messages
 	if Messages_to_relay:
 		for Message in Messages_to_relay:
-			await IRC_manager.Instance.Send_message(Bridge["irc_chan"], Author_name, Message)
+			await IRC_manager.Instance.Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request
@@ -283,13 +288,19 @@ async def on_message(Message):
 			Author_name, Bridge["discord_chan"], Message, Text, Relayed_message
 	)
 
-	# The bot ignores its own messages (including what it relayed)
-	if Author == bot.user or Relayed_message:
+	# Commands from IRC
+	if Text.startswith("!roll") and Relayed_message:
+		from Misc import roll_from_irc
+		await roll_from_irc(Bridge, Text)
 		return
 	# Exempt commands from buffering
 	if Is_command(Message):
 		# Forward the message to the bot’s command handler
 		await bot.process_commands(Message)
+		return
+
+	# The bot ignores its own messages (including what it relayed)
+	if Author == bot.user or Relayed_message:
 		return
 
 	# Prepare the message and send it to IRC

@@ -180,5 +180,5 @@ class Connection_handler(pydle.Client):
 		print(f"[I] <{Author}> {Message}")
 		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
 
-	async def Send_message(self, Chan, Author, Message):
+	async def Relay_Discord_message(self, Chan, Author, Message):
 		await self.message(Chan, f"<\x02{Author}\x02> {Message}")
