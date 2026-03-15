@@ -47,10 +47,19 @@ irc_bridges:
 
 irc_users:
   PutHereAnIrcNick1:
+    # User1 isn’t bothered by having a Discord display name that is the same as their IRC nick, and
+    # that their messages remain stored on Discord. Their avatar in the history will be the same as
+    # their avatar on Discord
     discord_username:     ""
+    discord_expiration:   "never"
   PutHereAnIrcNick2:
+    # User2 doesn’t want to have their IRC nick as their Discord display name, and they’re content
+    # to have their messages deleted on Discord after the default period of one year. Their avatar
+    # on Discord and in the history will be generated with robohash.org
     discord_display_name: ""
-    avatar:               "https://domain.tld/path/to/Avatar.jpeg"
   PutHereAnIrcNick3:
+    # User3 doesn’t want to have their IRC nick as their Discord display name, and they want their
+    # message deleted from Discord after one month. Also they want to specify an avatar.
     discord_display_name: ""
+    discord_expiration:   "1m"
     avatar:               "https://domain.tld/path/to/Avatar.jpeg"

@@ -398,11 +398,12 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		User = Config["users"]["irc_to_discord"].get(IRC_nick)
 		if User:
 			Author_name = User.get("discord_display_name")
-			Discord_username = User.get("discord_username")
+			Discord_username = User.get("discord_username", "")
 			Avatar_URL = User.get("avatar")
 			if not Avatar_URL:
 				Server = bot.get_guild(Config["discord"]["server"])
-				Discord_user = discord.utils.get(Server.members, name=Discord_username)
+				if Discord_username:
+					Discord_user = discord.utils.get(Server.members, name=Discord_username)
 				if Discord_user:
 					Avatar_URL = Discord_user.display_avatar.url
 		if not Avatar_URL:
