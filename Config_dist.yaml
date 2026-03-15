@@ -1,57 +1,56 @@
 # You must restart the bot if you modify this file.
 
 discord:
-  bot_owner:            ""
+  bot_owner:              ""
   # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
-  token:                ""
-  bot_name:             "name for the bot to display in the history"
-  server:               id_server
+  token:                  ""
+  bot_name:               "name for the bot to display in the history"
+  server:                 id_server
 
 mysqlclient:
-  host:                 ""
-  user:                 ""
-  password:             ""
-  database:             ""
+  host:                   ""
+  user:                   ""
+  password:               ""
+  database:               ""
   # For MariaDB in Debian 13
-  charset:              "utf8mb4"
-  collation:            "utf8mb4_unicode_520_ci"
+  charset:                "utf8mb4"
+  collation:              "utf8mb4_unicode_520_ci"
 
 history:
-  active:               True/False
-  db_table:             ""
-  storage_folder:       "/path/to/bot_files"
-  storage_url:          "https://domain.tld/bot_files"
+  active:                 True/False
+  db_table:               ""
+  storage_folder:         "/path/to/bot_files"
+  storage_url:            "https://domain.tld/bot_files"
 
 mail:
-  server:               ""
-  bot_address:          ""
+  server:                 ""
+  bot_address:            ""
 
 irc_info:
-  bot_owner:            ""
-  nick:                 "MyBot"
-  username:             "my_bot"
-  real_name:            "My Bot"
-  password:             ""
-  quit_message:         "That’s the end of the beans"
-  server:               "irc.libera.chat"
+  bot_owner:              ""
+  nick:                   "MyBot"
+  username:               "my_bot"
+  real_name:              "My Bot"
+  password:               ""
+  quit_message:           "That’s the end of the beans"
+  server:                 "irc.libera.chat"
 
 irc_bridges:
   chan1:
-    discord_chan:       id_chan
+    discord_chan:         id_chan
     # If you want messages on Discord displayed as coming from the users instead of the bot.
     # See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
     webhook: ""
   chan2:
-    discord_chan:       id_chan
+    discord_chan:         id_chan
     webhook: ""
 
 irc_users:
   PutHereAnIrcNick1:
-    discord_username:   ""
+    discord_username:     ""
   PutHereAnIrcNick2:
     discord_display_name: ""
-    avatar:             "https://domain.tld/path/to/Avatar.jpeg"
+    avatar:               "https://domain.tld/path/to/Avatar.jpeg"
   PutHereAnIrcNick3:
-    discord_username:   ""
     discord_display_name: ""
-    avatar:             "https://domain.tld/path/to/Avatar.jpeg"
+    avatar:               "https://domain.tld/path/to/Avatar.jpeg"
