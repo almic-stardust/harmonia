@@ -1,4 +1,5 @@
-# You must restart the bot if you modify this file.
+# You must restart the bot if you modify this file. If you use the web display of the history, don’t
+# forget Hypercorn and/or Uvicorn.
 
 discord:
   bot_owner:              ""

@@ -155,8 +155,8 @@ async def Reconcile_downloaded_files():
 			print(f"[Discord_m] Warning: The folder for the attachments isn’t accessible.")
 			return
 		if not os.path.exists(Other_sources):
-			print(f"[Discord_m] Warning: The folder for other sources attachments isn’t accessible.")
-			return
+			print(f"[Discord_m] Creating the folder for other sources attachments.")
+			os.makedirs(Other_sources)
 		# list() prevents runtime modification errors
 		for Discord_filename, Filenames_map in list(Map_pending_downloads.items()):
 			if not Filenames_map or "Original_filename" not in Filenames_map \

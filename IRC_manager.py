@@ -136,7 +136,8 @@ class Connection_handler(pydle.Client):
 		print("[IRC] Connected to server and chans")
 		if Config["irc_info"].get("password"):
 			await self.message("NickServ",
-					f"identify {Config['irc']['nick']} {Config['irc']['password']}")
+					f"identify {Config['irc_info']['nick']} {Config['irc_info']['password']}"
+			)
 			print("[IRC] Identified with nickserv")
 
 	async def Shutdown(self):
