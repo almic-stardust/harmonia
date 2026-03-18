@@ -9,7 +9,7 @@ import Discord_manager
 from Discord_manager import Reconcile_downloaded_files
 from Discord_manager import Delete_expired_messages
 import IRC_manager
-import Misc
+import Commands_manager
 
 ###############################################################################
 # Starting the bot

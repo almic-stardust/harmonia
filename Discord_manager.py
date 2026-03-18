@@ -260,6 +260,10 @@ async def on_message(Message):
 	Bridge = Get_bridge_by_Discord_chan(Message.channel.id)
 	if not Bridge:
 		return
+	IRC_chan = Bridge["irc_chan"]
+	Discord_chan = bot.get_channel(Bridge["discord_chan"])
+	if not Discord_chan:
+		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
 
 	# Author.display_name = the server nickname if set, otherwise the global display name if set,
 	# otherwise the Discord username
@@ -289,10 +293,40 @@ async def on_message(Message):
 	)
 
 	# Commands from IRC
-	if Text.startswith("!roll") and Relayed_message:
-		from Misc import roll_from_irc
-		await roll_from_irc(Bridge, Text)
+	if Text == "!help" and Relayed_message:
+		from Commands_manager import No_help_for_IRC
+		await No_help_for_IRC(Bridge)
 		return
+	if Text.startswith("!roll") and Relayed_message:
+		from Commands_manager import IRC_roll
+		Dices = Text.split()[1]
+		await IRC_roll(Bridge, Dices)
+		return
+	if Text.startswith("!straws") and Relayed_message:
+		if Text.rstrip() == "!straws":
+			from Commands_manager import IRC_straws
+			await IRC_straws(Bridge)
+			return
+		elif Text.rstrip() == "!straws help":
+			from Commands_manager import IRC_straws_help
+			await IRC_straws_help(Bridge)
+			return
+		elif Text.startswith("!straws add"):
+			from Commands_manager import IRC_straws_add
+			# Retrieve arguments in one string, starting from the 2nd (after add)
+			Word = "".join(Text.split()[2:])
+			await IRC_straws_add(Bridge, Author_name, Word)
+			return
+		elif Text.startswith("!straws draw"):
+			from Commands_manager import IRC_straws_draw
+			await IRC_straws_draw(Bridge)
+			return
+		else:
+			await IRC_manager.Instance.message(IRC_chan,
+					"Invalid argument: see “!help straws” (on Discord)."
+			)
+			await Discord_chan.send("Invalid argument: see “!help straws”.")
+
 	# Exempt commands from buffering
 	if Is_command(Message):
 		# Forward the message to the bot’s command handler
