@@ -317,9 +317,13 @@ async def on_message(Message):
 			Word = "".join(Text.split()[2:])
 			await IRC_straws_add(Bridge, Author_name, Word)
 			return
-		elif Text.startswith("!straws draw"):
+		elif Text.rstrip() == "!straws draw":
 			from Commands_manager import IRC_straws_draw
 			await IRC_straws_draw(Bridge)
+			return
+		elif Text.rstrip() == "!straws empty":
+			from Commands_manager import IRC_straws_empty
+			await IRC_straws_empty(Bridge)
 			return
 		else:
 			await IRC_manager.Instance.message(IRC_chan,

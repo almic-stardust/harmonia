@@ -56,24 +56,19 @@ async def IRC_roll(Bridge, Dices):
 	await IRC_manager.Instance.message(IRC_chan, Rolls)
 	await Discord_chan.send(Rolls)
 
-async def Show_bag(Bridge):
+def Show_bag():
 	global Straws_bag
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
 	if len(Straws_bag) > 0:
 		Bag_content = "The bag contains the following straws:"
 		for User in Straws_bag.keys():
 			Bag_content += f"\n[{User}] {Straws_bag[User]}"
 	else:
 		Bag_content = "The bag is currently empty. See “!help straws” (on Discord)"
-	await Discord_chan.send(Bag_content)
-	await IRC_manager.Instance.message(IRC_chan, Bag_content)
+	return Bag_content
 
 @bot.group()
 async def straws(Context):
-	"""Draw straws among a group"""
+	"""Draw straws among a group, with a reproducible pseudo-randomness."""
 	# If no subcommand is invoked, show what’s currently in the bag
 	if not Context.invoked_subcommand:
 		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
@@ -82,10 +77,18 @@ async def straws(Context):
 			Author = Context.author.display_name
 			# Relay on IRC the command sent on Discord
 			await IRC_manager.Instance.Relay_Discord_message(IRC_chan, Author, "!straws")
-			await Show_bag(Bridge)
+			Bag_content = Show_bag()
+			await Context.send(Bag_content)
+			await IRC_manager.Instance.message(IRC_chan, Bag_content)
 
 async def IRC_straws(Bridge):
-	await Show_bag(Bridge)
+	IRC_chan = Bridge["irc_chan"]
+	Discord_chan = bot.get_channel(Bridge["discord_chan"])
+	if not Discord_chan:
+		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	Bag_content = Show_bag()
+	await Discord_chan.send(Bag_content)
+	await IRC_manager.Instance.message(IRC_chan, Bag_content)
 
 @straws.command(name="help")
 async def Straws_help(Context):
@@ -122,7 +125,7 @@ def Add_straw(Author, Straw):
 @straws.command(name="add")
 async def Straws_add(Context, Word: str):
 	"""Put a straw in the bag, to participate in the draw."""
-	# A straw is made up of a word, that will be concatenated to 27 letters
+	# A straw is made up of a word, that will be capitalized and concatenated to 27 letters
 	# (27 because intergouvernementalisations)
 	Author = Context.author.display_name
 	# Relay on IRC the command sent on Discord
@@ -160,11 +163,14 @@ async def Draw_a_straw(Bridge):
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
 	try:
+		# Simulate a random seed, by concatenating the words given by the users
 		Common_key = ""
 		Users = []
 		for User in Straws_bag.keys():
 			Common_key += Straws_bag[User]
 			Users.append(User)
+		# Create a dedicated key for each user, by appending their name to the common key, and then
+		# calculate a hash for each user’s key
 		def Calculate_hash(User):
 		    return hashlib.sha256((Common_key + User).encode("utf8")).hexdigest()
 		Users.sort(key=Calculate_hash)
@@ -172,16 +178,17 @@ async def Draw_a_straw(Bridge):
 		await Discord_chan.send("It’s not possible to draw a straw!")
 		await IRC_manager.Instance.message(IRC_chan, "It’s not possible to draw a straw!")
 		return
-	# The shortest straw = first place in the list
+	# The user with the smallest hash (the first place in the list) drew the short straw
 	Lucky_one = Users[0]
-	await Discord_chan.send(f"{Lucky_one} is the lucky (?) who pulls the shortest straw.")
-	await IRC_manager.Instance.message(IRC_chan,
-			f"{Lucky_one} is the lucky (?) one who pulls the shortest straw."
-	)
+	Reply = Show_bag()
+	Reply += f"\nThe common key is: {Common_key}\n\n"
+	Reply += f"And {Lucky_one} is the lucky (?) one who pulls the shortest straw."
+	await Discord_chan.send(Reply)
+	await IRC_manager.Instance.message(IRC_chan, Reply)
 
 @straws.command(name="draw")
 async def Straws_draw(Context):
-	"""Pull a straw from the bag"""
+	"""Pull a straw from the bag."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		IRC_chan = Bridge["irc_chan"]
@@ -192,3 +199,29 @@ async def Straws_draw(Context):
 
 async def IRC_straws_draw(Bridge):
 	await Draw_a_straw(Bridge)
+
+@straws.command(name="empty")
+async def Straws_empty(Context):
+	"""Empty the bag of straws (reset the pool)."""
+	global Straws_bag
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		IRC_chan = Bridge["irc_chan"]
+		Author = Context.author.display_name
+		# Relay on IRC the command sent on Discord
+		await IRC_manager.Instance.Relay_Discord_message(IRC_chan, Author, "!straws empty")
+		Straws_bag = {}
+		Reply = "The bag is now empty."
+		await Context.send(Reply)
+		await IRC_manager.Instance.message(IRC_chan, Reply)
+
+async def IRC_straws_empty(Bridge):
+	global Straws_bag
+	IRC_chan = Bridge["irc_chan"]
+	Discord_chan = bot.get_channel(Bridge["discord_chan"])
+	if not Discord_chan:
+		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	Straws_bag = {}
+	Reply = "The bag is now empty."
+	await IRC_manager.Instance.message(IRC_chan, Reply)
+	await Discord_chan.send(Reply)
