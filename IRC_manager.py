@@ -128,6 +128,15 @@ class Connection_handler(pydle.Client):
 	Max_reconnect_delay = 300
 	Shutting_down = False
 
+	# When in prod, uncomment this block to disable exceptions. This will wrap the raw handler, and
+	# avoid crashes.
+	# When not in prod, comment it since it’ll hide bugs and complicate development.
+	#async def on_raw(self, Message):
+	#	try:
+	#		await super().on_raw(Message)
+	#	except KeyError:
+	#		pass
+
 	async def on_connect(self):
 		await super().on_connect()
 		self.Current_delay = 5
@@ -145,8 +154,8 @@ class Connection_handler(pydle.Client):
 		print("[IRC] Shutting down…")
 		await self.quit(Config["irc_info"].get("quit_message", "Something clever"))
 
-	async def on_disconnect(self, expected):
-		await super().on_disconnect(expected)
+	async def on_disconnect(self, Expected):
+		await super().on_disconnect(Expected)
 		if self.Shutting_down:
 			return
 		Next_delay = self.Current_delay
@@ -166,9 +175,18 @@ class Connection_handler(pydle.Client):
 		else:
 			self.Current_delay = self.Max_reconnect_delay
 
-	async def on_nicknameinuse(self, nickname):
-		await super().on_nicknameinuse(nickname)
+	async def on_nicknameinuse(self, Nick):
+		await super().on_nicknameinuse(Nick)
 		await self.set_nickname(self.nickname + "_")
+
+	def _destroy_user(self, Nick, Chan=None):
+		try:
+			super()._destroy_user(Nick, Chan)
+		except KeyError:
+			print(f"[WARN] Tried to destroy unknown user {Nick} in {Chan}")
+		except Exception as Error:
+			print(f"[ERROR] Unexpected error in _destroy_user: {Error}")
+			raise
 
 	async def on_message(self, Chan, Author, Message):
 		await super().on_message(Chan, Author, Message)

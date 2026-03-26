@@ -293,7 +293,7 @@ async def on_message(Message):
 	)
 
 	# Commands from IRC
-	if Text == "!help" and Relayed_message:
+	if Text.startswith("!help") and Relayed_message:
 		from Commands_manager import No_help_for_IRC
 		await No_help_for_IRC(Bridge)
 		return
@@ -307,7 +307,7 @@ async def on_message(Message):
 			from Commands_manager import IRC_straws
 			await IRC_straws(Bridge)
 			return
-		elif Text.rstrip() == "!straws help":
+		elif Text.startswith("!straws help"):
 			from Commands_manager import IRC_straws_help
 			await IRC_straws_help(Bridge)
 			return

@@ -147,6 +147,10 @@ async def IRC_straws_add(Bridge, Author, Word):
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	if not Word:
+		await IRC_manager.Instance.message(IRC_chan, "Usage: !straws add word")
+		await Discord_chan.send("Usage: !straws add word")
+		return
 	try:
 		Straw = Add_straw(Author, Word)
 	except Exception:
