@@ -57,14 +57,18 @@ async def on_error(event, *args, **kwargs):
 async def on_command_error(Context, Error):
 	await Context.send(f"Command error: {Error}")
 	IRC_chan = Get_bridge_by_Discord_chan(Context.channel.id)["irc_chan"]
-	if IRC_chan:
-		Author = Context.author.display_name
-		await IRC_manager.Instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
-		await IRC_manager.Instance.message(IRC_chan, f"Command error: {Error}")
+	if not IRC_chan:
+		return
+	Author = Context.author.display_name
+	# Relay on IRC the command that caused the error
+	await IRC_manager.Get_instance().Relay_Discord_message(
+			IRC_chan, Author, Context.message.content
+	)
+	await IRC_manager.Get_instance().message(IRC_chan, f"Command error: {Error}")
 
-async def Stop_bot(IRC_Instance):
+async def Stop_bot(IRC_instance):
 	global HTTP_session
-	await IRC_Instance.Shutdown()
+	await IRC_instance.Shutdown()
 	if HTTP_session:
 		await HTTP_session.close()
 		if HTTP_session.closed:
@@ -78,7 +82,7 @@ async def Stop_bot(IRC_Instance):
 @bot.command()
 async def quit(Context):
 	if Context.author.name == Config["discord"]["bot_owner"]:
-		await Stop_bot(IRC_manager.Instance)
+		await Stop_bot(IRC_manager.Get_instance())
 		return
 
 ###############################################################################
@@ -237,7 +241,9 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 			Messages_to_relay = Concatenated_messages
 	if Messages_to_relay:
 		for Message in Messages_to_relay:
-			await IRC_manager.Instance.Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
+			await IRC_manager.Get_instance().Relay_Discord_message(
+					Bridge["irc_chan"], Author_name, Message
+			)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request
@@ -326,7 +332,7 @@ async def on_message(Message):
 			await IRC_straws_empty(Bridge)
 			return
 		else:
-			await IRC_manager.Instance.message(IRC_chan,
+			await IRC_manager.Get_instance().message(IRC_chan,
 					"Invalid argument: see “!help straws” (on Discord)."
 			)
 			await Discord_chan.send("Invalid argument: see “!help straws”.")

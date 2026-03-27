@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import pydle
+import asyncio
 import re
+import random
+import uuid
 
 from Config_manager import Config
 import Discord_manager
@@ -121,33 +124,48 @@ def Split_into_IRC_messages(Message):
 # pydle class
 ###############################################################################
 
+def Get_instance():
+	global Instance
+	if Instance is None:
+		print("[IRC] Error: No IRC instance")
+		return
+	if not Instance.connected:
+		print("[IRC] Error: the IRC instance isn’t connected")
+		return
+	return Instance
+
 class Connection_handler(pydle.Client):
 
-	Instance = None
-	Current_delay = 5
-	Max_reconnect_delay = 300
-	Shutting_down = False
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		global Instance
+		Instance = self
+		self.Instance_ID = uuid.uuid4()
+		self.Shutting_down = False
+		self.Current_delay = 5
+		self.Max_reconnect_delay = 300
 
-	# When in prod, uncomment this block to disable exceptions. This will wrap the raw handler, and
-	# avoid crashes.
-	# When not in prod, comment it since it’ll hide bugs and complicate development.
-	#async def on_raw(self, Message):
-	#	try:
-	#		await super().on_raw(Message)
-	#	except KeyError:
-	#		pass
+	# Wrap the raw handler to avoid crashes, but continue to log the errors
+	async def on_raw(self, Message):
+		try:
+			await super().on_raw(Message)
+		except KeyError:
+			print(f"[IRC] on_raw exception: {KeyError}")
+			pass
 
 	async def on_connect(self):
 		await super().on_connect()
 		self.Current_delay = 5
+		print(f"[IRC] Instance ID: {self.Instance_ID}")
 		for Bridge in Config["irc_bridges"]:
 			await self.join(Config["irc_bridges"][Bridge]["irc_chan"])
-		print("[IRC] Connected to server and chans")
 		if Config["irc_info"].get("password"):
 			await self.message("NickServ",
 					f"identify {Config['irc_info']['nick']} {Config['irc_info']['password']}"
 			)
 			print("[IRC] Identified with nickserv")
+		await asyncio.sleep(60)
+		print(f"[IRC] Channels joined: {list(self.channels.keys())}")
 
 	async def Shutdown(self):
 		self.Shutting_down = True
@@ -160,18 +178,29 @@ class Connection_handler(pydle.Client):
 			return
 		Next_delay = self.Current_delay
 		print(f"[IRC] Disconnected. Reconnecting in {Next_delay}s")
-		await self.eventloop.sleep(Next_delay)
+		await asyncio.sleep(Next_delay)
 		try:
-			await self.connect(
+			# type(self) to ensure the same class
+			New_instance = type(self)(
+				nickname=self.nickname,
+				username=self.username,
+				realname=self.realname
+			)
+			await New_instance.connect(
 				Config["irc_info"]["server"],
 				tls=True, tls_verify=False
 			)
+			# Assign the global variable only after the connection has succeeded, to avoid opening
+			# up the possibility of an incorrect state, where calls to Get_instance() will find that
+			# Instance isn’t None, but .connected() returns False
+			global Instance
+			Instance = New_instance
 		except Exception as Error:
 			print(f"[IRC] Reconnect failed: {Error}")
+		# Add random jitter to the delay to avoid synchronized reconnection attempts (we don’t want
+		# many clients hitting the server at the same time)
 		if Next_delay < self.Max_reconnect_delay:
-			# Add random jitter to the delay to avoid synchronized retries (many clients hitting the
-			# server at the same moment)
-			self.Current_delay = random(Next_delay, Next_delay*2)
+			self.Current_delay = random.uniform(Next_delay, Next_delay * 2)
 		else:
 			self.Current_delay = self.Max_reconnect_delay
 
@@ -200,4 +229,7 @@ class Connection_handler(pydle.Client):
 		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
 
 	async def Relay_Discord_message(self, Chan, Author, Message):
+		if not self.connected:
+			print(f"[IRC] Error: attempt to send on disconnected instance {self.instance_id}")
+			return
 		await self.message(Chan, f"<\x02{Author}\x02> {Message}")

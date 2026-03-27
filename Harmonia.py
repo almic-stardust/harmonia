@@ -23,7 +23,7 @@ async def on_ready():
 	Loop.set_exception_handler(lambda loop, context: print("ASYNC ERROR:", context))
 	if len(bot.guilds) == 0:
 		print("[Discord] Bot is not yet in any server.")
-		await Discord_manager.Stop_bot(IRC_manager.Instance)
+		await Discord_manager.Stop_bot(IRC_manager.Get_instance())
 		return
 	# Tasks
 	if not Delete_expired_messages.is_running():
@@ -33,12 +33,12 @@ async def on_ready():
 	print(f"[Discord] Logged in as {bot.user}")
 
 async def Start_bot():
-	IRC_manager.Instance = IRC_manager.Connection_handler(
+	IRC_instance = IRC_manager.Connection_handler(
 		nickname=Config["irc_info"]["nick"],
 		username=Config["irc_info"]["username"],
 		realname=Config["irc_info"]["real_name"]
 	)
-	await IRC_manager.Instance.connect(
+	await IRC_instance.connect(
 		hostname=Config["irc_info"]["server"],
 		tls=True, tls_verify=False
 	)
