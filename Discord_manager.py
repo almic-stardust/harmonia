@@ -66,24 +66,23 @@ async def on_command_error(Context, Error):
 	)
 	await IRC_manager.Get_instance().message(IRC_chan, f"Command error: {Error}")
 
-async def Stop_bot(IRC_instance):
+async def Shutdown_Discord():
 	global HTTP_session
-	await IRC_instance.Shutdown()
+	print("[Discord] Shutting down…")
 	if HTTP_session:
 		await HTTP_session.close()
 		if HTTP_session.closed:
 			print("HTTP session closed")
 		# Prevent reuse after closing
 		HTTP_session = None
-	print("[Discord] Shutting down…")
 	await bot.close()
-	return
 
 @bot.command()
 async def quit(Context):
 	if Context.author.name == Config["discord"]["bot_owner"]:
-		await Stop_bot(IRC_manager.Get_instance())
-		return
+		#await Stop_bot(IRC_manager.Get_instance())
+		import Harmonia
+		await Harmonia.Stop_bot()
 
 ###############################################################################
 # Handling chans
