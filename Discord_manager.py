@@ -67,7 +67,7 @@ async def on_command_error(Context, Error):
 
 async def Shutdown_Discord():
 	global HTTP_session
-	print("[Discord] Shutting down…")
+	print("[Discord] Disconnecting…")
 	if HTTP_session:
 		await HTTP_session.close()
 		if HTTP_session.closed:

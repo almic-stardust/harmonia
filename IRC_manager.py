@@ -149,8 +149,20 @@ async def Run_IRC_loop():
 			# Instance isn’t None but .connected() returns False
 			Instance = New_instance
 			print(f"[IRC] Connected with instance {New_instance.Instance_ID}")
-			# Wait here until shutdown is requested
-			await IRC_shutting_down.wait()
+			# Wait here until either the connection is lost, or the bot’s shutdown is requested
+			_, Pending = await asyncio.wait(
+					[
+						asyncio.create_task(IRC_shutting_down.wait()),
+						asyncio.create_task(New_instance.Disconnection.wait())
+					],
+					return_when = asyncio.FIRST_COMPLETED
+			)
+			# Cancel the task that didn’t finish
+			for Task in Pending:
+				Task.cancel()
+			# If shutdown was requested, exit loop
+			if IRC_shutting_down.is_set():
+				break
 		except Exception as Error:
 			# If shutdown was requested, don’t treat as a real error
 			if IRC_shutting_down.is_set():
@@ -197,6 +209,7 @@ class Connection_handler(pydle.Client):
 		super().__init__(*args, **kwargs)
 		self.Instance_ID = uuid.uuid4()
 		self.Max_reconnect_delay = 300
+		self.Disconnection = asyncio.Event()
 
 	async def on_connect(self):
 		await super().on_connect()
@@ -212,12 +225,13 @@ class Connection_handler(pydle.Client):
 
 	async def on_disconnect(self, Expected):
 		await super().on_disconnect(Expected)
+		self.Disconnection.set()
 		if IRC_shutting_down.is_set():
 			return
 		print(f"[IRC] Instance {self.Instance_ID} disconnected.")
 
 	async def Shutdown_IRC(self):
-		print("[IRC] Shutting down…")
+		print("[IRC] Disconnecting…")
 		IRC_shutting_down.set()
 		await self.quit(Config["irc_info"].get("quit_message", "Something clever"))
 
