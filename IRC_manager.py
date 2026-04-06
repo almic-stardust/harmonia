@@ -130,7 +130,7 @@ def Split_into_IRC_messages(Message):
 async def Run_IRC_loop():
 
 	global Instance
-	Delay = 5
+	Reconnect_delay = 5
 
 	while not IRC_shutting_down.is_set():
 
@@ -148,6 +148,8 @@ async def Run_IRC_loop():
 			# possibility of an incorrect state, where calls to Get_instance() will find that
 			# Instance isn’t None but .connected() returns False
 			Instance = New_instance
+			# Reset delay after successful connection
+			Reconnect_delay = 5
 			print(f"[IRC] Connected with instance {New_instance.Instance_ID}")
 			# Wait here until either the connection is lost, or the bot’s shutdown is requested
 			_, Pending = await asyncio.wait(
@@ -172,15 +174,18 @@ async def Run_IRC_loop():
 
 		# Attempt reconnect only if not shutting down
 		if not IRC_shutting_down.is_set():
-			print(f"[IRC] Disconnected. Reconnecting in {Delay:.1f}s…")
-			await asyncio.sleep(Delay)
+			print(f"[IRC] Disconnected. Reconnecting in {Reconnect_delay:.1f}s…")
+			await asyncio.sleep(Reconnect_delay)
 			# Exponential backoff with jitter, to prevent synchronized reconnection attempts. If
 			# there’s a problem on the IRC network and clients are disconnected, the network servers
 			# don’t need many clients trying to reconnect simultaneously.
-			if Delay < New_instance.Max_reconnect_delay:
-				Delay = random.uniform(Delay, Delay * 2)
+			Max_reconnect_delay = New_instance.Max_reconnect_delay
+			if Reconnect_delay < Max_reconnect_delay:
+				Reconnect_delay = random.uniform(Reconnect_delay, Reconnect_delay * 2)
+			# Once the maximum delay is reached, continue to set a random delay, but within a
+			# limited window
 			else:
-				Delay = New_instance.Max_reconnect_delay
+				Reconnect_delay = random.uniform(Max_reconnect_delay, Max_reconnect_delay + 30)
 
 	print("[IRC] Run_IRC_loop() exited cleanly.")
 
