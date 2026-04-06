@@ -61,10 +61,9 @@ async def on_command_error(Context, Error):
 		return
 	Author = Context.author.display_name
 	# Relay on IRC the command that caused the error
-	await IRC_manager.Get_instance().Relay_Discord_message(
-			IRC_chan, Author, Context.message.content
-	)
-	await IRC_manager.Get_instance().message(IRC_chan, f"Command error: {Error}")
+	IRC_Instance = IRC_manager.GCI()
+	await IRC_instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
+	await IRC_instance.message(IRC_chan, f"Command error: {Error}")
 
 async def Shutdown_Discord():
 	global HTTP_session
@@ -80,7 +79,6 @@ async def Shutdown_Discord():
 @bot.command()
 async def quit(Context):
 	if Context.author.name == Config["discord"]["bot_owner"]:
-		#await Stop_bot(IRC_manager.Get_instance())
 		import Harmonia
 		await Harmonia.Stop_bot()
 
@@ -240,9 +238,7 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 			Messages_to_relay = Concatenated_messages
 	if Messages_to_relay:
 		for Message in Messages_to_relay:
-			await IRC_manager.Get_instance().Relay_Discord_message(
-					Bridge["irc_chan"], Author_name, Message
-			)
+			await IRC_manager.GCI().Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request
@@ -331,7 +327,7 @@ async def on_message(Message):
 			await IRC_straws_empty(Bridge)
 			return
 		else:
-			await IRC_manager.Get_instance().message(IRC_chan,
+			await IRC_manager.GCI().message(IRC_chan,
 					"Invalid argument: see “!help straws” (on Discord)."
 			)
 			await Discord_chan.send("Invalid argument: see “!help straws”.")

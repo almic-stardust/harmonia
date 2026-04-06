@@ -10,7 +10,7 @@ from Config_manager import Config
 import Discord_manager
 
 Instance = None
-Shutting_down = asyncio.Event()
+IRC_shutting_down = asyncio.Event()
 
 ###############################################################################
 # Handling messages
@@ -132,7 +132,7 @@ async def Run_IRC_loop():
 	global Instance
 	Delay = 5
 
-	while not Shutting_down.is_set():
+	while not IRC_shutting_down.is_set():
 
 		New_instance = Connection_handler(
 			nickname=Config["irc_info"]["nick"],
@@ -150,16 +150,16 @@ async def Run_IRC_loop():
 			Instance = New_instance
 			print(f"[IRC] Connected with instance {New_instance.Instance_ID}")
 			# Wait here until shutdown is requested
-			await Shutting_down.wait()
+			await IRC_shutting_down.wait()
 		except Exception as Error:
 			# If shutdown was requested, don’t treat as a real error
-			if Shutting_down.is_set():
+			if IRC_shutting_down.is_set():
 				print("[IRC] Connection aborted due to shutdown")
 				break
 			print(f"[IRC] Connection error: {Error}")
 
 		# Attempt reconnect only if not shutting down
-		if not Shutting_down.is_set():
+		if not IRC_shutting_down.is_set():
 			print(f"[IRC] Disconnected. Reconnecting in {Delay:.1f}s…")
 			await asyncio.sleep(Delay)
 			# Exponential backoff with jitter, to prevent synchronized reconnection attempts. If
@@ -177,10 +177,15 @@ def Get_instance():
 	if Instance is None:
 		print("[IRC] Error: No IRC instance")
 		return
-	if not Instance.connected:
-		print("[IRC] Error: IRC not connected")
-		return
 	return Instance
+
+# Get Connected Instance
+def GCI():
+	Current_instance = Get_instance()
+	if not Current_instance.connected:
+		 print("[IRC] Error: IRC not connected")
+		 return
+	return Current_instance
 
 ###############################################################################
 # pydle class
@@ -207,19 +212,14 @@ class Connection_handler(pydle.Client):
 
 	async def on_disconnect(self, Expected):
 		await super().on_disconnect(Expected)
-		if Shutting_down.is_set():
+		if IRC_shutting_down.is_set():
 			return
 		print(f"[IRC] Instance {self.Instance_ID} disconnected.")
 
 	async def Shutdown_IRC(self):
-		if Shutting_down.is_set():
-			return
 		print("[IRC] Shutting down…")
-		Shutting_down.set()
-		try:
-			await self.quit(Config["irc_info"].get("quit_message", "Something clever"))
-		except Exception:
-			pass
+		IRC_shutting_down.set()
+		await self.quit(Config["irc_info"].get("quit_message", "Something clever"))
 
 	# Wrap the raw handler to avoid crashes, but continue to log the errors
 	async def on_raw(self, Message):

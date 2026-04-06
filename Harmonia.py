@@ -46,14 +46,15 @@ async def Stop_bot():
 	global IRC_task
 	print("Shutdown initiated…")
 	# Stop IRC loop
-	IRC_manager.Shutting_down.set()
+	IRC_manager.IRC_shutting_down.set()
+	# Disconnect from IRC
 	IRC_instance = IRC_manager.Get_instance()
 	if IRC_instance:
 		try:
 			await IRC_instance.Shutdown_IRC()
 		except Exception as Error:
 			print(f"[IRC] Error during shutdown: {Error}")
-	# Wait for IRC loop to exit cleanly
+	# Wait for the IRC loop to exit cleanly
 	if IRC_task:
 		try:
 			await IRC_task
@@ -68,11 +69,8 @@ async def Stop_bot():
 ###############################################################################
 
 async def main():
-    try:
-        await Discord_manager.Init_webhooks()
-        await bot.start(Config["discord"]["token"])
-    finally:
-        await Stop_bot()
+	await Discord_manager.Init_webhooks()
+	await bot.start(Config["discord"]["token"])
 
 if __name__ == "__main__":
-    asyncio.run(main())
+	asyncio.run(main())
