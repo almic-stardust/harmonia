@@ -131,6 +131,7 @@ async def Run_IRC_loop():
 
 	global Instance
 	Reconnect_delay = 5
+	Max_reconnect_delay = 300
 
 	while not IRC_shutting_down.is_set():
 
@@ -151,7 +152,7 @@ async def Run_IRC_loop():
 			# Reset delay after successful connection
 			Reconnect_delay = 5
 			print(f"[IRC] Connected with instance {New_instance.Instance_ID}")
-			# Wait here until either the connection is lost, or the bot’s shutdown is requested
+			# Wait until disconnection or shutdown
 			_, Pending = await asyncio.wait(
 					[
 						asyncio.create_task(IRC_shutting_down.wait()),
@@ -171,15 +172,18 @@ async def Run_IRC_loop():
 				print("[IRC] Connection aborted due to shutdown")
 				break
 			print(f"[IRC] Connection error: {Error}")
+		# If New_instance dies, ensure the global instance is cleared
+		finally:
+			if Instance is New_instance:
+				Instance = None
 
-		# Attempt reconnect only if not shutting down
+		# Handle reconnection (only if not shutting down)
 		if not IRC_shutting_down.is_set():
 			print(f"[IRC] Disconnected. Reconnecting in {Reconnect_delay:.1f}s…")
 			await asyncio.sleep(Reconnect_delay)
 			# Exponential backoff with jitter, to prevent synchronized reconnection attempts. If
 			# there’s a problem on the IRC network and clients are disconnected, the network servers
 			# don’t need many clients trying to reconnect simultaneously.
-			Max_reconnect_delay = New_instance.Max_reconnect_delay
 			if Reconnect_delay < Max_reconnect_delay:
 				Reconnect_delay = random.uniform(Reconnect_delay, Reconnect_delay * 2)
 			# Once the maximum delay is reached, continue to set a random delay, but within a
@@ -213,7 +217,6 @@ class Connection_handler(pydle.Client):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.Instance_ID = uuid.uuid4()
-		self.Max_reconnect_delay = 300
 		self.Disconnection = asyncio.Event()
 
 	async def on_connect(self):
