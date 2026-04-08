@@ -176,7 +176,7 @@ async def Draw_a_straw(Bridge):
 		# Create a dedicated key for each user, by appending their name to the common key, and then
 		# calculate a hash for each user’s key
 		def Calculate_hash(User):
-		    return hashlib.sha256((Common_key + User).encode("utf8")).hexdigest()
+			return hashlib.sha256((Common_key + User).encode("utf8")).hexdigest()
 		Users.sort(key=Calculate_hash)
 	except Exception:
 		await Discord_chan.send("It’s not possible to draw a straw!")

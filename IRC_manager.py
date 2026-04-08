@@ -7,6 +7,7 @@ import random
 import uuid
 
 from Config_manager import Config
+import Gears
 import Discord_manager
 
 Instance = None
@@ -153,16 +154,10 @@ async def Run_IRC_loop():
 			Reconnect_delay = 5
 			print(f"[IRC] Connected with instance {New_instance.Instance_ID}")
 			# Wait until disconnection or shutdown
-			_, Pending = await asyncio.wait(
-					[
-						asyncio.create_task(IRC_shutting_down.wait()),
-						asyncio.create_task(New_instance.Disconnection.wait())
-					],
-					return_when = asyncio.FIRST_COMPLETED
+			await Gears.Wait_for_events(
+					New_instance.Disconnection.wait(),
+					IRC_shutting_down.wait()
 			)
-			# Cancel the task that didn’t finish
-			for Task in Pending:
-				Task.cancel()
 			# If shutdown was requested, exit loop
 			if IRC_shutting_down.is_set():
 				break
