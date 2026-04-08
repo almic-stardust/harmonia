@@ -10,8 +10,12 @@ from Config_manager import Config
 import Gears
 import Discord_manager
 
-Instance = None
 IRC_shutting_down = asyncio.Event()
+Expected_chans = set()
+for Bridge in Config["irc_bridges"]:
+	IRC_chan = Config["irc_bridges"][Bridge]["irc_chan"]
+	Expected_chans.add(IRC_chan)
+Instance = None
 
 ###############################################################################
 # Handling messages
@@ -223,8 +227,7 @@ class Connection_handler(pydle.Client):
 					f"identify {Config['irc_info']['nick']} {Config['irc_info']['password']}"
 			)
 			print("[IRC] Identified with nickserv")
-		await asyncio.sleep(60)
-		print(f"[IRC] Channels joined: {list(self.channels.keys())}")
+		asyncio.create_task(self.Ensure_chans())
 
 	async def on_disconnect(self, Expected):
 		await super().on_disconnect(Expected)
@@ -238,7 +241,17 @@ class Connection_handler(pydle.Client):
 		IRC_shutting_down.set()
 		await self.quit(Config["irc_info"].get("quit_message", "Something clever"))
 
-	# Wrap the raw handler to avoid crashes, but continue to log the errors
+	async def Ensure_chans(self):
+		global Expected_chans
+		while not IRC_shutting_down.is_set():
+			# Check every day
+			await asyncio.sleep(86400)
+			for IRC_chan in Expected_chans:
+				if IRC_chan not in self.channels:
+					print(f"[IRC] Recovering: rejoining {IRC_chan}")
+					await self.join(IRC_chan)
+
+	# Wrap the raw handler to avoid crashes, but continue to log errors
 	async def on_raw(self, Message):
 		try:
 			await super().on_raw(Message)
