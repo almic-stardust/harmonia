@@ -21,7 +21,11 @@ async def No_help_for_IRC(Bridge):
 
 def Roll_dices(Dices):
 	Rolls, Limit = map(int, Dices.split("d"))
-	return ", ".join(str(random.randint(1, Limit)) for _ in range(Rolls))
+	Results = []
+	for _ in range(Rolls):
+		Roll = random.randint(1, Limit)
+		Results.append(str(Roll))
+	return ", ".join(Results)
 
 @bot.command()
 async def roll(Context, Dices: str):
@@ -42,11 +46,17 @@ async def roll(Context, Dices: str):
 	if IRC_chan:
 		await IRC_manager.GCI().message(IRC_chan, Rolls)
 
-async def IRC_roll(Bridge, Dices):
+async def IRC_roll(Bridge, Text):
 	IRC_chan = Bridge["irc_chan"]
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	Parts = Text.split(maxsplit=1)
+	if len(Parts) < 2:
+		await IRC_manager.GCI().message(IRC_chan, "Usage: !roll NdN")
+		await Discord_chan.send("Usage: !roll NdN")
+		return
+	Dices = Parts[1].lower()
 	try:
 		Rolls = Roll_dices(Dices)
 	except Exception:
@@ -142,11 +152,13 @@ async def Straws_add(Context, Word: str):
 	# Confirmation via DM on Discord
 	await Context.author.send(f"Your straw “{Straw}” has been added in the bag.")
 
-async def IRC_straws_add(Bridge, Author, Word):
+async def IRC_straws_add(Bridge, Author, Text):
 	IRC_chan = Bridge["irc_chan"]
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	# Retrieve arguments in one string, starting from the 2nd (after add)
+	Word = "".join(Text.split()[2:])
 	if not Word:
 		await IRC_manager.GCI().message(IRC_chan, "Usage: !straws add word")
 		await Discord_chan.send("Usage: !straws add word")

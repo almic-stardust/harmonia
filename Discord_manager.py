@@ -303,8 +303,7 @@ async def on_message(Message):
 		return
 	if Text.startswith("!roll") and Relayed_message:
 		from Commands_manager import IRC_roll
-		Dices = Text.split()[1]
-		await IRC_roll(Bridge, Dices)
+		await IRC_roll(Bridge, Text)
 		return
 	if Text.startswith("!straws") and Relayed_message:
 		if Text.rstrip() == "!straws":
@@ -317,9 +316,7 @@ async def on_message(Message):
 			return
 		elif Text.startswith("!straws add"):
 			from Commands_manager import IRC_straws_add
-			# Retrieve arguments in one string, starting from the 2nd (after add)
-			Word = "".join(Text.split()[2:])
-			await IRC_straws_add(Bridge, Author_name, Word)
+			await IRC_straws_add(Bridge, Author_name, Text)
 			return
 		elif Text.rstrip() == "!straws draw":
 			from Commands_manager import IRC_straws_draw
