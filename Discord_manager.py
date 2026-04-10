@@ -239,6 +239,9 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 	if Messages_to_relay:
 		for Message in Messages_to_relay:
 			await IRC_manager.GCI().Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
+			# Libera allows one message to be sent every two seconds
+			# https://libera.chat/guides/faq#flood-exemptions-for-bots
+			await asyncio.sleep(2)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request
