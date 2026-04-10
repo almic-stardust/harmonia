@@ -178,27 +178,22 @@ async def Draw_a_straw(Bridge):
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	try:
-		# Simulate a random seed, by concatenating the words given by the users
-		Common_key = ""
-		Users = []
-		for User in Straws_bag.keys():
-			Common_key += Straws_bag[User]
-			Users.append(User)
-		# Create a dedicated key for each user, by appending their name to the common key, and then
-		# calculate a hash for each user’s key
-		def Calculate_hash(User):
-			return hashlib.sha256((Common_key + User).encode("utf8")).hexdigest()
-		Users.sort(key=Calculate_hash)
-	except Exception:
-		await Discord_chan.send("It’s not possible to draw a straw!")
-		await IRC_manager.GCI().message(IRC_chan, "It’s not possible to draw a straw!")
+	if not Straws_bag:
+		await Discord_chan.send("No straws to draw from.")
+		await IRC_manager.GCI().message(IRC_chan, "No straws to draw from.")
 		return
-	# The user with the smallest hash (the first place in the list) drew the short straw
-	Lucky_one = Users[0]
+	# Simulate a random seed, by concatenating the words given by the users
+	Common_key = "".join(Straws_bag.values())
+	Users = list(Straws_bag.keys())
+	# Create a dedicated key for each user, by appending their name to the common key, and then
+	# calculate a hash for each user’s key
+	def Calculate_hash(User):
+		return hashlib.sha256((Common_key + User).encode("utf8")).hexdigest()
+	Users.sort(key=Calculate_hash)
 	Reply = Show_bag()
 	Reply += f"\nThe common key is: {Common_key}\n\n"
-	Reply += f"And {Lucky_one} is the lucky (?) one who pulls the shortest straw."
+	# The user with the smallest hash (the first place in the list) drew the short straw
+	Reply += f"And {Users[0]} is the lucky (?) one who pulls the shortest straw."
 	await Discord_chan.send(Reply)
 	await IRC_manager.GCI().message(IRC_chan, Reply)
 
