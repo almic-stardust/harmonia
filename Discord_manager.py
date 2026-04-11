@@ -63,7 +63,7 @@ async def on_command_error(Context, Error):
 	# Relay on IRC the command that caused the error
 	IRC_Instance = IRC_manager.GCI()
 	await IRC_instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
-	await IRC_instance.message(IRC_chan, f"Command error: {Error}")
+	await IRC_instance.Safe_message(IRC_chan, f"Command error: {Error}")
 
 async def Shutdown_Discord():
 	global HTTP_session
@@ -71,7 +71,7 @@ async def Shutdown_Discord():
 	if HTTP_session:
 		await HTTP_session.close()
 		if HTTP_session.closed:
-			print("HTTP session closed")
+			print("[Discord] HTTP session closed.")
 		# Prevent reuse after closing
 		HTTP_session = None
 	await bot.close()
@@ -239,9 +239,6 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 	if Messages_to_relay:
 		for Message in Messages_to_relay:
 			await IRC_manager.GCI().Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
-			# Libera allows one message to be sent every two seconds
-			# https://libera.chat/guides/faq#flood-exemptions-for-bots
-			await asyncio.sleep(2)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request
@@ -327,7 +324,7 @@ async def on_message(Message):
 			await IRC_straws_empty(Bridge)
 			return
 		else:
-			await IRC_manager.GCI().message(IRC_chan,
+			await IRC_manager.GCI().Safe_message(IRC_chan,
 					"Invalid argument: see “!help straws” (on Discord)."
 			)
 			await Discord_chan.send("Invalid argument: see “!help straws”.")

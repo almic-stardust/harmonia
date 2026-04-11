@@ -2,6 +2,7 @@
 
 import pydle
 import asyncio
+import time
 import re
 import random
 import uuid
@@ -217,13 +218,15 @@ class Connection_handler(pydle.Client):
 		super().__init__(*args, **kwargs)
 		self.Instance_ID = uuid.uuid4()
 		self.Disconnection = asyncio.Event()
+		self.Last_send = 0
+		self.Send_lock = asyncio.Lock()
 
 	async def on_connect(self):
 		await super().on_connect()
 		for Bridge in Config["irc_bridges"]:
 			await self.join(Config["irc_bridges"][Bridge]["irc_chan"])
 		if Config["irc_info"].get("password"):
-			await self.message("NickServ",
+			await self.Safe_message("NickServ",
 					f"identify {Config['irc_info']['nick']} {Config['irc_info']['password']}"
 			)
 			print("[IRC] Identified with nickserv")
@@ -283,8 +286,21 @@ class Connection_handler(pydle.Client):
 		print(f"[I] <{Author}> {Message}")
 		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
 
+	async def Safe_message(self, Chan, Message):
+		async with self.Send_lock:
+			for Line in Message.splitlines():
+				# No need to send a blank line
+				if Line.strip():
+					Elapsed = time.monotonic() - self.Last_send
+					# Libera allows one message to be sent every two seconds
+					# https://libera.chat/guides/faq#flood-exemptions-for-bots
+					if Elapsed < 2:
+						await asyncio.sleep(2 - Elapsed)
+					await self.message(Chan, Line)
+					self.Last_send = time.monotonic()
+
 	async def Relay_Discord_message(self, Chan, Author, Message):
 		if not self.connected:
 			print(f"[IRC] Error: attempt to send on disconnected instance {self.instance_id}")
 			return
-		await self.message(Chan, f"<\x02{Author}\x02> {Message}")
+		await self.Safe_message(Chan, f"<\x02{Author}\x02> {Message}")
