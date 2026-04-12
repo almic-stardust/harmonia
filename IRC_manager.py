@@ -203,6 +203,8 @@ def Get_instance():
 # Get Connected Instance
 def GCI():
 	Current_instance = Get_instance()
+	if not Current_instance:
+		 return
 	if not Current_instance.connected:
 		 print("[IRC] Error: IRC not connected")
 		 return
@@ -218,8 +220,8 @@ class Connection_handler(pydle.Client):
 		super().__init__(*args, **kwargs)
 		self.Instance_ID = uuid.uuid4()
 		self.Disconnection = asyncio.Event()
-		self.Last_send = 0
 		self.Send_lock = asyncio.Lock()
+		self.Last_send = 0
 
 	async def on_connect(self):
 		await super().on_connect()

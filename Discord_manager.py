@@ -302,6 +302,7 @@ async def on_message(Message):
 		from Commands_manager import IRC_roll
 		await IRC_roll(Bridge, Text)
 		return
+
 	if Text.startswith("!straws") and Relayed_message:
 		if Text.rstrip() == "!straws":
 			from Commands_manager import IRC_straws
@@ -328,6 +329,37 @@ async def on_message(Message):
 					"Invalid argument: see “!help straws” (on Discord)."
 			)
 			await Discord_chan.send("Invalid argument: see “!help straws”.")
+
+	if Text.startswith("!ergostraws") and Relayed_message:
+		if Text.rstrip() == "!ergostraws":
+			from Commands_manager import IRC_ergostraws
+			await IRC_ergostraws(Bridge)
+			return
+		elif Text.startswith("!ergostraws help"):
+			from Commands_manager import IRC_ergostraws_help
+			await IRC_ergostraws_help(Bridge)
+			return
+		elif Text.startswith("!ergostraws add"):
+			from Commands_manager import IRC_ergostraws_add
+			await IRC_ergostraws_add(Bridge, Author_name, Text)
+			return
+		elif Text.startswith("!ergostraws users"):
+			from Commands_manager import IRC_ergostraws_users
+			await IRC_ergostraws_users(Bridge, Text)
+			return
+		elif Text.rstrip() == "!ergostraws draw":
+			from Commands_manager import IRC_ergostraws_draw
+			await IRC_ergostraws_draw(Bridge)
+			return
+		elif Text.rstrip() == "!ergostraws empty":
+			from Commands_manager import IRC_ergostraws_empty
+			await IRC_ergostraws_empty(Bridge)
+			return
+		else:
+			await IRC_manager.GCI().Safe_message(IRC_chan,
+					"Invalid argument: see “!help ergostraws” (on Discord)."
+			)
+			await Discord_chan.send("Invalid argument: see “!help ergostraws”.")
 
 	# Exempt commands from buffering
 	if Is_command(Message):
