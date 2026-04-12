@@ -18,61 +18,57 @@ async def No_help_for_IRC(Bridge):
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	await IRC_manager.GCI().Safe_message(IRC_chan,
-			"The !help command is only available on Discord."
-	)
-	await Discord_chan.send("The !help command is only available on Discord.")
+	Output = "The !help command is only available on Discord."
+	await Discord_chan.send(Output)
+	await IRC_manager.GCI().Safe_message(IRC_chan, Output)
 
 ###############################################################################
 # Roll dices
 ###############################################################################
 
-def Roll_dices(Dices):
-	Rolls, Limit = map(int, Dices.split("d"))
-	Results = []
-	for _ in range(Rolls):
-		Roll = random.randint(1, Limit)
-		Results.append(str(Roll))
-	return ", ".join(Results)
-
-@bot.command()
-async def roll(Context, Dices: str):
-	"""Roll dices in NdN format"""
-	# If the Discord chan is bridged to an IRC chan, relay on IRC the command sent on Discord
-	IRC_chan = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)["irc_chan"]
-	if IRC_chan:
-		Author = Context.author.display_name
-		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, Author, f"!roll {Dices}")
-	try:
-		Rolls = Roll_dices(Dices)
-	except Exception:
-		await Context.send("Format has to be in NdN.")
-		if IRC_chan:
-			await IRC_manager.GCI().Safe_message(IRC_chan, "Format has to be NdN.")
-		return
-	await Context.send(Rolls)
-	if IRC_chan:
-		await IRC_manager.GCI().Safe_message(IRC_chan, Rolls)
-
-async def IRC_roll(Bridge, Text):
+async def Roll_dices(Bridge, Dices):
 	IRC_chan = Bridge["irc_chan"]
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	try:
+		# Accept NDN as well as NdN
+		Dices = Dices.lower()
+		Number_rolls, Limit = map(int, Dices.split("d"))
+		Rolls = []
+		for _ in range(Number_rolls):
+			Roll = random.randint(1, Limit)
+			Rolls.append(str(Roll))
+		Rolls = ", ".join(Rolls)
+	except Exception as Error:
+		print(f"[Commands] Roll_dices(): {Error}")
+		Output = "Format has to be in NdN."
+		await Discord_chan.send(Output)
+		await IRC_manager.GCI().Safe_message(IRC_chan, Output)
+		return
+	await Discord_chan.send(Rolls)
+	await IRC_manager.GCI().Safe_message(IRC_chan, Rolls)
+
+@bot.command()
+async def roll(Context, Dices: str):
+	"""Roll dices in NdN format"""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		IRC_chan = Bridge["irc_chan"]
+		Author = Context.author.display_name
+		# If the Discord chan is bridged to an IRC chan, relay on IRC the command sent on Discord
+		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, Author, f"!roll {Dices}")
+		await Roll_dices(Bridge, Dices)
+
+async def IRC_roll(Bridge, Text):
 	Parts = Text.split(maxsplit=1)
 	if len(Parts) < 2:
-		await IRC_manager.GCI().Safe_message(IRC_chan, "Usage: !roll NdN")
-		await Discord_chan.send("Usage: !roll NdN")
+		Output = "Usage: !roll NdN"
+		await Discord_chan.send(Output)
+		await IRC_manager.GCI().Safe_message(IRC_chan, Output)
 		return
-	Dices = Parts[1].lower()
-	try:
-		Rolls = Roll_dices(Dices)
-	except Exception:
-		await IRC_manager.GCI().Safe_message(IRC_chan, "Format has to be NdN.")
-		await Discord_chan.send("Format has to be NdN.")
-		return
-	await IRC_manager.GCI().Safe_message(IRC_chan, Rolls)
-	await Discord_chan.send(Rolls)
+	Dices = Parts[1]
+	await Roll_dices(Bridge, Dices)
 
 ###############################################################################
 # Draw straws
@@ -296,8 +292,9 @@ async def Discord_ergostraws_help(Context):
 		# Relay on IRC the command sent on Discord
 		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, Author, "!ergostraws help")
 		await Ergostraws_help(Bridge)
-		await Discord_chan.send("See “!help ergostraws”.")
-		await IRC_manager.GCI().Safe_message(IRC_chan, "See “!help ergostraws” (on Discord).")
+		Output = "See “!help ergostraws"
+		await Context.send(Output + "”.")
+		await IRC_manager.GCI().Safe_message(IRC_chan, Output + "” (on Discord).")
 
 async def IRC_ergostraws_help(Bridge):
 	IRC_chan = Bridge["irc_chan"]
@@ -428,7 +425,6 @@ async def Ergostraws_draw(Bridge):
 	# Sort the list from smallest to biggest hash
 	Users = Ergobag["Users"]
 	Users.sort(key=lambda User: Hashes[User])
-	print("Users = ", Users)
 	Output = "The participants between whom to draw are: "
 	Output += ", ".join(Ergobag["Users"]) + ".\n\n"
 	Output += f"The common key is: “{Common_key}”.\n"

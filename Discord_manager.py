@@ -61,7 +61,7 @@ async def on_command_error(Context, Error):
 		return
 	Author = Context.author.display_name
 	# Relay on IRC the command that caused the error
-	IRC_Instance = IRC_manager.GCI()
+	IRC_instance = IRC_manager.GCI()
 	await IRC_instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
 	await IRC_instance.Safe_message(IRC_chan, f"Command error: {Error}")
 
