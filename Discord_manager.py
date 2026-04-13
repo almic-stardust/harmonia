@@ -328,9 +328,9 @@ async def on_message(Message):
 			from Commands_manager import IRC_straws_draw
 			await IRC_straws_draw(Bridge)
 			return
-		elif Text.rstrip() == "!straws empty":
-			from Commands_manager import IRC_straws_empty
-			await IRC_straws_empty(Bridge)
+		elif Text.rstrip() == "!straws reset":
+			from Commands_manager import IRC_straws_reset
+			await IRC_straws_reset(Bridge)
 			return
 		else:
 			await IRC_manager.GCI().Safe_message(IRC_chan,
