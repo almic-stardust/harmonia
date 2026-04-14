@@ -59,14 +59,17 @@ async def roll(Context, Dices: str):
 		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, Author, f"!roll {Dices}")
 		await Roll_dices(Bridge, Dices)
 
-async def IRC_roll(Bridge, Text):
-	Parts = Text.split(maxsplit=1)
-	if len(Parts) < 2:
+async def IRC_roll(Bridge, Dices):
+	IRC_chan = Bridge["irc_chan"]
+	Discord_chan = bot.get_channel(Bridge["discord_chan"])
+	if not Discord_chan:
+		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	Dices = Dices.replace("!roll", "")
+	if not Dices:
 		Output = "Usage: !roll NdN"
 		await Discord_chan.send(Output)
 		await IRC_manager.GCI().Safe_message(IRC_chan, Output)
 		return
-	Dices = Parts[1]
 	await Roll_dices(Bridge, Dices)
 
 ###############################################################################
@@ -192,7 +195,7 @@ async def Straws_add(Bridge, Author, Action, Straw, Context=None):
 		await IRC_manager.GCI().Safe_message(Author, Output)
 
 @straws.command(name="participate")
-async def Discord_straws_participate(Context, Word: str):
+async def Discord_straws_participate(Context, *, Word: str):
 	"""Put a straw in the bag (and participate in the draw)."""
 	# A straw is a word, or several that will be concatenated, in both cases up to 30 letters
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
@@ -203,15 +206,14 @@ async def Discord_straws_participate(Context, Word: str):
 		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, Author,
 				f"!straws participate {Word}"
 		)
-		await Straws_add(Bridge, Author, Participate, Word, Context)
+		await Straws_add(Bridge, Author, "Participate", Word, Context)
 
 async def IRC_straws_participate(Bridge, Author, Straw):
 	IRC_chan = Bridge["irc_chan"]
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	# Retrieve arguments in one string, starting from the 2nd (after participate)
-	Straw = " ".join(Straw.split()[2:])
+	Straw = Straw.replace("!straws participate", "")
 	if not Straw:
 		Output = "Usage: !straws participate Word"
 		await IRC_manager.GCI().Safe_message(IRC_chan, Output)
@@ -220,7 +222,7 @@ async def IRC_straws_participate(Bridge, Author, Straw):
 	await Straws_add(Bridge, Author, "Participate", Straw)
 
 @straws.command(name="contribute")
-async def Discord_straws_contribute(Context, Word: str):
+async def Discord_straws_contribute(Context, *, Word: str):
 	"""Put a straw in the bag (without participating in the draw)."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
@@ -237,7 +239,7 @@ async def IRC_straws_contribute(Bridge, Author, Straw):
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	Straw = " ".join(Straw.split()[2:])
+	Straw = Straw.replace("!straws contribute", "")
 	if not Straw:
 		Output = "Usage: !straws contribute Word"
 		await IRC_manager.GCI().Safe_message(IRC_chan, Output)
@@ -251,36 +253,32 @@ async def Straws_users(Bridge, Users):
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	try:
-		Users = Users.split()
-		# Remove “!straws” and “users” from the splitted string
-		Users = Users[2:]
-	except Exception as Error:
-		print(f"[Commands] Users_ergostraw(): {Error}")
-		await IRC_manager.GCI().Safe_message(IRC_chan, "No users provided!")
-		await Discord_chan.send("No users provided!")
-		return
-	Straws_bag["Users"] = Users
+	Straws_bag["Users"] = Users.split()
 	Output = "The list of users has been set."
 	await IRC_manager.GCI().Safe_message(IRC_chan, Output)
 	await Discord_chan.send(Output)
 
 @straws.command(name="users")
-async def Discord_straws_users(Context, Users: str):
-	"""Set the list of users between whom to draw."""
+async def Discord_straws_users(Context, *, Users: str):
+	"""Set the list of users participating in the draw."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		IRC_chan = Bridge["irc_chan"]
 		Author = Context.author.display_name
 		# Relay on IRC the command sent on Discord
-		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, Author, "!straws users {Users}")
+		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, Author, f"!straws users {Users}")
 		await Straws_users(Bridge, Users)
 
 async def IRC_straws_users(Bridge, Users):
+	IRC_chan = Bridge["irc_chan"]
+	Discord_chan = bot.get_channel(Bridge["discord_chan"])
+	if not Discord_chan:
+		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	Users = Users.replace("!straws users", "")
 	if not Users:
-		Output = "Usage: !straws users User1 User2 …"
-		await IRC_manager.GCI().Safe_message(IRC_chan, Output)
+		Output = "No users provided! Usage: !straws users User1 User2 …"
 		await Discord_chan.send(Output)
+		await IRC_manager.GCI().Safe_message(IRC_chan, Output)
 		return
 	await Straws_users(Bridge, Users)
 
@@ -307,9 +305,8 @@ async def Straws_draw(Bridge):
 		# calculate a hash for each user’s key
 		Hash = hashlib.sha256((Common_key + User).encode("utf8")).hexdigest()
 		Hashes[User] = Hash
-	# Sort the list from smallest to biggest hash
-	Users = Straws_bag["Users"]
-	Users.sort(key=lambda User: Hashes[User])
+	# To avoid modifying the original list, create an sorted copy, from smallest to biggest hash
+	Users = sorted(Straws_bag["Users"], key=lambda User: Hashes[User])
 	Output = "The participants between whom to draw are: "
 	Output += ", ".join(Straws_bag["Users"]) + ".\n\n"
 	Output += f"The common key is: “{Common_key}”.\n"
