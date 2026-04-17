@@ -2,6 +2,7 @@
 
 import asyncio
 
+
 async def Wait_for_events(*Events):
 	Tasks = [asyncio.create_task(Event) for Event in Events]
 	Done, Pending = await asyncio.wait(Tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -9,3 +10,11 @@ async def Wait_for_events(*Events):
 		Task.cancel()
 	await asyncio.gather(*Pending, return_exceptions=True)
 	return Done
+
+async def Get_channels(Bridge):
+	IRC_chan = Bridge["irc_chan"]
+	from Discord_manager import bot
+	Discord_chan = bot.get_channel(Bridge["discord_chan"])
+	if not Discord_chan:
+		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	return IRC_chan, Discord_chan

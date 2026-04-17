@@ -13,6 +13,7 @@ import re
 from urllib.parse import quote
 
 from Config_manager import Config
+import Gears
 import DB_manager
 import History
 import IRC_manager
@@ -261,10 +262,7 @@ async def on_message(Message):
 	Bridge = Get_bridge_by_Discord_chan(Message.channel.id)
 	if not Bridge:
 		return
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 
 	# Author.display_name = the server nickname if set, otherwise the global display name if set,
 	# otherwise the Discord username
@@ -334,9 +332,9 @@ async def on_message(Message):
 			return
 		else:
 			await IRC_manager.GCI().Safe_message(IRC_chan,
-					"Invalid argument. See “!help straws” (on Discord)."
+					"Invalid subcommand. See “!help straws” (on Discord)."
 			)
-			await Discord_chan.send("Invalid argument. See “!help straws”.")
+			await Discord_chan.send("Invalid subcommand. See “!help straws”.")
 
 	# Exempt commands from buffering
 	if Is_command(Message):

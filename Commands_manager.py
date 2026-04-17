@@ -4,6 +4,7 @@ import random
 import re
 import hashlib
 
+import Gears
 from Discord_manager import bot
 import Discord_manager
 import IRC_manager
@@ -12,11 +13,12 @@ Straws_bag = {}
 Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
 
+###############################################################################
+# General
+###############################################################################
+
 async def No_help_for_IRC(Bridge):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Output = "The !help command is only available on Discord."
 	await Discord_chan.send(Output)
 	await IRC_manager.GCI().Safe_message(IRC_chan, Output)
@@ -26,10 +28,7 @@ async def No_help_for_IRC(Bridge):
 ###############################################################################
 
 async def Roll_dices(Bridge, Dices):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	try:
 		# Accept NDN as well as NdN
 		Dices = Dices.lower()
@@ -60,10 +59,7 @@ async def roll(Context, Dices: str):
 		await Roll_dices(Bridge, Dices)
 
 async def IRC_roll(Bridge, Dices):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Dices = Dices.replace("!roll", "")
 	if not Dices:
 		Output = "Usage: !roll NdN"
@@ -90,7 +86,7 @@ def Straws_current_state():
 		Presence_straws = True
 		Output += "The following users gave the following words:\n"
 		for Author in Straws_bag["Common_key"].keys():
-			Output += f"[{Author}] {Straws_bag["Common_key"][Author]}\n"
+			Output += f"[{Author}] {Straws_bag['Common_key'][Author]}\n"
 	if not Presence_participants:
 		Display_help = True
 		if Presence_straws:
@@ -105,8 +101,12 @@ def Straws_current_state():
 @bot.group()
 async def straws(Context):
 	"""Draw straws among a group, with a reproducible pseudo-randomness."""
-	# If no subcommand is invoked, show what’s currently in the bag
-	if not Context.invoked_subcommand:
+	if Context.invoked_subcommand is None:
+		# If there’s something after “!straws”, but it’s not a valid subcommand
+		if Context.subcommand_passed is not None:
+			await Context.send("Invalid subcommand. See “!help straws”.")
+			return
+		# If no subcommand is invoked, show what’s currently in the bag
 		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 		if Bridge:
 			IRC_chan = Bridge["irc_chan"]
@@ -123,10 +123,7 @@ async def straws(Context):
 				await IRC_manager.GCI().Safe_message(IRC_chan, Output + "” (on Discord).")
 
 async def IRC_straws(Bridge):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Output, Display_help = Straws_current_state()
 	if not Display_help:
 		await Discord_chan.send(Output)
@@ -150,20 +147,14 @@ async def Discord_straws_help(Context):
 		await IRC_manager.GCI().Safe_message(IRC_chan, Output + "” (on Discord).")
 
 async def IRC_straws_help(Bridge):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Output = "See “!help straws"
 	await Discord_chan.send(Output + "”.")
 	await IRC_manager.GCI().Safe_message(IRC_chan, Output + "” (on Discord).")
 
 async def Straws_add(Bridge, Author, Action, Straw, Context=None):
 	global Straws_bag
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	try:
 		# Remove dots, commas and underscores
 		Straw = Straw.replace(".", " ").replace(",", " ").replace("_", " ")
@@ -176,7 +167,8 @@ async def Straws_add(Bridge, Author, Action, Straw, Context=None):
 		# Ward off clever ones
 		Straw = Straw[:30]
 		if Action == "Participate":
-			Straws_bag["Users"].append(Author)
+			if Author not in Straws_bag["Users"]:
+				Straws_bag["Users"].append(Author)
 			Straws_bag["Common_key"].update({Author: Straw})
 		if Action == "Contribute":
 			Straws_bag["Common_key"].update({Author: Straw})
@@ -209,10 +201,7 @@ async def Discord_straws_participate(Context, *, Word: str):
 		await Straws_add(Bridge, Author, "Participate", Word, Context)
 
 async def IRC_straws_participate(Bridge, Author, Straw):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Straw = Straw.replace("!straws participate", "")
 	if not Straw:
 		Output = "Usage: !straws participate Word"
@@ -235,10 +224,7 @@ async def Discord_straws_contribute(Context, *, Word: str):
 		await Straws_add(Bridge, Author, "Contribute", Word, Context)
 
 async def IRC_straws_contribute(Bridge, Author, Straw):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Straw = Straw.replace("!straws contribute", "")
 	if not Straw:
 		Output = "Usage: !straws contribute Word"
@@ -249,10 +235,7 @@ async def IRC_straws_contribute(Bridge, Author, Straw):
 
 async def Straws_users(Bridge, Users):
 	global Straws_bag
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Straws_bag["Users"] = Users.split()
 	Output = "The list of users has been set."
 	await IRC_manager.GCI().Safe_message(IRC_chan, Output)
@@ -270,10 +253,7 @@ async def Discord_straws_users(Context, *, Users: str):
 		await Straws_users(Bridge, Users)
 
 async def IRC_straws_users(Bridge, Users):
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Users = Users.replace("!straws users", "")
 	if not Users:
 		Output = "No users provided! Usage: !straws users User1 User2 …"
@@ -284,10 +264,7 @@ async def IRC_straws_users(Bridge, Users):
 
 async def Straws_draw(Bridge):
 	global Straws_bag
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	if len(Straws_bag["Common_key"]) == 0:
 		Output = "No straws to draw from. See “!help straws"
 		await Discord_chan.send(Output + "”.")
@@ -334,10 +311,7 @@ async def IRC_straws_draw(Bridge):
 
 async def Straws_reset(Bridge):
 	global Straws_bag
-	IRC_chan = Bridge["irc_chan"]
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
+	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
 	Straws_bag["Common_key"] = {}
 	Straws_bag["Users"] = []
 	Output = "The list of participants has been deleted, and the bag is now empty."
