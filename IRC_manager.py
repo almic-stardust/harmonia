@@ -289,6 +289,9 @@ class Connection_handler(pydle.Client):
 		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
 
 	async def Safe_message(self, Chan, Message):
+		if not self.connected:
+			print(f"[IRC] Error: attempt to send on disconnected instance {self.instance_id}")
+			return
 		async with self.Send_lock:
 			for Line in Message.splitlines():
 				# No need to send a blank line
@@ -302,7 +305,4 @@ class Connection_handler(pydle.Client):
 					self.Last_send = time.monotonic()
 
 	async def Relay_Discord_message(self, Chan, Author, Message):
-		if not self.connected:
-			print(f"[IRC] Error: attempt to send on disconnected instance {self.instance_id}")
-			return
 		await self.Safe_message(Chan, f"<\x02{Author}\x02> {Message}")

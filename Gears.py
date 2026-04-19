@@ -2,6 +2,7 @@
 
 import asyncio
 
+import IRC_manager
 
 async def Wait_for_events(*Events):
 	Tasks = [asyncio.create_task(Event) for Event in Events]
@@ -12,9 +13,19 @@ async def Wait_for_events(*Events):
 	return Done
 
 async def Get_channels(Bridge):
-	IRC_chan = Bridge["irc_chan"]
 	from Discord_manager import bot
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	return IRC_chan, Discord_chan
+	IRC_chan = Bridge["irc_chan"]
+	return Discord_chan, IRC_chan
+
+async def Send(Bridge, Message, Message_IRC=None):
+	"""Send a message both on Discord and IRC"""
+	Discord_chan, IRC_chan = await Get_channels(Bridge)
+	await Discord_chan.send(Message)
+	if IRC_chan:
+		if Message_IRC:
+			await IRC_manager.GCI().Safe_message(IRC_chan, Message_IRC)
+		else:
+			await IRC_manager.GCI().Safe_message(IRC_chan, Message)

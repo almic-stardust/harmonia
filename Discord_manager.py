@@ -262,7 +262,7 @@ async def on_message(Message):
 	Bridge = Get_bridge_by_Discord_chan(Message.channel.id)
 	if not Bridge:
 		return
-	IRC_chan, Discord_chan = await Gears.Get_channels(Bridge)
+	Discord_chan, IRC_chan = await Gears.Get_channels(Bridge)
 
 	# Author.display_name = the server nickname if set, otherwise the global display name if set,
 	# otherwise the Discord username
