@@ -43,7 +43,7 @@ async def Roll_dices(Bridge, Dices, Author=None):
 		Rolls = ", ".join(Rolls)
 	except Exception as Error:
 		print(f"[Commands] Roll_dices(): {Error}")
-		Output_Discord = "Format has to be in NdN."
+		Output_Discord = "Format has to be NdN."
 		Output_IRC += Output_Discord
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
 		return
@@ -59,10 +59,6 @@ async def roll(Context, Dices: str):
 		await Roll_dices(Bridge, Dices, Context.author.display_name)
 
 async def IRC_roll(Bridge, Dices):
-	Dices = Dices.replace("!roll", "")
-	if not Dices:
-		await Gears.Send(Bridge, "Usage: !roll NdN")
-		return
 	await Roll_dices(Bridge, Dices)
 
 ###############################################################################
@@ -183,12 +179,8 @@ async def Discord_straws_participate(Context, *, Word: str):
 	if Bridge:
 		await Straws_add(Bridge, Context.author.display_name, "participate", Word, Context)
 
-async def IRC_straws_participate(Bridge, User, Straw):
-	Straw = Straw.replace("!straws participate", "")
-	if not Straw:
-		await Gears.Send(Bridge, "Usage: !straws participate Word")
-		return
-	await Straws_add(Bridge, User, "participate", Straw)
+async def IRC_straws_participate(Bridge, User, Word):
+	await Straws_add(Bridge, User, "participate", Word)
 
 @straws.command(name="contribute")
 async def Discord_straws_contribute(Context, *, Word: str):
@@ -197,12 +189,8 @@ async def Discord_straws_contribute(Context, *, Word: str):
 	if Bridge:
 		await Straws_add(Bridge, Context.author.display_name, "contribute", Word, Context)
 
-async def IRC_straws_contribute(Bridge, User, Straw):
-	Straw = Straw.replace("!straws contribute", "")
-	if not Straw:
-		await Gears.Send(Bridge, "Usage: !straws contribute Word")
-		return
-	await Straws_add(Bridge, User, "contribute", Straw)
+async def IRC_straws_contribute(Bridge, User, Word):
+	await Straws_add(Bridge, User, "contribute", Word)
 
 async def Straws_users(Bridge, Users, Author=None):
 	global Straws_bag
@@ -223,10 +211,6 @@ async def Discord_straws_users(Context, *, Users: str):
 		await Straws_users(Bridge, Users, Context.author.display_name)
 
 async def IRC_straws_users(Bridge, Users):
-	Users = Users.replace("!straws users", "")
-	if not Users:
-		await Gears.Send(Bridge, "No users provided! Usage: !straws users User1 User2 …")
-		return
 	await Straws_users(Bridge, Users)
 
 async def Straws_draw(Bridge, Author=None):
