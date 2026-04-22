@@ -14,7 +14,76 @@ Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
 
 ###############################################################################
-# General
+# IRC commands dispatcher
+###############################################################################
+
+async def IRC_dispatcher(Bridge, User, Text):
+	Commands = { #		 Fonction name			Needs User variable?	Needs arguments?
+			"!help":	(No_help_for_IRC,		False,					False),
+			"!roll":	(IRC_roll,				False,					True),
+			"!straws":	(Straws_dispatcher,		True,					True),
+	}
+	Parts = Text.split(maxsplit=1)
+	Command = Parts[0]
+	Remainder = Parts[1] if len(Parts) > 1 else None
+	if Command not in Commands:
+		Output_Discord = "Invalid command. See “!help”."
+		Output_IRC = "Invalid command. See “!help” (on Discord)."
+		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		return
+	Function, Needs_user, Needs_args = Commands[Command]
+	if Needs_args and Needs_user:
+		await Function(Bridge, User, Remainder)
+	elif Needs_args:
+		await Function(Bridge, Remainder)
+	else:
+		await Function(Bridge)
+
+async def Straws_dispatcher(Bridge, User, Remainder):
+
+	Subcommands = { #		 Fonction name				Needs arguments?
+			"help":			(IRC_straws_help,			False),
+			"participate":	(IRC_straws_participate,	True),
+			"contribute":	(IRC_straws_contribute,		True),
+			"users":		(IRC_straws_users,			True),
+			"draw":			(IRC_straws_draw,			False),
+			"reset":		(IRC_straws_reset,			False),
+	}
+
+	if not Remainder:
+		await IRC_straws(Bridge)
+		return
+	Parts = Remainder.split(maxsplit=1)
+	Subcommand = Parts[0]
+
+	if Subcommand not in Subcommands:
+		Output_Discord = "Invalid subcommand. See “!help straws”."
+		Output_IRC = "Invalid subcommand. See “!help straws” (on Discord)."
+		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		return
+	IRC_function, Needs_args = Subcommands[Subcommand]
+
+	# Commands that don’t require arguments
+	if not Needs_args:
+		await IRC_function(Bridge)
+		return
+	Arguments = Parts[1] if len(Parts) > 1 else None
+
+	# Commands requiring arguments
+	if not Arguments:
+		if Subcommand in {"participate", "contribute"}:
+			Help_usage = f"Usage: !straws {Subcommand} Word"
+		elif Subcommand == "users":
+			Help_usage = "Usage: !straws users User1 User2 …"
+		await Gears.Send(Bridge, Help_usage)
+		return
+	if Subcommand in {"participate", "contribute"}:
+		await IRC_function(Bridge, User, Arguments)
+	else:
+		await IRC_function(Bridge, Arguments)
+
+###############################################################################
+# Misc
 ###############################################################################
 
 async def No_help_for_IRC(Bridge):
@@ -59,6 +128,9 @@ async def roll(Context, Dices: str):
 		await Roll_dices(Bridge, Dices, Context.author.display_name)
 
 async def IRC_roll(Bridge, Dices):
+	if not Dices:
+		await Gears.Send(Bridge, "Usage: !roll NdN")
+		return
 	await Roll_dices(Bridge, Dices)
 
 ###############################################################################
@@ -221,14 +293,14 @@ async def Straws_draw(Bridge, Author=None):
 	if Author:
 		Output_IRC = f"<\x02{Author}\x02> !straws draw\n"
 
-	if len(Straws_bag["Common_key"]) == 0:
-		Output_Discord = "No straws to draw from. See “!help straws”."
-		Output_IRC += "No straws to draw from. See “!help straws” (on Discord)."
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
-		return
 	if len(Straws_bag["Users"]) == 0:
 		Output_Discord = "No participants between whom to draw. See “!help straws”."
 		Output_IRC += "No participants between whom to draw. See “!help straws” (on Discord)."
+		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		return
+	if len(Straws_bag["Common_key"]) == 0:
+		Output_Discord = "No straws to draw from. See “!help straws”."
+		Output_IRC += "No straws to draw from. See “!help straws” (on Discord)."
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
 		return
 

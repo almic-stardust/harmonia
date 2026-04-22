@@ -291,73 +291,11 @@ async def on_message(Message):
 			Author_name, Bridge["discord_chan"], Message, Text, Relayed_message
 	)
 
-	# Commands from IRC
-	if Text.startswith("!help") and Relayed_message:
-		from Commands_manager import No_help_for_IRC
-		await No_help_for_IRC(Bridge)
-		return
-	if Text.startswith("!roll") and Relayed_message:
-		Parts = Text.split(maxsplit=2)
-		# Should give ["!roll", "NdN"]
-		if len(Parts) < 2:
-			await Gears.Send(Bridge, "Usage: !roll NdN")
-			return
-		Dices = Parts[1]
-		from Commands_manager import IRC_roll
-		await IRC_roll(Bridge, Dices)
-		return
+	if Text.startswith("!") and Relayed_message:
+		from Commands_manager import IRC_dispatcher
+		await IRC_dispatcher(Bridge, Author_name, Text)
 
-	if Text.startswith("!straws") and Relayed_message:
-		if Text.rstrip() == "!straws":
-			from Commands_manager import IRC_straws
-			await IRC_straws(Bridge)
-			return
-		Parts = Text.split(maxsplit=2)
-		# Should give ["!straws", "subcommand", "arguments"]
-		if len(Parts) < 2:
-			await Gears.Send(Bridge, "Usage: !straws <subcommand> [arguments]")
-			return
-		Subcommand = Parts[1]
-		# Subcommands that require an argument
-		if Subcommand in {"participate", "contribute", "users"}:
-			if len(Parts) < 3:
-				if Subcommand == "users":
-					await Gears.Send(Bridge, "Usage: !straws users User1 User2 …")
-				else:
-					await Gears.Send(Bridge, f"Usage: !straws {Subcommand} Word")
-				return
-			Argument = Parts[2]
-		if Subcommand == "help":
-			from Commands_manager import IRC_straws_help
-			await IRC_straws_help(Bridge)
-			return
-		elif Subcommand == "participate":
-			from Commands_manager import IRC_straws_participate
-			await IRC_straws_participate(Bridge, Author_name, Argument)
-			return
-		elif Subcommand == "contribute":
-			from Commands_manager import IRC_straws_contribute
-			await IRC_straws_contribute(Bridge, Author_name, Argument)
-			return
-		elif Subcommand == "users":
-			from Commands_manager import IRC_straws_users
-			await IRC_straws_users(Bridge, Argument)
-			return
-		elif Subcommand == "draw":
-			from Commands_manager import IRC_straws_draw
-			await IRC_straws_draw(Bridge)
-			return
-		elif Subcommand == "reset":
-			from Commands_manager import IRC_straws_reset
-			await IRC_straws_reset(Bridge)
-			return
-		else:
-			await IRC_manager.GCI().Safe_message(IRC_chan,
-					"Invalid subcommand. See “!help straws” (on Discord)."
-			)
-			await Discord_chan.send("Invalid subcommand. See “!help straws”.")
-
-	# Exempt commands from buffering
+	# Exempt Discord commands from buffering
 	if Is_command(Message):
 		# Forward the message to the bot’s command handler
 		await bot.process_commands(Message)

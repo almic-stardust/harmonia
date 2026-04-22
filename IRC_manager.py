@@ -292,6 +292,7 @@ class Connection_handler(pydle.Client):
 		if not self.connected:
 			print(f"[IRC] Error: attempt to send on disconnected instance {self.instance_id}")
 			return
+		# Time-limiter
 		async with self.Send_lock:
 			for Line in Message.splitlines():
 				# No need to send a blank line
