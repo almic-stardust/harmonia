@@ -209,7 +209,7 @@ def Split_message(Message):
 	return Splitted_message
 
 def Is_command(Message):
-	return Message.content.startswith(tuple(bot.command_prefix))
+	return bool(re.match(r"^![A-Za-z]+", Message.content))
 
 async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 
@@ -291,18 +291,20 @@ async def on_message(Message):
 			Author_name, Bridge["discord_chan"], Message, Text, Relayed_message
 	)
 
-	if Text.startswith("!") and Relayed_message:
-		from Commands_manager import IRC_dispatcher
-		await IRC_dispatcher(Bridge, Author_name, Text)
-
-	# Exempt Discord commands from buffering
-	if Is_command(Message):
-		# Forward the message to the bot’s command handler
-		await bot.process_commands(Message)
+	if Relayed_message:
+		# Ensure the command starts with a letter (don’t react to “!!!” or “!?”)
+		if re.match(r"^![A-Za-z]+", Text):
+			from Commands_manager import IRC_dispatcher
+			await IRC_dispatcher(Bridge, Author_name, Text)
 		return
 
-	# The bot ignores its own messages (including what it relayed)
-	if Author == bot.user or Relayed_message:
+	# The bot ignores its own messages
+	if Author == bot.user:
+		return
+
+	# Forward Discord commands to the bot’s command handler, to prevent them from being buffered
+	if Is_command(Message):
+		await bot.process_commands(Message)
 		return
 
 	# Prepare the message and send it to IRC
