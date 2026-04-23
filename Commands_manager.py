@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import inspect
 import random
 import re
 import hashlib
@@ -14,15 +15,29 @@ Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
 
 ###############################################################################
-# IRC commands dispatcher
+# Dispatch IRC commands
 ###############################################################################
 
-async def IRC_dispatcher(Bridge, User, Text):
-	Commands = { #		 Fonction name			Needs User variable?	Needs arguments?
-			"!help":	(No_help_for_IRC,		False,					False),
-			"!roll":	(IRC_roll,				False,					True),
-			"!straws":	(Straws_dispatcher,		True,					True),
+async def IRC_commands_dispatcher(Bridge, User, Text):
+
+	Straws_infos = {
+			"Dispatcher": Straws_dispatcher,
+			#		 		 Fonction					User variable?	Arguments?
+			"Direct_call":	(IRC_straws,				False),
+	"Subcommands": {
+			"help":			(IRC_straws_help,							False),
+			"participate":	(IRC_straws_participate,					True),
+			"contribute":	(IRC_straws_contribute,						True),
+			"users":		(IRC_straws_users,							True),
+			"draw":			(IRC_straws_draw,							False),
+			"reset":		(IRC_straws_reset,							False),
+	}}
+	Commands = { #		 Destination (funct or subcom)	User variable?	Arguments?
+			"!help":	(No_help_for_IRC,				False,			False),
+			"!roll":	(IRC_roll,						False,			True),
+			"!straws":	(Straws_infos,					True,			True),
 	}
+
 	Parts = Text.split(maxsplit=1)
 	Command = Parts[0]
 	Remainder = Parts[1] if len(Parts) > 1 else None
@@ -31,45 +46,48 @@ async def IRC_dispatcher(Bridge, User, Text):
 		Output_IRC = "Invalid command. See “!help” (on Discord)."
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
 		return
-	Function, Needs_user, Needs_args = Commands[Command]
-	if Needs_args and Needs_user:
-		await Function(Bridge, User, Remainder)
-	elif Needs_args:
-		await Function(Bridge, Remainder)
+	SC_infos, With_user, With_args = Commands[Command]
+	# Commands without subcommands
+	if inspect.isfunction(SC_infos):
+		# It’s clearer to call Function(…) with a variable named Function
+		Function = SC_infos
+		if With_user and With_args:
+			await Function(Bridge, User, Remainder)
+		elif With_args:
+			await Function(Bridge, Remainder)
+		else:
+			await Function(Bridge)
 	else:
-		await Function(Bridge)
+		if not With_user:
+			User = None
+		await IRC_subcommands_dispatcher(Bridge, Command, SC_infos, User, Remainder)
 
-async def Straws_dispatcher(Bridge, User, Remainder):
-
-	Subcommands = { #		 Fonction name				Needs arguments?
-			"help":			(IRC_straws_help,			False),
-			"participate":	(IRC_straws_participate,	True),
-			"contribute":	(IRC_straws_contribute,		True),
-			"users":		(IRC_straws_users,			True),
-			"draw":			(IRC_straws_draw,			False),
-			"reset":		(IRC_straws_reset,			False),
-	}
-
+async def IRC_subcommands_dispatcher(Bridge, Command, SC_infos, User, Remainder):
 	if not Remainder:
-		await IRC_straws(Bridge)
+		Function, With_user = SC_infos["Direct_call"]
+		if With_user:
+			await Function(Bridge, User)
+		else:
+			await Function(Bridge)
 		return
+	Dispatcher_function = SC_infos["Dispatcher"]
+	Subcommands = SC_infos["Subcommands"]
 	Parts = Remainder.split(maxsplit=1)
 	Subcommand = Parts[0]
-
 	if Subcommand not in Subcommands:
-		Output_Discord = "Invalid subcommand. See “!help straws”."
-		Output_IRC = "Invalid subcommand. See “!help straws” (on Discord)."
+		Output_Discord = f"Invalid subcommand. See “!help {Command}”."
+		Output_IRC = f"Invalid subcommand. See “!help {Command}” (on Discord)."
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
 		return
-	IRC_function, Needs_args = Subcommands[Subcommand]
-
-	# Commands that don’t require arguments
-	if not Needs_args:
-		await IRC_function(Bridge)
+	Function, With_args = Subcommands[Subcommand]
+	# Subcommands that don’t require arguments
+	if not With_args:
+		await Function(Bridge)
 		return
 	Arguments = Parts[1] if len(Parts) > 1 else None
+	await Dispatcher_function(Bridge, Subcommand, Function, User, Arguments)
 
-	# Commands requiring arguments
+async def Straws_dispatcher(Bridge, Subcommand, Function, User, Arguments):
 	if not Arguments:
 		if Subcommand in {"participate", "contribute"}:
 			Help_usage = f"Usage: !straws {Subcommand} Word"
@@ -78,9 +96,9 @@ async def Straws_dispatcher(Bridge, User, Remainder):
 		await Gears.Send(Bridge, Help_usage)
 		return
 	if Subcommand in {"participate", "contribute"}:
-		await IRC_function(Bridge, User, Arguments)
+		await Function(Bridge, User, Arguments)
 	else:
-		await IRC_function(Bridge, Arguments)
+		await Function(Bridge, Arguments)
 
 ###############################################################################
 # Misc

@@ -294,8 +294,8 @@ async def on_message(Message):
 	if Relayed_message:
 		# Ensure the command starts with a letter (don’t react to “!!!” or “!?”)
 		if re.match(r"^![A-Za-z]+", Text):
-			from Commands_manager import IRC_dispatcher
-			await IRC_dispatcher(Bridge, Author_name, Text)
+			from Commands_manager import IRC_commands_dispatcher
+			await IRC_commands_dispatcher(Bridge, Author_name, Text)
 		return
 
 	# The bot ignores its own messages
