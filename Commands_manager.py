@@ -113,23 +113,29 @@ async def No_help_for_IRC(Bridge):
 
 # In this module, the Author variable will be used to indicate whether the message was sent from
 # Discord, and if so, by which user.
-async def Roll_dices(Bridge, Dices, Author=None):
+async def Roll_Dice(Bridge, Dice, Author=None):
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC. Otherwise, IRC users will see a response
 	# from the bot, without seeing the command that prompted it.
 	if Author:
-		Output_IRC = f"<\x02{Author}\x02> !roll {Dices}\n"
+		Output_IRC = f"<\x02{Author}\x02> !roll {Dice}\n"
 	try:
 		# Accept NDN as well as NdN
-		Dices = Dices.lower()
-		Number_rolls, Limit = map(int, Dices.split("d"))
+		Dice = Dice.lower()
+		Number_rolls, Limit = map(int, Dice.split("d"))
+		if Number_rolls > 500:
+			await Gears.Send(Bridge, "You really need to throw more than 500 dice at once?")
+			return
+		if Limit > 1000:
+			await Gears.Send(Bridge, "The dice are limited to 1000 faces.")
+			return
 		Rolls = []
 		for _ in range(Number_rolls):
 			Roll = random.randint(1, Limit)
 			Rolls.append(str(Roll))
 		Rolls = ", ".join(Rolls)
 	except Exception as Error:
-		print(f"[Commands] Roll_dices(): {Error}")
+		print(f"[Commands] Roll_Dice(): {Error}")
 		Output_Discord = "Format has to be NdN."
 		Output_IRC += Output_Discord
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
@@ -139,17 +145,17 @@ async def Roll_dices(Bridge, Dices, Author=None):
 	await Gears.Send(Bridge, Output_Discord, Output_IRC)
 
 @bot.command()
-async def roll(Context, Dices: str):
-	"""Roll dices in NdN format"""
+async def roll(Context, Dice: str):
+	"""Roll Dice in NdN format"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Roll_dices(Bridge, Dices, Context.author.display_name)
+		await Roll_Dice(Bridge, Dice, Context.author.display_name)
 
-async def IRC_roll(Bridge, Dices):
-	if not Dices:
+async def IRC_roll(Bridge, Dice):
+	if not Dice:
 		await Gears.Send(Bridge, "Usage: !roll NdN")
 		return
-	await Roll_dices(Bridge, Dices)
+	await Roll_Dice(Bridge, Dice)
 
 ###############################################################################
 # !straws
@@ -288,8 +294,15 @@ async def Straws_users(Bridge, Users, Author=None):
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
 		Output_IRC = f"<\x02{Author}\x02> !straws users {Users}\n"
-	Straws_bag["Users"] = Users.split()
-	Output_Discord = "The list of users has been set."
+	if len(Users) > 50:
+		Output_Discord = "The draw is limited to 50 users."
+		Output_IRC += Output_Discord
+		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		return
+	Straws_bag["Users"] = []
+	for User in Users.split():
+		Straws_bag["Users"].append(User[:30])
+	Output_Discord = "The list of users has been set (usernames are limited to 30 characters)."
 	Output_IRC += Output_Discord
 	await Gears.Send(Bridge, Output_Discord, Output_IRC)
 
@@ -325,10 +338,10 @@ async def Straws_draw(Bridge, Author=None):
 	Common_key = " ".join(Straws_bag["Common_key"].values())
 	Hashes = {}
 	for User in Straws_bag["Users"]:
-		# Create a dedicated key for each user, by appending their name to the common key, and then
-		# calculate a hash for each user’s key
-		Hash = hashlib.sha256((Common_key + User).encode("utf8")).hexdigest()
-		Hashes[User] = Hash
+		# Create a dedicated key for each user, by appending their name to the common key
+		User_key = (Common_key + User).encode("utf8")
+		# Calculate a hash for each user’s key
+		Hashes[User] = hashlib.sha512(User_key).hexdigest()
 	# To avoid modifying the original list, create an sorted copy, from smallest to biggest hash
 	Users = sorted(Straws_bag["Users"], key=lambda User: Hashes[User])
 
@@ -337,7 +350,9 @@ async def Straws_draw(Bridge, Author=None):
 	Output += f"The common key is: “{Common_key}”.\n"
 	Output += "Hash for each participant:\n"
 	for User in Straws_bag["Users"]:
-		Output += f"[{User}] {Hashes[User]}\n"
+		# Display only the beginning of the hash: it’s more readable, and sufficient to verify
+		Beginning_hash = Hashes[User][:30]
+		Output += f"[{User}] {Beginning_hash}[…]\n"
 	# Shortest straw = smallest hash 
 	Output += f"\nAnd {Users[0]} is the lucky (?) participant who pulls the shortest straw."
 	Output_Discord = Output
