@@ -49,22 +49,22 @@ Create the virtual environment:
 
 #### Database
 
-Create a base according to your Config.yaml, then create this table:
+Create a base according to your Config.yaml, then create these tables:
 
 	CREATE TABLE history (
-	    date_creation   TIMESTAMP NOT NULL DEFAULT current_timestamp(),
-	    server_id       BIGINT NOT NULL,
-	    chan_id         BIGINT NOT NULL,
-	    message_id      BIGINT NOT NULL PRIMARY KEY,
-	    reply_to        BIGINT NULL,
-	    user            VARCHAR(32) NOT NULL,
-	    content         TEXT NOT NULL,
-	    edited          BOOLEAN NOT NULL DEFAULT FALSE,
-	    attachments     TEXT NULL,
-	    reactions       TEXT NULL,
-	    relayed         BOOLEAN NOT NULL DEFAULT FALSE,
-	    expired         BOOLEAN NOT NULL DEFAULT FALSE,
-	    date_deletion   TIMESTAMP NULL
+	    date_creation       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+	    server_id           BIGINT NOT NULL,
+	    chan_id             BIGINT NOT NULL,
+	    message_id          BIGINT NOT NULL PRIMARY KEY,
+	    reply_to            BIGINT NULL,
+	    user                VARCHAR(255) NOT NULL,
+	    content             TEXT NOT NULL,
+	    edited              BOOLEAN NOT NULL DEFAULT FALSE,
+	    attachments         TEXT NULL,
+	    reactions           TEXT NULL,
+	    relayed             BOOLEAN NOT NULL DEFAULT FALSE,
+	    expired             BOOLEAN NOT NULL DEFAULT FALSE,
+	    date_deletion       TIMESTAMP NULL,
 	);
 
 #### Last steps
@@ -86,9 +86,7 @@ Finally, you can start the bot:
 Here is the procedure to set up this feature.
 
 	% cd harmonia/display_history
-	% ln -s ../DB_manager.py
-	% ln -s ../Config.yaml
-	% ln -s ../Config_manager.py
+	% for File in Config_manager.py Config.yaml DB_manager.py ; ln -s ../$File
 
 For performance, create composite indexes in the DB:
 

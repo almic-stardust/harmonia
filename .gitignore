@@ -6,3 +6,7 @@ Config.yaml
 /display_history/static/favicon.ico
 /display_history/static/index.html
 /display_history/__pycache__/
+/utils/Config_manager.py
+/utils/Config.yaml
+/utils/DB_manager.py
+/utils/__pycache__/
