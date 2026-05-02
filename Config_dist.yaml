@@ -13,19 +13,17 @@ mysqlclient:
   user:                   ""
   password:               ""
   database:               ""
-  # For MariaDB in Debian 13
   charset:                "utf8mb4"
-  collation:              "utf8mb4_unicode_520_ci"
-
-history:
-  active:                 True/False
-  db_table:               ""
-  storage_folder:         "/path/to/bot_files"
-  storage_url:            "https://domain.tld/bot_files"
 
 mail:
   server:                 ""
   bot_address:            ""
+
+history:
+  active:                 True/False
+  db_table:               "project_history"
+  storage_folder:         "/path/to/bot_files"
+  storage_url:            "https://domain.tld/bot_files"
 
 irc_info:
   bot_owner:              ""
@@ -36,16 +34,10 @@ irc_info:
   quit_message:           "That’s the end of the beans"
   server:                 "irc.libera.chat"
 
-irc_bridges:
-  chan1:
-    discord_chan:         id_chan
-    # If you want messages on Discord displayed as coming from the users instead of the bot.
-    # See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
-    webhook: ""
-  chan2:
-    discord_chan:         id_chan
-    webhook: ""
+users:
+  db_table:               "project_users"
 
+# If you don’t want to use the DB to manage users
 irc_users:
   PutHereAnIrcNick1:
     # User1 isn’t bothered by having a Discord display name that is the same as their IRC nick, and
@@ -64,3 +56,13 @@ irc_users:
     discord_display_name: ""
     discord_expiration:   "1m"
     avatar:               "https://domain.tld/path/to/Avatar.jpeg"
+
+irc_bridges:
+  chan1:
+    discord_chan:         id_chan
+    # If you want messages on Discord displayed as coming from the users instead of the bot.
+    # See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+    webhook: ""
+  chan2:
+    discord_chan:         id_chan
+    webhook: ""

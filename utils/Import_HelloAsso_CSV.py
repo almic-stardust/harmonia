@@ -8,6 +8,7 @@ import csv
 import datetime
 from pprint import pprint
 
+from Config_manager import Config
 import DB_manager
 
 if len(sys.argv) == 1 or not fnmatch.fnmatch(sys.argv[1], "*csv"):
@@ -20,14 +21,16 @@ if not os.path.exists(Filename):
 
 def Parse_date(Date):
 	Date = str(Date).strip()
-	if not Date:
-		return None
-	else:
+	Formats = ["%d/%m/%Y",	"%d/%m/%Y %H:%M"]
+	Error = ""
+	for Format in Formats:
 		try:
-			return datetime.datetime.strptime(Date, "%d/%m/%Y %H:%M")
-		except Exception as Error:
-			print(f"Error while parsing date: {Error}")
-			return None
+			return datetime.datetime.strptime(Date, Format)
+		except Exception as e:
+			Error = e
+			continue
+	print(f"Error while parsing date: {Error}")
+	return None
 
 def Parse_contribution(Value):
 	if Value is None:
@@ -46,12 +49,17 @@ def Parse_contribution(Value):
 		return 0
 
 with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
-	Users = []
+
+	Users_table = Config["users"]["db_table"]
+	Users = {}
+	Output = ""
 	CSV_content = csv.DictReader(CSV_file, delimiter=";")
+
 	Field_names = []
 	for Field_name in CSV_content.fieldnames:
 		Field_names.append(Field_name.strip())
 	pprint(Field_names)
+
 	for Line in CSV_content:
 		Mail = Line.get("Email payeur", "").strip()
 		First_name = Line.get("Prénom adhérent", "").strip()
@@ -64,7 +72,21 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 				Pseudo = First_name
 			else:
 				Pseudo = None
-		Last_renewal = Parse_date(Line.get("Date de la commande"))
+		Date = Parse_date(Line.get("Date de la commande"))
 		Contribution = Parse_contribution(Line.get("Montant tarif"))
-		User = [Mail, Pseudo, First_name, Last_name, Last_renewal, Contribution]
-		print(User)
+
+		#DB_manager.Users_import_HA_user(Users_table, Pseudo, Mail, First_name, Last_name, Date, Contribution)
+		User_infos = {
+				"Pseudo": Pseudo,
+				"Mail": Mail,
+				"First_name": First_name,
+				"Last_name": Last_name,
+				"Last_renewal": Date,
+				"Contribution": Contribution
+		}
+		User_ID = DB_manager.Users_check_duplicates(Users_table, User_infos)
+		if User_ID:
+			print("User_ID =", User_ID, "\n")
+		Users[Pseudo] = User_infos
+
+	#DB_manager.Users_add_users(Users_table, Users)

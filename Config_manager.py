@@ -28,10 +28,14 @@ if Config.get("irc_bridges"):
 else:
 	Config["irc_bridges"] = {}
 
-Config["users"] = {
-	"irc_to_discord": {},
-	"discord_to_irc": {}
-}
+if Config.get("users"):
+	Config["users"]["irc_to_discord"] = {}
+	Config["users"]["discord_to_irc"] = {}
+else:
+	Config["users"] = {
+		"irc_to_discord": {},
+		"discord_to_irc": {}
+	}
 if Config.get("irc_users"):
 	for IRC_user, User_infos in Config["irc_users"].items():
 		# Ensure User_infos is a dict

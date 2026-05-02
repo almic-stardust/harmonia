@@ -4,7 +4,7 @@ import datetime
 import os
 import re
 
-from Config_manager import Config
+#from Config_manager import Config
 import DB_manager
 import Attachments_manager
 

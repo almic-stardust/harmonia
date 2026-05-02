@@ -67,6 +67,25 @@ Create a base according to your Config.yaml, then create these tables:
 	    date_deletion       TIMESTAMP NULL,
 	);
 
+	CREATE TABLE users (
+	    pseudonym           VARCHAR(255) NULL,
+	    id                  INT AUTO_INCREMENT PRIMARY KEY,
+	    mail                VARCHAR(255) NOT NULL,
+	    first_name          VARCHAR(255) NULL,
+	    last_name           VARCHAR(255) NULL,
+	    ml_pseudo             VARCHAR(255) NULL,
+	    wiki_pseudo           VARCHAR(255) NULL,
+	    irc_pseudo            VARCHAR(255) NULL,
+	    forum_pseudo          VARCHAR(255) NULL,
+	    discord_pseudo        VARCHAR(255) NULL,
+	    discord_expiration  INT NULL,
+	    avatar              VARCHAR(255) NULL,
+	    first_membership    TIMESTAMP NOT NULL,
+	    last_renewal        TIMESTAMP NULL,
+	    medium              VARCHAR(255) NOT NULL,
+	    contribution        INT NOT NULL,
+	);
+
 #### Last steps
 
 	% git https://github.com/almic-stardust/harmonia

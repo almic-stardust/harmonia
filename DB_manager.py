@@ -136,7 +136,7 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		Request = f"""
+		Query = f"""
 			SELECT
 				message_id,
 				reply_to,
@@ -152,13 +152,13 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 			AND chan_id = %s
 			AND date_deletion IS NULL
 		"""
-		Params = [Server_ID, Chan_ID]
+		Values = [Server_ID, Chan_ID]
 		if Before is not None:
-			Request += " AND date_creation < %s"
-			Params.append(Before)
-		Request += " ORDER BY date_creation DESC LIMIT %s"
-		Params.append(Limit)
-		Cursor.execute(Request, Params)
+			Query += " AND date_creation < %s"
+			Values.append(Before)
+		Query += " ORDER BY date_creation DESC LIMIT %s"
+		Values.append(Limit)
+		Cursor.execute(Query, Values)
 		Result = Cursor.fetchall()
 		return list(Result)
 	except MySQLdb.Error as error:
@@ -206,7 +206,6 @@ def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filename
 					WHERE message_id = %s""",
 					(New_content, Message_ID)
 			)
-
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -342,3 +341,116 @@ def Mark_message_expired(Table, Message_ID):
 	finally:
 		Cursor.close()
 		Connection.close()
+
+def Users_check_duplicates(Table, User_infos):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	User_ID = None
+	Fields = {
+			"pseudonym": "",
+			"mail": "",
+			"first_name": "",
+			"last_name": "",
+			"ml_pseudo": "",
+			"wiki_pseudo": "",
+			"irc_pseudo": "",
+			"forum_pseudo": "",
+			"discord_pseudo": ""
+	}
+	if "Pseudo" in User_infos.keys():
+		Fields["pseudonym"] = User_infos["Pseudo"]
+	if "Mail" in User_infos.keys():
+		Fields["mail"] = User_infos["Mail"].split("@")[0]
+	if "First_name" in User_infos.keys():
+		Fields["first_name"] = User_infos["First_name"]
+	if "Last_name" in User_infos.keys():
+		Fields["last_name"] = User_infos["Last_name"]
+	if "ML_pseudo" in User_infos.keys():
+		Fields["ml_pseudo"] = User_infos["ML_pseudo"]
+	if "Wiki_pseudo" in User_infos.keys():
+		Fields["wiki_pseudo"] = User_infos["Wiki_pseudo"]
+	if "IRC_pseudo" in User_infos.keys():
+		Fields["irc_pseudo"] = User_infos["IRC_pseudo"]
+	if "Forum_pseudo" in User_infos.keys():
+		Fields["forum_pseudo"] = User_infos["Forum_pseudo"]
+	if "Discord_pseudo" in User_infos.keys():
+		Fields["discord_pseudo"] = User_infos["Discord_pseudo"]
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		for Column in Fields.keys():
+			if not Fields[Column]:
+				continue
+			for Other_column in Fields.keys():
+				Cursor.execute(f"""
+						SELECT * FROM {Table}
+						WHERE {Other_column} = %s""",
+						(Fields[Column],)
+				)
+				Results = Cursor.fetchall()
+				if len(Results) > 0:
+					Pseudos = set()
+					IDs = set()
+					Names = set()
+					for Result in Results:
+						Pseudos.add(Result[0])
+						IDs.add(Result[1])
+						Names.add(
+								# A tuple of the first and last names
+								( Result[3].strip().lower(), Result[4].strip().lower() )
+						)
+					# If there is only one entry with that first and last names = it’s a user
+					if len(Names) == 1:
+						if len(IDs) == 1:
+							User_ID = IDs.pop()
+						else:
+							Output = "[DB] Warning: This user has duplicate entries: "
+							for Pseudo in Pseudos:
+								Output += f"{Pseudo} "
+							print(Output)
+							User_ID = min(IDs)
+		return User_ID
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def Users_import_HA_user(Table, Pseudo, Mail, First_name, Last_name, Date, Contribution):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	Output = ""
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		# Check if the user is already registered
+		Cursor.execute(f"""
+				SELECT mail FROM {Table}
+				WHERE mail = %s""",
+				(Mail,)
+		)
+		Result = Cursor.fetchone()
+		Query = ""
+		if not Result:
+			Query = f"""
+					INSERT INTO {Table} (
+							pseudonym, mail,
+							first_name, last_name,
+							first_membership,
+							medium, contribution)
+							VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+			Values = [Pseudo, Mail, First_name, Last_name, Date, "HelloAsso", Contribution]
+			Output += f"[DB] {Pseudo} new member as of {Date.strftime('%d/%m/%Y')}."
+		else:
+			Output += f"[DB] {Pseudo} is already registered."
+		if Query:
+			Cursor.execute(Query, Values)
+			Connection.commit()
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+	print(Output)
