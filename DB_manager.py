@@ -342,6 +342,48 @@ def Mark_message_expired(Table, Message_ID):
 		Cursor.close()
 		Connection.close()
 
+def Users_fetch_user(Table, User_ID):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	User_infos = None
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"""
+				SELECT * FROM {Table}
+				WHERE id = %s""",
+				(User_ID,)
+		)
+		Result = Cursor.fetchall()
+		if len(Result) == 1:
+			User_infos = {
+					"Pseudo":				Result[0][0],
+					"ID":					User_ID,
+					"Mail":					Result[0][2],
+					"First_name":			Result[0][3],
+					"Last_name":			Result[0][4],
+					"ML_pseudo":			Result[0][5],
+					"Wiki_pseudo":			Result[0][6],
+					"IRC_pseudo":			Result[0][7],
+					"Forum_pseudo":			Result[0][8],
+					"Discord_pseudo":		Result[0][9],
+					"Discord_expiration":	Result[0][10],
+					"Avatar":				Result[0][11],
+					"First_membership":		Result[0][12],
+					"Last_renewal":			Result[0][13],
+					"Medium":				Result[0][14],
+					"Contribution":			Result[0][15]
+			}
+		else:
+			print("[DB] Warning: User with duplicate entries.")
+		return User_infos
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
 def Users_check_duplicates(Table, User_infos):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()

@@ -58,7 +58,9 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 	Field_names = []
 	for Field_name in CSV_content.fieldnames:
 		Field_names.append(Field_name.strip())
+	print("The list of fields:")
 	pprint(Field_names)
+	print()
 
 	for Line in CSV_content:
 		Mail = Line.get("Email payeur", "").strip()
@@ -74,8 +76,6 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 				Pseudo = None
 		Date = Parse_date(Line.get("Date de la commande"))
 		Contribution = Parse_contribution(Line.get("Montant tarif"))
-
-		#DB_manager.Users_import_HA_user(Users_table, Pseudo, Mail, First_name, Last_name, Date, Contribution)
 		User_infos = {
 				"Pseudo": Pseudo,
 				"Mail": Mail,
@@ -84,9 +84,15 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 				"Last_renewal": Date,
 				"Contribution": Contribution
 		}
+
 		User_ID = DB_manager.Users_check_duplicates(Users_table, User_infos)
 		if User_ID:
-			print("User_ID =", User_ID, "\n")
+			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
+			Output += f"[{User_infos['ID']}] {User_infos['Pseudo']} is already registered.\n"
+		else:
+			Output += f"[({User_infos['ID']})] {User_infos['Pseudo']} is a new member as of {Date.strftime('%d/%m/%Y')}."
+
 		Users[Pseudo] = User_infos
 
+	print(Output)
 	#DB_manager.Users_add_users(Users_table, Users)
