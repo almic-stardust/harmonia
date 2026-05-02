@@ -63,8 +63,9 @@ async def on_command_error(Context, Error):
 	Author = Context.author.display_name
 	# Relay on IRC the command that caused the error
 	IRC_instance = IRC_manager.GCI()
-	await IRC_instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
-	await IRC_instance.Safe_message(IRC_chan, f"Command error: {Error}")
+	if IRC_instance:
+		await IRC_instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
+		await IRC_instance.Safe_message(IRC_chan, f"Command error: {Error}")
 
 async def Shutdown_Discord():
 	global HTTP_session
@@ -238,8 +239,10 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 		if len(Concatenated_messages) <= 5:
 			Messages_to_relay = Concatenated_messages
 	if Messages_to_relay:
+		IRC_instance = IRC_manager.GCI()
 		for Message in Messages_to_relay:
-			await IRC_manager.GCI().Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
+			if IRC_instance:
+				await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request

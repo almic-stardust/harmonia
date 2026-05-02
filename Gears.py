@@ -17,15 +17,17 @@ async def Get_channels(Bridge):
 	Discord_chan = bot.get_channel(Bridge["discord_chan"])
 	if not Discord_chan:
 		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	IRC_chan = Bridge["irc_chan"]
-	return Discord_chan, IRC_chan
+	return Discord_chan, Bridge["irc_chan"]
 
 async def Send(Bridge, Message, Message_IRC=None):
 	"""Send a message both on Discord and IRC"""
 	Discord_chan, IRC_chan = await Get_channels(Bridge)
 	await Discord_chan.send(Message)
 	if IRC_chan:
-		if Message_IRC:
-			await IRC_manager.GCI().Safe_message(IRC_chan, Message_IRC)
-		else:
-			await IRC_manager.GCI().Safe_message(IRC_chan, Message)
+		IRC_instance = IRC_manager.GCI()
+		if IRC_instance:
+			# If the message to be sent on IRC is different from the message for Discord
+			if Message_IRC:
+				await IRC_instance.Safe_message(IRC_chan, Message_IRC)
+			else:
+				await IRC_instance.Safe_message(IRC_chan, Message)

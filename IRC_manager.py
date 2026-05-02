@@ -152,13 +152,13 @@ async def Run_IRC_loop():
 				tls=True, tls_verify=False
 			)
 			# Assign the global variable only after the connection has succeeded, to avoid the
-			# possibility of an incorrect state, where calls to Get_instance() will find that
-			# Instance isn’t None but .connected() returns False
+			# possibility of an incorrect state, where calls to GCI() will find that Instance 
+			# isn’t None but .connected() returns False
 			Instance = New_instance
 			# Reset delay after successful connection
 			Reconnect_delay = 5
 			print(f"[IRC] Connected with instance {New_instance.Instance_ID}")
-			# Wait until disconnection or shutdown
+			# Wait until either the bot is disconnected, or a shutdown request is requested
 			await Gears.Wait_for_events(
 					New_instance.Disconnection.wait(),
 					IRC_shutting_down.wait()
@@ -197,17 +197,14 @@ def Get_instance():
 	global Instance
 	if Instance is None:
 		print("[IRC] Error: No IRC instance")
-		return
 	return Instance
 
 # Get Connected Instance
 def GCI():
 	Current_instance = Get_instance()
-	if not Current_instance:
-		 return
 	if not Current_instance.connected:
 		 print("[IRC] Error: IRC not connected")
-		 return
+		 return None
 	return Current_instance
 
 ###############################################################################
@@ -256,7 +253,7 @@ class Connection_handler(pydle.Client):
 					print(f"[IRC] Recovering: rejoining {IRC_chan}")
 					await self.join(IRC_chan)
 
-	# Wrap the raw handler to avoid crashes, but continue to log errors
+	# Wrap the raw handler to avoid crashes, but continue to log the errors
 	async def on_raw(self, Message):
 		try:
 			await super().on_raw(Message)

@@ -258,14 +258,18 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 		await Gears.Send(Bridge, "Your straw couldn’t be added in the bag!")
 		return
 	Output = f"Your straw “{Straw}” has been added in the bag."
+	IRC_instance = IRC_manager.GCI()
 	# The command comes from Discord: relay the command on IRC + confirmation via DM
 	if Context:
-		IRC_chan = Bridge["irc_chan"]
-		await IRC_manager.GCI().Relay_Discord_message(IRC_chan, User, f"!straws {Action} {Straw}")
+		if IRC_instance:
+			await IRC_instance.Relay_Discord_message(
+					Bridge["irc_chan"], IRC_chan, User, f"!straws {Action} {Straw}"
+			)
 		await Context.author.send(Output)
 	# The command comes from IRC: confirmation via query
 	else:
-		await IRC_manager.GCI().Safe_message(User, Output)
+		if IRC_instance:
+			await IRC_instance.Safe_message(User, Output)
 
 @straws.command(name="participate")
 async def Discord_straws_participate(Context, *, Word: str):
