@@ -291,9 +291,8 @@ def Get_chans_for_server(Table, Server_ID):
 		Connection.close()
 
 def Messages_potentially_expired(Table):
-	""" Return the messages corresponding to the two expiration periods: after one month, and after
-	one year (plus a delay as safety margin)"""
-
+	"""Return the messages corresponding to the two expiration periods: after one month, and after
+	one year (plus a delay as safety margin)."""
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -382,9 +381,9 @@ def Users_fetch_user(Table, User_ID):
 		Cursor.close()
 		Connection.close()
 
-def Users_check_duplicates(Table, User_infos):
+def Users_check_presence(Table, User_infos):
 	"""Check if the identifiers of this user (pseudo, first name, last name, etc) match other
-	identifiers already present in the DB"""
+	identifiers already present in the DB."""
 
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
@@ -476,8 +475,10 @@ def Users_check_duplicates(Table, User_infos):
 						if New_pseudo and New_pseudo != Old_pseudo:
 							print(f"[DB] New pseudo? “{Old_pseudo}” vs “{New_pseudo}”")
 						return Candidate_ID
+
 		# If we haven’t found anything
 		return None
+
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
@@ -485,40 +486,74 @@ def Users_check_duplicates(Table, User_infos):
 		Cursor.close()
 		Connection.close()
 
-def Users_import_HA_user(Table, Pseudo, Mail, First_name, Last_name, Date, Contribution):
+def Users_manage_user(Table, Action, User_infos):
+	"""This function expects a complete and clean dictionary as input. All necessary checks are
+	assumed to have been performed."""
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
-	Output = ""
+	if Action == "Add":
+		Query = f"""
+				INSERT INTO {Table} (
+						pseudonym,
+						mail,
+						first_name,
+						last_name,
+						ml_pseudo,
+						wiki_pseudo,
+						irc_pseudo,
+						forum_pseudo,
+						discord_pseudo,
+						discord_expiration,
+						avatar,
+						first_membership,
+						last_renewal,
+						medium,
+						contribution)
+						VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+	if Action == "Update":
+		Query = f"""
+				UPDATE {Table} SET
+						pseudonym = %s,
+						mail = %s,
+						first_name = %s,
+						last_name = %s,
+						ml_pseudo = %s,
+						wiki_pseudo = %s,
+						irc_pseudo = %s,
+						forum_pseudo = %s,
+						discord_pseudo = %s,
+						discord_expiration = %s,
+						avatar = %s,
+						first_membership = %s,
+						last_renewal = %s,
+						medium = %s,
+						contribution = %s
+				WHERE id = {User_infos['ID']}"""
+	Values = [
+			User_infos["Pseudo"],
+			User_infos["Mail"],
+			User_infos["First_name"],
+			User_infos["Last_name"],
+			User_infos["ML_pseudo"],
+			User_infos["Wiki_pseudo"],
+			User_infos["IRC_pseudo"],
+			User_infos["Forum_pseudo"],
+			User_infos["Discord_pseudo"],
+			User_infos["Discord_expiration"],
+			User_infos["Avatar"],
+			User_infos["First_membership"],
+			User_infos["Last_renewal"],
+			User_infos["Medium"],
+			User_infos["Contribution"]
+	]
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		# Check if the user is already registered
-		Cursor.execute(f"""
-				SELECT mail FROM {Table}
-				WHERE mail = %s""",
-				(Mail,)
-		)
-		Result = Cursor.fetchone()
-		Query = ""
-		if not Result:
-			Query = f"""
-					INSERT INTO {Table} (
-							pseudonym, mail,
-							first_name, last_name,
-							first_membership,
-							medium, contribution)
-							VALUES (%s, %s, %s, %s, %s, %s, %s)"""
-			Values = [Pseudo, Mail, First_name, Last_name, Date, "HelloAsso", Contribution]
-			Output += f"[DB] {Pseudo} new member as of {Date.strftime('%d/%m/%Y')}."
-		else:
-			Output += f"[DB] {Pseudo} is already registered."
-		if Query:
-			Cursor.execute(Query, Values)
-			Connection.commit()
+		Cursor.execute(Query, Values)
+		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
 	finally:
 		Cursor.close()
 		Connection.close()
-	print(Output)

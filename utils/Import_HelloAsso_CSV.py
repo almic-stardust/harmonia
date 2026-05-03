@@ -6,7 +6,6 @@ import os
 import fnmatch
 import csv
 import datetime
-from pprint import pprint
 
 from Config_manager import Config
 import DB_manager
@@ -51,31 +50,29 @@ def Parse_contribution(Value):
 with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 
 	Users_table = Config["users"]["db_table"]
-	Users = {}
 	Output = ""
 	CSV_content = csv.DictReader(CSV_file, delimiter=";")
 
-	Field_names = []
-	for Field_name in CSV_content.fieldnames:
-		Field_names.append(Field_name.strip())
-	print("The list of fields:")
-	pprint(Field_names)
-	print()
-
+	Normalized_lines = []
 	for Line in CSV_content:
-		Mail = Line.get("Email payeur", "").strip()
-		First_name = Line.get("Prénom adhérent", "").strip()
-		Last_name = Line.get("Nom adhérent", "").strip()
-		Pseudo = Line.get("Pseudo", "").strip()
-		if not Pseudo:
-			if Mail:
-				Pseudo = Mail.split("@")[0]
-			elif First_name:
-				Pseudo = First_name
-			else:
-				Pseudo = None
-		Date = Parse_date(Line.get("Date de la commande"))
-		Contribution = Parse_contribution(Line.get("Montant tarif"))
+		Normalized_line = {}
+		for Key, Value in Line.items():
+			# Key.lower() to avoid Pseudo vs pseudo
+			Normalized_line[Key.lower()] = Value
+		Normalized_lines.append(Normalized_line)
+	# The CSV of HelloAsso are sorted from newest to oldest date, but in the BD it’s preferable to
+	# register users from oldest to newest
+	Normalized_lines.reverse()
+
+	for Line in Normalized_lines:
+		Mail = Line.get("email", "").strip().lower()
+		if not Mail:
+			Mail = Line.get("email payeur", "").strip().lower()
+		First_name = Line.get("prénom adhérent", "").strip().capitalize()
+		Last_name = Line.get("nom adhérent", "").strip().capitalize()
+		Pseudo = Line.get("pseudo", "").strip()
+		Date = Parse_date(Line.get("date de la commande"))
+		Contribution = Parse_contribution(Line.get("montant tarif"))
 		User_infos = {
 				"Pseudo": Pseudo,
 				"Mail": Mail,
@@ -85,14 +82,41 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 				"Contribution": Contribution
 		}
 
-		User_ID = DB_manager.Users_check_duplicates(Users_table, User_infos)
+		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
 		if User_ID:
 			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
-			Output += f"[{User_infos['ID']}] {User_infos['Pseudo']} is already registered.\n"
+			Output += f"({User_infos['ID']}) {User_infos['Pseudo']} is already registered.\n"
+			# Membership renewed
+			if not User_infos["Last_renewal"] or User_infos["Last_renewal"] < Date:
+				User_infos["Medium"] = "HelloAsso"
+				User_infos["Last_renewal"] = Date
+				User_infos["Contribution"] = Contribution
+				User_infos["Mail"] = Mail
+			# In case a file from a previous year is imported
+			if Date < User_infos["First_membership"]:
+				User_infos["First_membership"] = Date
+			DB_manager.Users_manage_user(Users_table, "Update", User_infos)
 		else:
-			Output += f"[({User_infos['ID']})] {User_infos['Pseudo']} is a new member as of {Date.strftime('%d/%m/%Y')}."
-
-		Users[Pseudo] = User_infos
+			if not User_infos["Pseudo"]:
+				if User_infos["First_name"] and User_infos["Last_name"]:
+					User_infos["Pseudo"] = f"{User_infos['First_name']}.{User_infos['Last_name'][0]}"
+				elif User_infos["Mail"]:
+					User_infos["Pseudo"] = User_infos["Mail"].split("@")[0].capitalize()
+				elif User_infos["First_name"]:
+					User_infos["Pseudo"] = User_infos["First_name"]
+				else:
+					Pseudo = None
+			Output += f"{User_infos['Pseudo']} is a new member.\n"
+			# Complete the dictionary, in addition to what we got from the CSV
+			User_infos["ML_pseudo"] = None
+			User_infos["Wiki_pseudo"] = None
+			User_infos["IRC_pseudo"] = None
+			User_infos["Forum_pseudo"] = None
+			User_infos["Discord_pseudo"] = None
+			User_infos["Discord_expiration"] = None
+			User_infos["Avatar"] = None
+			User_infos["First_membership"] = Date
+			User_infos["Medium"] = "HelloAsso"
+			DB_manager.Users_manage_user(Users_table, "Add", User_infos)
 
 	print(Output)
-	#DB_manager.Users_add_users(Users_table, Users)

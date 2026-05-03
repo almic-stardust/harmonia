@@ -80,10 +80,10 @@ Create a base according to your Config.yaml, then create these tables:
 	    discord_pseudo      VARCHAR(255) NULL,
 	    discord_expiration  INT NULL,
 	    avatar              VARCHAR(255) NULL,
-	    first_membership    TIMESTAMP NOT NULL,
+	    first_membership    TIMESTAMP NULL,
 	    last_renewal        TIMESTAMP NULL,
-	    medium              VARCHAR(255) NOT NULL,
-	    contribution        INT NOT NULL,
+	    medium              VARCHAR(255) NULL,
+	    contribution        INT NULL
 	);
 
 #### Last steps
@@ -146,3 +146,12 @@ Or, if you must have the very latest version:
 Now the history should also be accessible at:
 
 	http://LAN_IP:60081/chan/server_id/chan_id
+
+# Import a user base from HelloAsso
+
+A script is provided to import CSV files supplied by HelloAsso.
+
+	% cd harmonia/utils
+	% for File in Config_manager.py Config.yaml DB_manager.py ; ln -s ../$File
+	% chmod +x Import_HelloAsso_CSV.py
+	% for File in *csv ; ./Import_HelloAsso_CSV.py $File
