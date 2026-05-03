@@ -290,9 +290,10 @@ def Get_chans_for_server(Table, Server_ID):
 		Cursor.close()
 		Connection.close()
 
-# Return the messages corresponding to the two expiration periods: after one month, and after one
-# year (plus a delay as safety margin)
 def Messages_potentially_expired(Table):
+	""" Return the messages corresponding to the two expiration periods: after one month, and after
+	one year (plus a delay as safety margin)"""
+
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -354,28 +355,25 @@ def Users_fetch_user(Table, User_ID):
 				WHERE id = %s""",
 				(User_ID,)
 		)
-		Result = Cursor.fetchall()
-		if len(Result) == 1:
-			User_infos = {
-					"Pseudo":				Result[0][0],
-					"ID":					User_ID,
-					"Mail":					Result[0][2],
-					"First_name":			Result[0][3],
-					"Last_name":			Result[0][4],
-					"ML_pseudo":			Result[0][5],
-					"Wiki_pseudo":			Result[0][6],
-					"IRC_pseudo":			Result[0][7],
-					"Forum_pseudo":			Result[0][8],
-					"Discord_pseudo":		Result[0][9],
-					"Discord_expiration":	Result[0][10],
-					"Avatar":				Result[0][11],
-					"First_membership":		Result[0][12],
-					"Last_renewal":			Result[0][13],
-					"Medium":				Result[0][14],
-					"Contribution":			Result[0][15]
-			}
-		else:
-			print("[DB] Warning: User with duplicate entries.")
+		Result = Cursor.fetchone()
+		User_infos = {
+				"Pseudo":				Result[0],
+				"ID":					User_ID,
+				"Mail":					Result[2],
+				"First_name":			Result[3],
+				"Last_name":			Result[4],
+				"ML_pseudo":			Result[5],
+				"Wiki_pseudo":			Result[6],
+				"IRC_pseudo":			Result[7],
+				"Forum_pseudo":			Result[8],
+				"Discord_pseudo":		Result[9],
+				"Discord_expiration":	Result[10],
+				"Avatar":				Result[11],
+				"First_membership":		Result[12],
+				"Last_renewal":			Result[13],
+				"Medium":				Result[14],
+				"Contribution":			Result[15]
+		}
 		return User_infos
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -385,9 +383,11 @@ def Users_fetch_user(Table, User_ID):
 		Connection.close()
 
 def Users_check_duplicates(Table, User_infos):
+	"""Check if the identifiers of this user (pseudo, first name, last name, etc) match other
+	identifiers already present in the DB"""
+
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
-	User_ID = None
 	Fields = {
 			"pseudonym": "",
 			"mail": "",
@@ -417,9 +417,11 @@ def Users_check_duplicates(Table, User_infos):
 		Fields["forum_pseudo"] = User_infos["Forum_pseudo"]
 	if "Discord_pseudo" in User_infos.keys():
 		Fields["discord_pseudo"] = User_infos["Discord_pseudo"]
+
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
+		Other_identifiers = {}
 		for Column in Fields.keys():
 			if not Fields[Column]:
 				continue
@@ -431,27 +433,51 @@ def Users_check_duplicates(Table, User_infos):
 				)
 				Results = Cursor.fetchall()
 				if len(Results) > 0:
-					Pseudos = set()
-					IDs = set()
-					Names = set()
 					for Result in Results:
-						Pseudos.add(Result[0])
-						IDs.add(Result[1])
-						Names.add(
-								# A tuple of the first and last names
-								( Result[3].strip().lower(), Result[4].strip().lower() )
-						)
-					# If there is only one entry with that first and last names = it’s a user
-					if len(Names) == 1:
-						if len(IDs) == 1:
-							User_ID = IDs.pop()
-						else:
-							Output = "[DB] Warning: This user has duplicate entries: "
-							for Pseudo in Pseudos:
-								Output += f"{Pseudo} "
-							print(Output)
-							User_ID = min(IDs)
-		return User_ID
+						# Other_identifiers[user ID] (Result[1] = user ID)
+						Other_identifiers[Result[1]] = {
+								"Mail":				Result[2].split("@")[0],
+								"First_name":		Result[3],
+								"Last_name":		Result[4],
+								"Pseudos": {
+										"Main":		Result[0],
+										"ML":		Result[5],
+										"Wiki":		Result[6],
+										"IRC":		Result[7],
+										"Forum":	Result[8],
+										"Discord":	Result[9]
+								}
+						}
+
+		if len(Other_identifiers) > 0:
+			for Candidate_ID in Other_identifiers:
+				Candidate_infos = Other_identifiers[Candidate_ID]
+				Old_pseudo = Candidate_infos["Pseudos"]["Main"]
+				New_pseudo = User_infos.get("Pseudo")
+				if (Candidate_infos.get("First_name") == User_infos.get("First_name") \
+						and Candidate_infos.get("Last_name") == User_infos.get("Last_name") \
+				) or Candidate_infos.get("Mail") == User_infos.get("Mail"):
+					if New_pseudo and New_pseudo != Old_pseudo:
+						print(f"[DB] New pseudo? “{Old_pseudo}” vs “{New_pseudo}”")
+					return Candidate_ID
+
+				# Check if there’s a match in the pseudos of the different platforms
+				Candidate_values = set()
+				for Value in Candidate_infos["Pseudos"].values():
+					if Value:
+						Candidate_values.add(Value.strip().lower())
+				User_values = set()
+				for Key in ["Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_pseudo"]:
+					Value = User_infos.get(Key)
+					if Value:
+						User_values.add(Value.strip().lower())
+				for Value in User_values:
+					if Value in Candidate_values:
+						if New_pseudo and New_pseudo != Old_pseudo:
+							print(f"[DB] New pseudo? “{Old_pseudo}” vs “{New_pseudo}”")
+						return Candidate_ID
+		# If we haven’t found anything
+		return None
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
