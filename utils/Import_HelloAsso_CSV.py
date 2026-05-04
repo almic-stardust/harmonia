@@ -85,7 +85,7 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
 		if User_ID:
 			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
-			Output += f"({User_infos['ID']}) {User_infos['Pseudo']} is already registered.\n"
+			Output += f"{User_infos['Pseudo']} ({User_infos['ID']})\n"
 			# Membership renewed
 			if not User_infos["Last_renewal"] or User_infos["Last_renewal"] < Date:
 				User_infos["Medium"] = "HelloAsso"
@@ -98,15 +98,19 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			DB_manager.Users_manage_user(Users_table, "Update", User_infos)
 		else:
 			if not User_infos["Pseudo"]:
+				Pseudo_from_name = User_infos['First_name'] + "." + User_infos['Last_name'][0]
+				Pseudo_from_mail = User_infos["Mail"].split("@")[0].capitalize()
+				Pseudo_from_mail = Pseudo_from_mail.split("+")[0]
+				Pseudo_from_mail = Pseudo_from_mail.split("-")[0]
 				if User_infos["First_name"] and User_infos["Last_name"]:
-					User_infos["Pseudo"] = f"{User_infos['First_name']}.{User_infos['Last_name'][0]}"
+					User_infos["Pseudo"] = Pseudo_from_name
 				elif User_infos["Mail"]:
-					User_infos["Pseudo"] = User_infos["Mail"].split("@")[0].capitalize()
+					User_infos["Pseudo"] = Pseudo_from_mail
 				elif User_infos["First_name"]:
 					User_infos["Pseudo"] = User_infos["First_name"]
 				else:
 					Pseudo = None
-			Output += f"{User_infos['Pseudo']} is a new member.\n"
+			Output += f"→→→→→→→→→→ New: {User_infos['Pseudo']}\n"
 			# Complete the dictionary, in addition to what we got from the CSV
 			User_infos["ML_pseudo"] = None
 			User_infos["Wiki_pseudo"] = None

@@ -401,7 +401,7 @@ def Users_check_presence(Table, User_infos):
 	if "Pseudo" in User_infos.keys():
 		Fields["pseudonym"] = User_infos["Pseudo"]
 	if "Mail" in User_infos.keys():
-		Fields["mail"] = User_infos["Mail"].split("@")[0]
+		Fields["mail"] = User_infos["Mail"]
 	if "First_name" in User_infos.keys():
 		Fields["first_name"] = User_infos["First_name"]
 	if "Last_name" in User_infos.keys():
@@ -433,18 +433,23 @@ def Users_check_presence(Table, User_infos):
 				Results = Cursor.fetchall()
 				if len(Results) > 0:
 					for Result in Results:
+						Mail_login = Result[2].split("@")[0]
+						Mail_login = Mail_login.split("+")[0]
+						# Sometimes used as an alternative recipient delimiter
+						Mail_login = Mail_login.split("-")[0]
 						# Other_identifiers[user ID] (Result[1] = user ID)
 						Other_identifiers[Result[1]] = {
-								"Mail":				Result[2].split("@")[0],
-								"First_name":		Result[3],
-								"Last_name":		Result[4],
+								"Mail":					Result[2],
+								"First_name":			Result[3],
+								"Last_name":			Result[4],
 								"Pseudos": {
-										"Main":		Result[0],
-										"ML":		Result[5],
-										"Wiki":		Result[6],
-										"IRC":		Result[7],
-										"Forum":	Result[8],
-										"Discord":	Result[9]
+										"Main":			Result[0],
+										"Mail_login":	Mail_login,
+										"ML":			Result[5],
+										"Wiki":			Result[6],
+										"IRC":			Result[7],
+										"Forum":		Result[8],
+										"Discord":		Result[9]
 								}
 						}
 
@@ -457,7 +462,7 @@ def Users_check_presence(Table, User_infos):
 						and Candidate_infos.get("Last_name") == User_infos.get("Last_name") \
 				) or Candidate_infos.get("Mail") == User_infos.get("Mail"):
 					if New_pseudo and New_pseudo != Old_pseudo:
-						print(f"[DB] New pseudo? “{Old_pseudo}” vs “{New_pseudo}”")
+						print(f"[DB] New pseudo? “{Old_pseudo}” vs new “{New_pseudo}”")
 					return Candidate_ID
 
 				# Check if there’s a match in the pseudos of the different platforms
