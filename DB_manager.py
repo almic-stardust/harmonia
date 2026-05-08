@@ -362,6 +362,10 @@ def Users_fetch_user(Table, User_ID):
 		for Date in Dates:
 			Renewals.append(datetime.datetime.fromisoformat(Date))
 		Renewals.sort()
+		Amounts = json.loads(Result[13]) if Result[13] else {}
+		Contributions = {}
+		for Year, Amount in Amounts.items():
+			Contributions[int(Year)] = Amount
 		User_infos = {
 				"Pseudo":				Result[0],
 				"ID":					User_ID,
@@ -376,8 +380,8 @@ def Users_fetch_user(Table, User_ID):
 				"Discord_expiration":	Result[10],
 				"Avatar":				Result[11],
 				"Renewals":				Renewals,
-				"Last_medium":			Result[13],
-				"Contribution":			Result[14]
+				"Contributions":		Contributions,
+				"Last_medium":			Result[14],
 		}
 		return User_infos
 	except MySQLdb.Error as Error:
@@ -521,8 +525,8 @@ def Users_manage_user(Table, Action, User_infos):
 						discord_expiration,
 						avatar,
 						renewals,
-						last_medium,
-						contribution)
+						contributions,
+						last_medium)
 						VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	if Action == "Update":
 		Query = f"""
@@ -539,8 +543,8 @@ def Users_manage_user(Table, Action, User_infos):
 						discord_expiration = %s,
 						avatar = %s,
 						renewals = %s,
-						last_medium = %s,
-						contribution = %s
+						contributions = %s,
+						last_medium = %s
 				WHERE id = {User_infos['ID']}"""
 	Values = [
 			User_infos["Pseudo"],
@@ -555,8 +559,8 @@ def Users_manage_user(Table, Action, User_infos):
 			User_infos["Discord_expiration"],
 			User_infos["Avatar"],
 			Dates,
-			User_infos["Last_medium"],
-			User_infos["Contribution"]
+			json.dumps(User_infos["Contributions"]),
+			User_infos["Last_medium"]
 	]
 	try:
 		if not Table.isidentifier():

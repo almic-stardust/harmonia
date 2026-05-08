@@ -81,8 +81,8 @@ Create a base according to your Config.yaml, then create these tables:
 	    discord_expiration  INT NULL,
 	    avatar              VARCHAR(255) NULL,
 	    renewals            JSON NULL,
-	    last_medium         VARCHAR(255) NULL,
-	    contribution        INT NULL
+	    contributions       JSON NULL,
+	    last_medium         VARCHAR(255) NULL
 	);
 
 #### Last steps

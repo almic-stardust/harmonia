@@ -6,6 +6,7 @@ import os
 import fnmatch
 import csv
 import datetime
+from pprint import pprint
 
 from Config_manager import Config
 import DB_manager
@@ -63,6 +64,13 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 	# The CSV of HelloAsso are sorted from newest to oldest date, but in the BD it’s preferable to
 	# register users from oldest to newest
 	Normalized_lines.reverse()
+	# Determine the year of this CSV file, assuming that a membership campaign can start at the end
+	# of the previous year, but should not extend into the beginning of the following year. So the
+	# year of the file should correspond to that of the newest membership.
+	Last_date = Parse_date(Normalized_lines[-1].get("date de la commande"))
+	File_year = Last_date.year
+	print(f"\n>>> Year {File_year} <<<")
+	print("Note: this script must never be run twice on the same CSV file.\n")
 
 	for Line in Normalized_lines:
 		Mail = Line.get("email", "").strip().lower()
@@ -88,11 +96,20 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 		if User_ID:
 			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
 			Output += f"{User_infos['Pseudo']} ({User_infos['ID']})\n"
+			# Some infos are updated only if it’s the latest renewal
 			Last_renewal = User_infos["Renewals"][-1] if User_infos["Renewals"] else None
 			if not Last_renewal or Last_renewal < Date:
-				User_infos["Last_medium"] = "HelloAsso"
-				User_infos["Contribution"] = Contribution
 				User_infos["Mail"] = Mail
+				User_infos["Last_medium"] = "HelloAsso"
+			if File_year not in User_infos["Contributions"]:
+				User_infos["Contributions"][File_year] = Contribution
+			# If a member makes multiple contributions in the same file, add them together, and the
+			# total becomes the member’s contribution for that year of membership.
+			# Handling this case is the reason why this script must never be run twice on the same
+			# CSV file.
+			else:
+				User_infos["Contributions"][File_year] += Contribution
+			# Import regardless of whether it’s the newest CSV file, or one from a previous year
 			if Date not in User_infos["Renewals"]:
 				User_infos["Renewals"].append(Date)
 				User_infos["Renewals"].sort()
@@ -122,6 +139,7 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			User_infos["Discord_expiration"] = None
 			User_infos["Avatar"] = None
 			User_infos["Renewals"] = [Date]
+			User_infos["Contributions"] = {File_year: Contribution}
 			User_infos["Last_medium"] = "HelloAsso"
 			DB_manager.Users_manage_user(Users_table, "Add", User_infos)
 
