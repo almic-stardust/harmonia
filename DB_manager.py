@@ -4,6 +4,7 @@ import sys
 # This actually uses the package mysqlclient, a fork of MySQLdb adding Python 3 support
 import MySQLdb
 import json
+import datetime
 
 from Config_manager import Config
 
@@ -355,6 +356,12 @@ def Users_fetch_user(Table, User_ID):
 				(User_ID,)
 		)
 		Result = Cursor.fetchone()
+		Dates = json.loads(Result[12]) if Result[12] else []
+		# Convert back into datetime objects
+		Renewals = []
+		for Date in Dates:
+			Renewals.append(datetime.datetime.fromisoformat(Date))
+		Renewals.sort()
 		User_infos = {
 				"Pseudo":				Result[0],
 				"ID":					User_ID,
@@ -368,10 +375,9 @@ def Users_fetch_user(Table, User_ID):
 				"Discord_pseudo":		Result[9],
 				"Discord_expiration":	Result[10],
 				"Avatar":				Result[11],
-				"First_membership":		Result[12],
-				"Last_renewal":			Result[13],
-				"Medium":				Result[14],
-				"Contribution":			Result[15]
+				"Renewals":				Renewals,
+				"Last_medium":			Result[13],
+				"Contribution":			Result[14]
 		}
 		return User_infos
 	except MySQLdb.Error as Error:
@@ -496,6 +502,10 @@ def Users_manage_user(Table, Action, User_infos):
 	assumed to have been performed."""
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
+	Dates = []
+	for Date in User_infos["Renewals"]:
+		Dates.append(Date.isoformat(sep=" "))
+	Dates = json.dumps(Dates)
 	if Action == "Add":
 		Query = f"""
 				INSERT INTO {Table} (
@@ -510,11 +520,10 @@ def Users_manage_user(Table, Action, User_infos):
 						discord_pseudo,
 						discord_expiration,
 						avatar,
-						first_membership,
-						last_renewal,
-						medium,
+						renewals,
+						last_medium,
 						contribution)
-						VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+						VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	if Action == "Update":
 		Query = f"""
 				UPDATE {Table} SET
@@ -529,9 +538,8 @@ def Users_manage_user(Table, Action, User_infos):
 						discord_pseudo = %s,
 						discord_expiration = %s,
 						avatar = %s,
-						first_membership = %s,
-						last_renewal = %s,
-						medium = %s,
+						renewals = %s,
+						last_medium = %s,
 						contribution = %s
 				WHERE id = {User_infos['ID']}"""
 	Values = [
@@ -546,9 +554,8 @@ def Users_manage_user(Table, Action, User_infos):
 			User_infos["Discord_pseudo"],
 			User_infos["Discord_expiration"],
 			User_infos["Avatar"],
-			User_infos["First_membership"],
-			User_infos["Last_renewal"],
-			User_infos["Medium"],
+			Dates,
+			User_infos["Last_medium"],
 			User_infos["Contribution"]
 	]
 	try:

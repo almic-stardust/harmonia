@@ -68,8 +68,10 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 		Mail = Line.get("email", "").strip().lower()
 		if not Mail:
 			Mail = Line.get("email payeur", "").strip().lower()
-		First_name = Line.get("prénom adhérent", "").strip().capitalize()
-		Last_name = Line.get("nom adhérent", "").strip().capitalize()
+		# First names can be compound
+		First_name = Line.get("prénom adhérent", "").strip().title()
+		# Last names can be compound, or contain spaces or apostrophes
+		Last_name = Line.get("nom adhérent", "").strip().title()
 		Pseudo = Line.get("pseudo", "").strip()
 		Date = Parse_date(Line.get("date de la commande"))
 		Contribution = Parse_contribution(Line.get("montant tarif"))
@@ -78,24 +80,24 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 				"Mail": Mail,
 				"First_name": First_name,
 				"Last_name": Last_name,
-				"Last_renewal": Date,
 				"Contribution": Contribution
 		}
 
 		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+		# Renewal
 		if User_ID:
 			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
 			Output += f"{User_infos['Pseudo']} ({User_infos['ID']})\n"
-			# Membership renewed
-			if not User_infos["Last_renewal"] or User_infos["Last_renewal"] < Date:
-				User_infos["Medium"] = "HelloAsso"
-				User_infos["Last_renewal"] = Date
+			Last_renewal = User_infos["Renewals"][-1] if User_infos["Renewals"] else None
+			if not Last_renewal or Last_renewal < Date:
+				User_infos["Last_medium"] = "HelloAsso"
 				User_infos["Contribution"] = Contribution
 				User_infos["Mail"] = Mail
-			# In case a file from a previous year is imported
-			if Date < User_infos["First_membership"]:
-				User_infos["First_membership"] = Date
+			if Date not in User_infos["Renewals"]:
+				User_infos["Renewals"].append(Date)
+				User_infos["Renewals"].sort()
 			DB_manager.Users_manage_user(Users_table, "Update", User_infos)
+		# New member
 		else:
 			if not User_infos["Pseudo"]:
 				Pseudo_from_name = User_infos['First_name'] + "." + User_infos['Last_name'][0]
@@ -119,8 +121,8 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			User_infos["Discord_pseudo"] = None
 			User_infos["Discord_expiration"] = None
 			User_infos["Avatar"] = None
-			User_infos["First_membership"] = Date
-			User_infos["Medium"] = "HelloAsso"
+			User_infos["Renewals"] = [Date]
+			User_infos["Last_medium"] = "HelloAsso"
 			DB_manager.Users_manage_user(Users_table, "Add", User_infos)
 
 	print(Output)
