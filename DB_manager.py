@@ -25,8 +25,8 @@ def History_update_filename(Table, Old_filename, New_filename):
 		# Check if there is an entry whose attachments field contains the value of Old_filename
 		Cursor.execute(f"""
 				SELECT message_id, attachments FROM {Table}
-				WHERE attachments LIKE %s""",
-				('%\\"' + Old_filename.replace("—", "\\\\u2014") + '\\"%',)
+				WHERE JSON_CONTAINS(attachments, %s)""",
+				(json.dumps(Old_filename),)
 		)
 		Result = Cursor.fetchone()
 		if not Result:
@@ -122,7 +122,18 @@ def History_fetch_message(Table, Message_ID):
 		DB_entry = []
 		if Result:
 			DB_entry = list(Result)
-			DB_entry[7] = json.loads(DB_entry[7]) if DB_entry[7] else []
+			# Decode only if the returned object is a string: depending on the driver version,
+			# MariaDB may return JSON columns as already-decoded # Python objects
+			# Attachments
+			if isinstance(DB_entry[7], str):
+				DB_entry[7] = json.loads(DB_entry[7])
+			elif DB_entry[7] is None:
+				DB_entry[7] = []
+			# Reactions
+			if isinstance(DB_entry[8], str):
+				DB_entry[8] = json.loads(DB_entry[8])
+			elif DB_entry[8] is None:
+				DB_entry[8] = {}
 		return DB_entry
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
