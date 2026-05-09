@@ -13,8 +13,8 @@ import re
 from urllib.parse import quote
 
 from Config_manager import Config
-import Gears
 import DB_manager
+import Gears
 import History
 import IRC_manager
 import Attachments_manager

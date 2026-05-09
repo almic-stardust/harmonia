@@ -1,13 +1,6 @@
 # You must restart the bot if you modify this file. If you use the web display of the history, don’t
 # forget Hypercorn and/or Uvicorn.
 
-discord:
-  bot_owner:              ""
-  # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
-  token:                  ""
-  bot_name:               "name for the bot to display in the history"
-  server:                 id_server
-
 mysqlclient:
   host:                   ""
   user:                   ""
@@ -19,20 +12,12 @@ mail:
   server:                 ""
   bot_address:            ""
 
-history:
-  active:                 True/False
-  db_table:               "project_history"
-  storage_folder:         "/path/to/bot_files"
-  storage_url:            "https://domain.tld/bot_files"
-
-irc_info:
+discord:
   bot_owner:              ""
-  nick:                   "MyBot"
-  username:               "my_bot"
-  real_name:              "My Bot"
-  password:               ""
-  quit_message:           "That’s the end of the beans"
-  server:                 "irc.libera.chat"
+  # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
+  token:                  ""
+  bot_name:               "name for the bot to display in the history"
+  server:                 id_server
 
 users:
   db_table:               "project_users"
@@ -56,6 +41,21 @@ irc_users:
     discord_display_name: ""
     discord_expiration:   "1m"
     avatar:               "https://domain.tld/path/to/Avatar.jpeg"
+
+history:
+  active:                 True/False
+  db_table:               "project_history"
+  storage_folder:         "/path/to/bot_files"
+  storage_url:            "https://domain.tld/bot_files"
+
+irc_info:
+  bot_owner:              ""
+  nick:                   "MyBot"
+  username:               "my_bot"
+  real_name:              "My Bot"
+  password:               ""
+  quit_message:           "That’s the end of the beans"
+  server:                 "irc.libera.chat"
 
 irc_bridges:
   chan1:

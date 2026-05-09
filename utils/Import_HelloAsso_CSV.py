@@ -6,7 +6,6 @@ import os
 import fnmatch
 import csv
 import datetime
-from pprint import pprint
 
 from Config_manager import Config
 import DB_manager
