@@ -4,7 +4,11 @@ import inspect
 import random
 import re
 import hashlib
+import datetime
+from datetime import timedelta
 
+from Config_manager import Config
+import DB_manager
 import Gears
 import Discord_manager
 from Discord_manager import bot
@@ -33,11 +37,21 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 			"draw":			(IRC_straws_draw,							False),
 			"reset":		(IRC_straws_reset,							False),
 	}}
+	Polls_infos = {
+			"Name":			"polls",
+			"Dispatcher":	Polls_dispatcher,
+			#		 		 Fonction					User variable?	Arguments?
+			"Direct_call":	(IRC_polls,					True),
+	"Subcommands": {
+			"help":			(IRC_polls_help,							False),
+			"members":		(IRC_polls_members,							True),
+	}}
 
 	Commands = { #		 Destination (funct or dict)	User variable?	Arguments?
 			"!help":	(No_help_for_IRC,				False,			False),
 			"!roll":	(IRC_roll,						False,			True),
 			"!straws":	(Straws_infos,					True,			True),
+			"!polls":	(Polls_infos,					True,			True),
 	}
 
 	Parts = Text.split(maxsplit=1)
@@ -104,6 +118,18 @@ async def Straws_dispatcher(Bridge, Subcommand, Function, User, Arguments):
 		await Function(Bridge, User, Arguments)
 	else:
 		await Function(Bridge, Arguments)
+
+async def Polls_dispatcher(Bridge, Subcommand, Function, User, Arguments):
+	#if not Arguments:
+	#	if Subcommand == "":
+	#		Help_usage = f"Usage: !polls {Subcommand} "
+	#	await Gears.Send(Bridge, Help_usage)
+	#	return
+	#if Subcommand in {"vote"}:
+	#	await Function(Bridge, User, Arguments)
+	#else:
+	#	await Function(Bridge, Arguments)
+	await Function(Bridge, Arguments)
 
 ###############################################################################
 # Misc
@@ -399,3 +425,114 @@ async def Discord_straws_reset(Context):
 
 async def IRC_straws_reset(Bridge):
 	await Straws_reset(Bridge)
+
+###############################################################################
+# !polls
+###############################################################################
+
+@bot.group()
+async def polls(Context):
+	"""Organize votes and participate in them."""
+	if Context.invoked_subcommand is None:
+		# If there’s something after “!polls”, but it’s not a valid subcommand
+		if Context.subcommand_passed is not None:
+			await Context.send("Invalid subcommand. See “!help polls”.")
+			return
+		# If no subcommand is invoked: “!polls” = “!polls list”
+		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+		if Bridge:
+			await Gears.Send(Bridge, "Display the last 5 votes, prioritizing ongoing extended.")
+
+async def IRC_polls(Bridge, User):
+	await Gears.Send(Bridge, "Display the last 5 votes, prioritizing ongoing extended.")
+
+async def Polls_help(Bridge, Author=None):
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if Author:
+		Output_IRC = f"<\x02{Author}\x02> !polls help\n"
+	Output_Discord = "See “!help polls”."
+	Output_IRC += "See “!help polls” (on Discord)."
+	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+
+@polls.command(name="help")
+async def Discord_polls_help(Context):
+	"""Placeholder to redirect towards “!help polls”."""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_help(Bridge, Context.author.display_name)
+
+async def IRC_polls_help(Bridge):
+	await Polls_help(Bridge)
+
+def Polls_voting_rights(User_infos):
+	if not User_infos["Renewals"]:
+		return User_infos
+	Now = datetime.datetime.now()
+	User_infos["Registration"] = User_infos["Renewals"][0]
+	User_infos["Last_renewal"] = User_infos["Renewals"][-1]
+	User_infos["Penultimate_renewal"] = None
+	if len(User_infos["Renewals"]) >= 2:
+		User_infos["Penultimate_renewal"] = User_infos["Renewals"][-2]
+	# Registration over a year ago
+	if User_infos["Registration"] + timedelta(days=365) <= Now \
+			and User_infos["Last_renewal"] + timedelta(days=365) >= Now:
+		User_infos["Can_vote"] = True
+	# Former member who renewed their membership less than 3 months ago
+	elif User_infos["Penultimate_renewal"] \
+			and User_infos["Penultimate_renewal"] + timedelta(days=365) <= Now \
+			and User_infos["Last_renewal"] + timedelta(days=90) >= Now:
+		User_infos["Can_vote"] = True
+	return User_infos
+
+async def Polls_members(Bridge, Users, Author=None):
+	Users_table = Config["users"]["db_table"]
+	Output = ""
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if Author:
+		if Users:
+			Output_IRC = f"<\x02{Author}\x02> !polls members {Users}\n"
+		else:
+			Output_IRC = f"<\x02{Author}\x02> !polls members\n"
+	if not Users:
+		Output_Discord = "Display a list of members with voting rights."
+		Output_IRC += Output_Discord
+		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		return
+	# Users is a string representing a list of pseudos
+	for User in Users.split():
+		User_infos = {}
+		User_infos["Pseudo"] = User
+		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+		if User_ID:
+			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
+		User_infos["Can_vote"] = False
+		if User_ID:
+			User_infos = Polls_voting_rights(User_infos)
+			if User_infos["Can_vote"]:
+				Output += f"{User} can vote "
+			else:
+				Output += f"{User} can’t vote "
+			Last_renewal = datetime.datetime.strftime(User_infos["Last_renewal"], "%d/%m/%Y")
+			Registration = datetime.datetime.strftime(User_infos["Registration"], "%d/%m/%Y")
+			if User_infos["Penultimate_renewal"]:
+				Penultimate = datetime.datetime.strftime(User_infos["Penultimate_renewal"], "%d/%m/%Y")
+				Output += f"(last renewal {Last_renewal} | penultimate {Penultimate} | registration {Registration})\n"
+			else:
+				Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
+		else:
+			Output += f"{User} isn’t a member.\n"
+	Output_Discord = Output
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+
+@polls.command(name="members")
+async def Discord_polls_members(Context, Users=None):
+	"""Display informations about members’ voting rights."""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_members(Bridge, Users, Context.author.display_name)
+
+async def IRC_polls_members(Bridge, Users):
+	await Polls_members(Bridge, Users)
