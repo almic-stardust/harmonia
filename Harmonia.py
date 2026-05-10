@@ -4,8 +4,8 @@
 import asyncio
 
 from Config_manager import Config
-from Discord_manager import bot
 import Discord_manager
+from Discord_manager import bot
 from Discord_manager import Reconcile_downloaded_files
 from Discord_manager import Delete_expired_messages
 import IRC_manager

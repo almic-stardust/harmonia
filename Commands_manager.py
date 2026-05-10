@@ -6,8 +6,8 @@ import re
 import hashlib
 
 import Gears
-from Discord_manager import bot
 import Discord_manager
+from Discord_manager import bot
 import IRC_manager
 
 Straws_bag = {}
@@ -21,7 +21,8 @@ Straws_bag["Users"] = []
 async def IRC_commands_dispatcher(Bridge, User, Text):
 
 	Straws_infos = {
-			"Dispatcher": Straws_dispatcher,
+			"Name":			"straws",
+			"Dispatcher":	Straws_dispatcher,
 			#		 		 Fonction					User variable?	Arguments?
 			"Direct_call":	(IRC_straws,				False),
 	"Subcommands": {
@@ -32,7 +33,8 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 			"draw":			(IRC_straws_draw,							False),
 			"reset":		(IRC_straws_reset,							False),
 	}}
-	Commands = { #		 Destination (funct or subcom)	User variable?	Arguments?
+
+	Commands = { #		 Destination (funct or dict)	User variable?	Arguments?
 			"!help":	(No_help_for_IRC,				False,			False),
 			"!roll":	(IRC_roll,						False,			True),
 			"!straws":	(Straws_infos,					True,			True),
@@ -46,37 +48,41 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 		Output_IRC = "Invalid command. See “!help” (on Discord)."
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
 		return
-	SC_infos, With_user, With_args = Commands[Command]
+	Command_infos, With_user, With_args = Commands[Command]
 	# Commands without subcommands
-	if inspect.isfunction(SC_infos):
+	if inspect.isfunction(Command_infos):
 		# It’s clearer to call Function(…) with a variable named Function
-		Function = SC_infos
+		Function = Command_infos
 		if With_user and With_args:
 			await Function(Bridge, User, Remainder)
 		elif With_args:
 			await Function(Bridge, Remainder)
+		elif With_user:
+			await Function(Bridge, User)
 		else:
 			await Function(Bridge)
 	else:
-		if not With_user:
-			User = None
-		await IRC_subcommands_dispatcher(Bridge, Command, SC_infos, User, Remainder)
+		if With_user:
+			await IRC_subcommands_dispatcher(Bridge, Command_infos, User, Remainder)
+		else:
+			await IRC_subcommands_dispatcher(Bridge, Command_infos, None, Remainder)
 
-async def IRC_subcommands_dispatcher(Bridge, Command, SC_infos, User, Remainder):
+async def IRC_subcommands_dispatcher(Bridge, Command_infos, User, Remainder):
 	if not Remainder:
-		Function, With_user = SC_infos["Direct_call"]
+		Function, With_user = Command_infos["Direct_call"]
 		if With_user:
 			await Function(Bridge, User)
 		else:
 			await Function(Bridge)
 		return
-	Dispatcher_function = SC_infos["Dispatcher"]
-	Subcommands = SC_infos["Subcommands"]
+	Dispatcher_function = Command_infos["Dispatcher"]
+	Subcommands = Command_infos["Subcommands"]
 	Parts = Remainder.split(maxsplit=1)
 	Subcommand = Parts[0]
+	Arguments = Parts[1] if len(Parts) > 1 else None
 	if Subcommand not in Subcommands:
-		Output_Discord = f"Invalid subcommand. See “!help {Command}”."
-		Output_IRC = f"Invalid subcommand. See “!help {Command}” (on Discord)."
+		Output_Discord = f"Invalid subcommand. See “!help {Command_infos['Name']}”."
+		Output_IRC = f"Invalid subcommand. See “!help {Command_infos['Name']}” (on Discord)."
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
 		return
 	Function, With_args = Subcommands[Subcommand]
@@ -84,7 +90,6 @@ async def IRC_subcommands_dispatcher(Bridge, Command, SC_infos, User, Remainder)
 	if not With_args:
 		await Function(Bridge)
 		return
-	Arguments = Parts[1] if len(Parts) > 1 else None
 	await Dispatcher_function(Bridge, Subcommand, Function, User, Arguments)
 
 async def Straws_dispatcher(Bridge, Subcommand, Function, User, Arguments):
@@ -164,10 +169,10 @@ async def IRC_roll(Bridge, Dice):
 async def Straws_current_state(Bridge, Author=None):
 
 	global Straws_bag
-	Output = ""
 	Presence_participants = False
 	Presence_straws = False
 	Display_help = False
+	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
@@ -226,7 +231,7 @@ async def Straws_help(Bridge, Author=None):
 
 @straws.command(name="help")
 async def Discord_straws_help(Context):
-	"""Place holder to redirect towards “!help straws”."""
+	"""Placeholder to redirect towards “!help straws”."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Straws_help(Bridge, Context.author.display_name)
