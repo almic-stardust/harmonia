@@ -58,9 +58,9 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 	Command = Parts[0]
 	Remainder = Parts[1] if len(Parts) > 1 else None
 	if Command not in Commands:
-		Output_Discord = "Invalid command. See “!help”."
+		Output = "Invalid command. See “!help”."
 		Output_IRC = "Invalid command. See “!help” (on Discord)."
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 	Command_infos, With_user, With_args = Commands[Command]
 	# Commands without subcommands
@@ -95,9 +95,9 @@ async def IRC_subcommands_dispatcher(Bridge, Command_infos, User, Remainder):
 	Subcommand = Parts[0]
 	Arguments = Parts[1] if len(Parts) > 1 else None
 	if Subcommand not in Subcommands:
-		Output_Discord = f"Invalid subcommand. See “!help {Command_infos['Name']}”."
+		Output = f"Invalid subcommand. See “!help {Command_infos['Name']}”."
 		Output_IRC = f"Invalid subcommand. See “!help {Command_infos['Name']}” (on Discord)."
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 	Function, With_args = Subcommands[Subcommand]
 	# Subcommands that don’t require arguments
@@ -167,13 +167,13 @@ async def Roll_Dice(Bridge, Dice, Author=None):
 		Rolls = ", ".join(Rolls)
 	except Exception as Error:
 		print(f"[Commands] Roll_Dice(): {Error}")
-		Output_Discord = "Format has to be NdN."
-		Output_IRC += Output_Discord
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		Output = "Format has to be NdN."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
 		return
-	Output_Discord = Rolls
-	Output_IRC += Output_Discord
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	Output = Rolls
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @bot.command()
 async def roll(Context, Dice: str):
@@ -223,12 +223,12 @@ async def Straws_current_state(Bridge, Author=None):
 	if Presence_participants and not Presence_straws:
 		Display_help = True
 		Output += "But the bag is empty. "
-	Output_Discord = Output
+	Output = Output
 	Output_IRC += Output
 	if Display_help:
-		Output_Discord += "See “!help straws”."
+		Output += "See “!help straws”."
 		Output_IRC += "See “!help straws” (on Discord)."
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @bot.group()
 async def straws(Context):
@@ -251,9 +251,9 @@ async def Straws_help(Bridge, Author=None):
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
 		Output_IRC = f"<\x02{Author}\x02> !straws help\n"
-	Output_Discord = "See “!help straws”."
+	Output = "See “!help straws”."
 	Output_IRC += "See “!help straws” (on Discord)."
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @straws.command(name="help")
 async def Discord_straws_help(Context):
@@ -330,16 +330,16 @@ async def Straws_users(Bridge, Users, Author=None):
 	if Author:
 		Output_IRC = f"<\x02{Author}\x02> !straws users {Users}\n"
 	if len(Users) > 50:
-		Output_Discord = "The draw is limited to 50 users."
-		Output_IRC += Output_Discord
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		Output = "The draw is limited to 50 users."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 	Straws_bag["Users"] = []
 	for User in Users.split():
 		Straws_bag["Users"].append(User[:30])
-	Output_Discord = "The list of users has been set (usernames are limited to 30 characters)."
-	Output_IRC += Output_Discord
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	Output = "The list of users has been set (usernames are limited to 30 characters)."
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @straws.command(name="users")
 async def Discord_straws_users(Context, *, Users: str):
@@ -360,14 +360,14 @@ async def Straws_draw(Bridge, Author=None):
 		Output_IRC = f"<\x02{Author}\x02> !straws draw\n"
 
 	if len(Straws_bag["Users"]) == 0:
-		Output_Discord = "No participants between whom to draw. See “!help straws”."
+		Output = "No participants between whom to draw. See “!help straws”."
 		Output_IRC += "No participants between whom to draw. See “!help straws” (on Discord)."
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 	if len(Straws_bag["Common_key"]) == 0:
-		Output_Discord = "No straws to draw from. See “!help straws”."
+		Output = "No straws to draw from. See “!help straws”."
 		Output_IRC += "No straws to draw from. See “!help straws” (on Discord)."
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 
 	Common_key = " ".join(Straws_bag["Common_key"].values())
@@ -390,9 +390,9 @@ async def Straws_draw(Bridge, Author=None):
 		Output += f"[{User}] {Beginning_hash}[…]\n"
 	# Shortest straw = smallest hash 
 	Output += f"\nAnd {Users[0]} is the lucky (?) participant who pulls the shortest straw."
-	Output_Discord = Output
+	Output = Output
 	Output_IRC += Output
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @straws.command(name="draw")
 async def Discord_straws_draw(Context):
@@ -412,9 +412,9 @@ async def Straws_reset(Bridge, Author=None):
 		Output_IRC = f"<\x02{Author}\x02> !straws reset\n"
 	Straws_bag["Common_key"] = {}
 	Straws_bag["Users"] = []
-	Output_Discord = "The list of participants has been deleted, and the bag is now empty."
-	Output_IRC += Output_Discord
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	Output = "The list of participants has been deleted, and the bag is now empty."
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @straws.command(name="reset")
 async def Discord_straws_reset(Context):
@@ -451,9 +451,9 @@ async def Polls_help(Bridge, Author=None):
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
 		Output_IRC = f"<\x02{Author}\x02> !polls help\n"
-	Output_Discord = "See “!help polls”."
+	Output = "See “!help polls”."
 	Output_IRC += "See “!help polls” (on Discord)."
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="help")
 async def Discord_polls_help(Context):
@@ -497,9 +497,9 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls members\n"
 	if not List_of_users:
-		Output_Discord = "Display a list of members with voting rights."
-		Output_IRC += Output_Discord
-		await Gears.Send(Bridge, Output_Discord, Output_IRC)
+		Output = "Display a list of members with voting rights."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 	# List_of_users is a string
 	for User in List_of_users.split():
@@ -524,9 +524,9 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 				Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
 		else:
 			Output += f"{User} isn’t a member.\n"
-	Output_Discord = Output
+	Output = Output
 	Output_IRC += Output
-	await Gears.Send(Bridge, Output_Discord, Output_IRC)
+	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="members")
 async def Discord_polls_members(Context, List_of_users=None):
