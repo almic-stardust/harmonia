@@ -50,8 +50,9 @@ def Parse_contribution(Value):
 with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 
 	Users_table = Config["users"]["db_table"]
-	Output = ""
+	Users = DB_manager.Users_fetch_users(Users_table)
 	CSV_content = csv.DictReader(CSV_file, delimiter=";")
+	Output = ""
 
 	Normalized_lines = []
 	for Line in CSV_content:
@@ -93,7 +94,7 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
 		# Renewal
 		if User_ID:
-			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
+			User_infos = Users[User_ID]
 			Output += f"{User_infos['Pseudo']} ({User_infos['ID']})\n"
 			# Some infos are updated only if it’s the latest renewal
 			Last_renewal = User_infos["Renewals"][-1] if User_infos["Renewals"] else None

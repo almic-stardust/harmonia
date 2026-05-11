@@ -464,47 +464,46 @@ def Users_check_presence(Table, User_infos):
 		Cursor.close()
 		Connection.close()
 
-def Users_fetch_user(Table, User_ID):
+def Users_fetch_users(Table):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
-	User_infos = None
+	Users = {}
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		Cursor.execute(f"""
-				SELECT * FROM {Table}
-				WHERE id = %s""",
-				(User_ID,)
-		)
-		Result = Cursor.fetchone()
-		Dates = json.loads(Result[12]) if Result[12] else []
-		# Convert back into datetime objects
-		Renewals = []
-		for Date in Dates:
-			Renewals.append(datetime.datetime.fromisoformat(Date))
-		Renewals.sort()
-		Amounts = json.loads(Result[13]) if Result[13] else {}
-		Contributions = {}
-		for Year, Amount in Amounts.items():
-			Contributions[int(Year)] = Amount
-		User_infos = {
-				"Pseudo":				Result[0],
-				"ID":					User_ID,
-				"Mail":					Result[2],
-				"First_name":			Result[3],
-				"Last_name":			Result[4],
-				"ML_pseudo":			Result[5],
-				"Wiki_pseudo":			Result[6],
-				"IRC_pseudo":			Result[7],
-				"Forum_pseudo":			Result[8],
-				"Discord_pseudo":		Result[9],
-				"Discord_expiration":	Result[10],
-				"Avatar":				Result[11],
-				"Renewals":				Renewals,
-				"Contributions":		Contributions,
-				"Last_medium":			Result[14],
-		}
-		return User_infos
+		Cursor.execute(f"SELECT * FROM {Table}")
+		Results = Cursor.fetchall()
+		for Result in Results:
+			User_ID = Result[1]
+			Dates = json.loads(Result[12]) if Result[12] else []
+			# Convert back into datetime objects
+			Renewals = []
+			for Date in Dates:
+				Renewals.append(datetime.datetime.fromisoformat(Date))
+			Renewals.sort()
+			Amounts = json.loads(Result[13]) if Result[13] else {}
+			Contributions = {}
+			for Year, Amount in Amounts.items():
+				Contributions[int(Year)] = Amount
+			User_infos = {
+					"Pseudo":				Result[0],
+					"ID":					User_ID,
+					"Mail":					Result[2],
+					"First_name":			Result[3],
+					"Last_name":			Result[4],
+					"ML_pseudo":			Result[5],
+					"Wiki_pseudo":			Result[6],
+					"IRC_pseudo":			Result[7],
+					"Forum_pseudo":			Result[8],
+					"Discord_pseudo":		Result[9],
+					"Discord_expiration":	Result[10],
+					"Avatar":				Result[11],
+					"Renewals":				Renewals,
+					"Contributions":		Contributions,
+					"Last_medium":			Result[14],
+			}
+			Users[User_ID] = User_infos
+		return Users
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)

@@ -485,28 +485,29 @@ def Polls_voting_rights(User_infos):
 		User_infos["Can_vote"] = True
 	return User_infos
 
-async def Polls_members(Bridge, Users, Author=None):
+async def Polls_members(Bridge, List_of_users, Author=None):
 	Users_table = Config["users"]["db_table"]
+	Users = DB_manager.Users_fetch_users(Users_table)
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
-		if Users:
-			Output_IRC = f"<\x02{Author}\x02> !polls members {Users}\n"
+		if List_of_users:
+			Output_IRC = f"<\x02{Author}\x02> !polls members {List_of_users}\n"
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls members\n"
-	if not Users:
+	if not List_of_users:
 		Output_Discord = "Display a list of members with voting rights."
 		Output_IRC += Output_Discord
 		await Gears.Send(Bridge, Output_Discord, Output_IRC)
 		return
-	# Users is a string representing a list of pseudos
-	for User in Users.split():
+	# List_of_users is a string
+	for User in List_of_users.split():
 		User_infos = {}
 		User_infos["Pseudo"] = User
 		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
 		if User_ID:
-			User_infos = DB_manager.Users_fetch_user(Users_table, User_ID)
+			User_infos = Users[User_ID]
 		User_infos["Can_vote"] = False
 		if User_ID:
 			User_infos = Polls_voting_rights(User_infos)
@@ -528,11 +529,11 @@ async def Polls_members(Bridge, Users, Author=None):
 	await Gears.Send(Bridge, Output_Discord, Output_IRC)
 
 @polls.command(name="members")
-async def Discord_polls_members(Context, Users=None):
+async def Discord_polls_members(Context, List_of_users=None):
 	"""Display informations about members’ voting rights."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Polls_members(Bridge, Users, Context.author.display_name)
+		await Polls_members(Bridge, List_of_users, Context.author.display_name)
 
-async def IRC_polls_members(Bridge, Users):
-	await Polls_members(Bridge, Users)
+async def IRC_polls_members(Bridge, List_of_users):
+	await Polls_members(Bridge, List_of_users)
