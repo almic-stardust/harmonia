@@ -496,6 +496,7 @@ def Polls_voting_rights(User_infos):
 async def Polls_members(Bridge, List_of_users, Author=None):
 	Users_table = Config["users"]["db_table"]
 	Users = DB_manager.Users_fetch_users(Users_table)
+	Unregistered = []
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
@@ -504,35 +505,56 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 			Output_IRC = f"<\x02{Author}\x02> !polls members {List_of_users}\n"
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls members\n"
+	# “!polls members” lists all members with voting rights
 	if not List_of_users:
-		Output = "Display a list of members with voting rights."
-		Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
-		return
-	# List_of_users is a string
-	for User in List_of_users.split():
-		User_infos = {}
-		User_infos["Pseudo"] = User
-		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
-		if User_ID:
-			User_infos = Users[User_ID]
-		User_infos["Can_vote"] = False
-		if User_ID:
-			User_infos = Polls_voting_rights(User_infos)
-			if User_infos["Can_vote"]:
-				Output += f"{User} can vote "
+		List_of_users_from_argument = False
+		Users_to_display = Users
+	else:
+		List_of_users_from_argument = True
+		Users_to_display = {}
+		# List_of_users is a string
+		for User in List_of_users.split():
+			User_infos = {}
+			User_infos["Pseudo"] = User
+			User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+			if User_ID:
+				Users_to_display[User_ID] = Users[User_ID]
 			else:
-				Output += f"{User} can’t vote "
-			Last_renewal = datetime.datetime.strftime(User_infos["Last_renewal"], "%d/%m/%Y")
-			Registration = datetime.datetime.strftime(User_infos["Registration"], "%d/%m/%Y")
-			if User_infos["Penultimate_year"]:
-				Penultimate_year = datetime.datetime.strftime(User_infos["Penultimate_year"], "%Y")
-				Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
-			else:
-				Output += f"(Last renewal {Last_renewal} | Registration {Registration})\n"
+				Unregistered.append(User)
+	if len(Unregistered) > 0:
+		if len(Unregistered) == 1:
+			Output += f"{Unregistered[0]} isn’t a member.\n"
 		else:
-			Output += f"{User} isn’t a member.\n"
-	Output = Output
+			for User in Unregistered:
+				Output += f"{User} "
+			Output += "aren’t members.\n"
+		if not Users_to_display:
+			Output_IRC += Output
+			await Gears.Send(Bridge, Output, Output_IRC)
+			return
+	for User_ID in Users_to_display:
+		User_infos = Users_to_display[User_ID]
+		User_infos["Can_vote"] = False
+		User_infos = Polls_voting_rights(User_infos)
+		if User_infos["Can_vote"]:
+			Output += f"{User_infos['Pseudo']} "
+		# If we display all voting members, keep a concise display
+		if not List_of_users_from_argument:
+			continue
+		if User_infos["Can_vote"]:
+			Output += f"can vote "
+		else:
+			Output += f"{User_infos['Pseudo']} can’t vote "
+		Registration = datetime.datetime.strftime(User_infos["Registration"], "%d/%m/%Y")
+		Last_renewal = datetime.datetime.strftime(User_infos["Last_renewal"], "%d/%m/%Y")
+		#if User_infos["Penultimate_renewal"]:
+		#	Penultimate = datetime.datetime.strftime(User_infos["Penultimate_renewal"], "%d/%m/%Y")
+		#	Output += f"(last renewal {Last_renewal} | penultimate {Penultimate} | registration {Registration})\n"
+		if User_infos["Penultimate_year"]:
+			Penultimate_year = datetime.datetime.strftime(User_infos["Penultimate_year"], "%Y")
+			Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
+		else:
+			Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
 	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 
