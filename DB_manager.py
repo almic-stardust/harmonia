@@ -475,16 +475,19 @@ def Users_fetch_users(Table):
 		Results = Cursor.fetchall()
 		for Result in Results:
 			User_ID = Result[1]
-			Dates = json.loads(Result[12]) if Result[12] else []
-			# Convert back into datetime objects
-			Renewals = []
-			for Date in Dates:
-				Renewals.append(datetime.datetime.fromisoformat(Date))
-			Renewals.sort()
+			Dates = json.loads(Result[12]) if Result[12] else {}
+			Renewals = {}
+			for Year, Dates_for_year in Dates.items():
+				Year = int(Year)
+				Renewals[Year] = []
+				for Date in Dates_for_year:
+					Renewals[Year].append(datetime.datetime.fromisoformat(Date))
+				Renewals[Year].sort()
 			Amounts = json.loads(Result[13]) if Result[13] else {}
 			Contributions = {}
-			for Year, Amount in Amounts.items():
-				Contributions[int(Year)] = Amount
+			if len(Amounts) > 0:
+				for Year, Amount in Amounts.items():
+					Contributions[int(Year)] = Amount
 			User_infos = {
 					"Pseudo":				Result[0],
 					"ID":					User_ID,
@@ -516,10 +519,13 @@ def Users_manage_user(Table, Action, User_infos):
 	assumed to have been performed."""
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
-	Dates = []
-	for Date in User_infos["Renewals"]:
-		Dates.append(Date.isoformat(sep=" "))
-	Dates = json.dumps(Dates)
+	Dates = {}
+	for Year, Dates_for_year in User_infos["Renewals"].items():
+		Dates[Year] = []
+		for Date in Dates_for_year:
+			Dates[Year].append(Date.isoformat(sep=" "))
+	Renewals = json.dumps(Dates)
+	Contributions = json.dumps(User_infos["Contributions"]) if User_infos["Contributions"] else None
 	if Action == "Add":
 		Query = f"""
 				INSERT INTO {Table} (
@@ -568,8 +574,8 @@ def Users_manage_user(Table, Action, User_infos):
 			User_infos["Discord_pseudo"],
 			User_infos["Discord_expiration"],
 			User_infos["Avatar"],
-			Dates,
-			json.dumps(User_infos["Contributions"]),
+			Renewals,
+			Contributions,
 			User_infos["Last_medium"]
 	]
 	try:

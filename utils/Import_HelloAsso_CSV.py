@@ -69,8 +69,13 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 	# year of the file should correspond to that of the newest membership.
 	Last_date = Parse_date(Normalized_lines[-1].get("date de la commande"))
 	File_year = Last_date.year
-	print(f"\n>>> Year {File_year} <<<")
-	print("Note: this script must never be run twice on the same CSV file.\n")
+
+	for User_infos in Users.values():
+		if File_year in User_infos["Renewals"]:
+			print(f"Error: memberships for year {File_year} already exist in the DB.")
+			print("This script must not be run twice on the same CSV file.")
+			sys.exit(1)
+	print(f"\n>>> Year {File_year} <<<\n")
 
 	for Line in Normalized_lines:
 		Mail = Line.get("email", "").strip().lower()
@@ -97,22 +102,29 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			User_infos = Users[User_ID]
 			Output += f"{User_infos['Pseudo']} ({User_infos['ID']})\n"
 			# Some infos are updated only if it’s the latest renewal
-			Last_renewal = User_infos["Renewals"][-1] if User_infos["Renewals"] else None
+			Renewals = []
+			for Dates in User_infos["Renewals"].values():
+				Renewals.extend(Dates)
+			Renewals.sort()
+			Last_renewal = Renewals[-1] if len(Renewals) > 0 else None
 			if not Last_renewal or Last_renewal < Date:
 				User_infos["Mail"] = Mail
 				User_infos["Last_medium"] = "HelloAsso"
-			if File_year not in User_infos["Contributions"]:
-				User_infos["Contributions"][File_year] = Contribution
-			# If a member makes multiple contributions in the same file, add them together, and the
-			# total becomes the member’s contribution for that year of membership.
-			# Handling this case is the reason why this script must never be run twice on the same
-			# CSV file.
-			else:
-				User_infos["Contributions"][File_year] += Contribution
+			if Contribution > 0:
+				if File_year not in User_infos["Contributions"]:
+					User_infos["Contributions"][File_year] = Contribution
+				# If a member makes multiple contributions in the same file, add them together, and
+				# the total becomes the member’s contribution for that year of membership.
+				# Handling this case is the reason why this script must not be run twice on the same
+				# CSV file.
+				else:
+					User_infos["Contributions"][File_year] += Contribution
 			# Import regardless of whether it’s the newest CSV file, or one from a previous year
-			if Date not in User_infos["Renewals"]:
-				User_infos["Renewals"].append(Date)
-				User_infos["Renewals"].sort()
+			if File_year not in User_infos["Renewals"]:
+				User_infos["Renewals"][File_year] = []
+			if Date not in User_infos["Renewals"][File_year]:
+				User_infos["Renewals"][File_year].append(Date)
+				User_infos["Renewals"][File_year].sort()
 			DB_manager.Users_manage_user(Users_table, "Update", User_infos)
 		# New member
 		else:
@@ -138,8 +150,8 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			User_infos["Discord_pseudo"] = None
 			User_infos["Discord_expiration"] = None
 			User_infos["Avatar"] = None
-			User_infos["Renewals"] = [Date]
-			User_infos["Contributions"] = {File_year: Contribution}
+			User_infos["Renewals"] = {File_year: [Date]}
+			User_infos["Contributions"] = {File_year: Contribution} if Contribution > 0 else None
 			User_infos["Last_medium"] = "HelloAsso"
 			DB_manager.Users_manage_user(Users_table, "Add", User_infos)
 

@@ -468,19 +468,27 @@ async def IRC_polls_help(Bridge):
 def Polls_voting_rights(User_infos):
 	if not User_infos["Renewals"]:
 		return User_infos
+	Renewals_years = []
+	Renewals_dates = []
+	for Year in User_infos["Renewals"]:
+		Renewals_years.append(Year)
+		Renewals_dates.extend(User_infos["Renewals"][Year])
+	Renewals_years.sort()
+	Renewals_dates.sort()
+	User_infos["Registration"] = Renewals_dates[0]
+	User_infos["Last_renewal"] = Renewals_dates[-1]
+	User_infos["Penultimate_year"] = None
+	if len(Renewals_years) >= 2:
+		Penultimate_year = Renewals_years[-2]
+		User_infos["Penultimate_year"] = datetime.datetime.strptime(str(Penultimate_year), "%Y")
 	Now = datetime.datetime.now()
-	User_infos["Registration"] = User_infos["Renewals"][0]
-	User_infos["Last_renewal"] = User_infos["Renewals"][-1]
-	User_infos["Penultimate_renewal"] = None
-	if len(User_infos["Renewals"]) >= 2:
-		User_infos["Penultimate_renewal"] = User_infos["Renewals"][-2]
 	# Registration over a year ago
 	if User_infos["Registration"] + timedelta(days=365) <= Now \
 			and User_infos["Last_renewal"] + timedelta(days=365) >= Now:
 		User_infos["Can_vote"] = True
 	# Former member who renewed their membership less than 3 months ago
-	elif User_infos["Penultimate_renewal"] \
-			and User_infos["Penultimate_renewal"] + timedelta(days=365) <= Now \
+	elif User_infos["Penultimate_year"] \
+			and User_infos["Penultimate_year"] + timedelta(days=365) <= Now \
 			and User_infos["Last_renewal"] + timedelta(days=90) >= Now:
 		User_infos["Can_vote"] = True
 	return User_infos
@@ -517,11 +525,11 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 				Output += f"{User} can’t vote "
 			Last_renewal = datetime.datetime.strftime(User_infos["Last_renewal"], "%d/%m/%Y")
 			Registration = datetime.datetime.strftime(User_infos["Registration"], "%d/%m/%Y")
-			if User_infos["Penultimate_renewal"]:
-				Penultimate = datetime.datetime.strftime(User_infos["Penultimate_renewal"], "%d/%m/%Y")
-				Output += f"(last renewal {Last_renewal} | penultimate {Penultimate} | registration {Registration})\n"
+			if User_infos["Penultimate_year"]:
+				Penultimate_year = datetime.datetime.strftime(User_infos["Penultimate_year"], "%Y")
+				Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
 			else:
-				Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
+				Output += f"(Last renewal {Last_renewal} | Registration {Registration})\n"
 		else:
 			Output += f"{User} isn’t a member.\n"
 	Output = Output
@@ -529,7 +537,7 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="members")
-async def Discord_polls_members(Context, List_of_users=None):
+async def Discord_polls_members(Context, *, List_of_users=None):
 	"""Display informations about members’ voting rights."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
