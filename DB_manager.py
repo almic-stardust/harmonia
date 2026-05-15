@@ -78,16 +78,16 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 			Attachments = None
 		Cursor.execute(f"""
 				INSERT INTO {Table} (
-						date_creation,
-						server_id, chan_id, message_id,
-						reply_to,
-						user, content, attachments, relayed)
-						VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-				, (
-						Date,
-						Server_ID, Chan_ID, Message_ID,
-						Replied_message_ID,
-						Discord_username, Content, Attachments, Relayed
+					date_creation,
+					server_id, chan_id, message_id,
+					reply_to,
+					user, content, attachments, relayed)
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+				(
+					Date,
+					Server_ID, Chan_ID, Message_ID,
+					Replied_message_ID,
+					Discord_username, Content, Attachments, Relayed
 				)
 		)
 		Connection.commit()
@@ -106,16 +106,16 @@ def History_fetch_message(Table, Message_ID):
 			raise ValueError("[DB] Error: invalid table name.")
 		Cursor.execute(f"""
 				SELECT
-				date_creation,
-				server_id,
-				chan_id,
-				message_id,
-				reply_to,
-				user,
-				content,
-				attachments,
-				reactions,
-				date_deletion
+					date_creation,
+					server_id,
+					chan_id,
+					message_id,
+					reply_to,
+					user,
+					content,
+					attachments,
+					reactions,
+					date_deletion
 				FROM {Table} WHERE message_id = %s""",
 				(Message_ID,))
 		Result = Cursor.fetchone()
@@ -162,8 +162,7 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 			FROM {Table}
 			WHERE server_id = %s
 			AND chan_id = %s
-			AND date_deletion IS NULL
-		"""
+			AND date_deletion IS NULL"""
 		Values = [Server_ID, Chan_ID]
 		if Before is not None:
 			Query += " AND date_creation < %s"
@@ -529,38 +528,38 @@ def Users_manage_user(Table, Action, User_infos):
 	if Action == "Add":
 		Query = f"""
 				INSERT INTO {Table} (
-						pseudonym,
-						mail,
-						first_name,
-						last_name,
-						ml_pseudo,
-						wiki_pseudo,
-						irc_pseudo,
-						forum_pseudo,
-						discord_pseudo,
-						discord_expiration,
-						avatar,
-						renewals,
-						contributions,
-						last_medium)
-						VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+					pseudonym,
+					mail,
+					first_name,
+					last_name,
+					ml_pseudo,
+					wiki_pseudo,
+					irc_pseudo,
+					forum_pseudo,
+					discord_pseudo,
+					discord_expiration,
+					avatar,
+					renewals,
+					contributions,
+					last_medium)
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	if Action == "Update":
 		Query = f"""
 				UPDATE {Table} SET
-						pseudonym = %s,
-						mail = %s,
-						first_name = %s,
-						last_name = %s,
-						ml_pseudo = %s,
-						wiki_pseudo = %s,
-						irc_pseudo = %s,
-						forum_pseudo = %s,
-						discord_pseudo = %s,
-						discord_expiration = %s,
-						avatar = %s,
-						renewals = %s,
-						contributions = %s,
-						last_medium = %s
+					pseudonym = %s,
+					mail = %s,
+					first_name = %s,
+					last_name = %s,
+					ml_pseudo = %s,
+					wiki_pseudo = %s,
+					irc_pseudo = %s,
+					forum_pseudo = %s,
+					discord_pseudo = %s,
+					discord_expiration = %s,
+					avatar = %s,
+					renewals = %s,
+					contributions = %s,
+					last_medium = %s
 				WHERE id = {User_infos['ID']}"""
 	Values = [
 			User_infos["Pseudo"],
