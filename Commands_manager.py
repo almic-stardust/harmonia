@@ -289,7 +289,7 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 	if Context:
 		if IRC_instance:
 			await IRC_instance.Relay_Discord_message(
-					Bridge["irc_chan"], IRC_chan, User, f"!straws {Action} {Straw}"
+					Bridge["irc_chan"], User, f"!straws {Action} {Straw}"
 			)
 		await Context.author.send(Output)
 	# The command comes from IRC: confirmation via query
@@ -560,13 +560,13 @@ async def Discord_polls_members(Context, *, List_of_users=None):
 async def IRC_polls_members(Bridge, List_of_users):
 	await Polls_members(Bridge, List_of_users)
 
-async def Polls_create(Bridge, User, Arguments, Author=None):
+async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 	Polls_table = Config["polls"]["db_table"]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
-	if Author:
-		Output_IRC = f"<\x02{Author}\x02> !polls create {Arguments}\n"
+	if From_Discord:
+		Output_IRC = f"<\x02{User}\x02> !polls create {Arguments}\n"
 	if not Arguments:
 		Output += "Syntax: !polls create Subject | Choice 1 ; Choice 2 ; …"
 		Output_IRC += Output
@@ -586,8 +586,6 @@ async def Polls_create(Bridge, User, Arguments, Author=None):
 			if Choice:
 				List_of_choices.append(Choice)
 		Choices = List_of_choices
-		print("Choices =", Choices)
-		print("len(Choices) =", len(Choices))
 		if len(Choices) == 1:
 			Output += "If there’s only one choice, what’s the point of having a vote?"
 			Output_IRC += Output
@@ -608,11 +606,16 @@ async def Polls_create(Bridge, User, Arguments, Author=None):
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="create")
-async def Discord_polls_create(Context, User, *, Arguments):
-	"""Create a new poll."""
+async def Discord_polls_create(Context, *, Arguments):
+	"""Create a new poll.
+
+	Parameters
+	----------
+	Arguments : str
+		syntax: “!polls create Subject | Choice 1 ; Choice 2 ; …”"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Polls_create(Bridge, User, Arguments, Context.author.display_name)
+		await Polls_create(Bridge, Context.author.display_name, Arguments, True)
 
 async def IRC_polls_create(Bridge, User, Arguments):
 	await Polls_create(Bridge, User, Arguments)
