@@ -68,7 +68,7 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 	if inspect.isfunction(Command_infos):
 		# It’s clearer to call Function(…) with a variable named Function
 		Function = Command_infos
-		if With_user and With_args:
+		if With_args and With_user:
 			await Function(Bridge, User, Remainder)
 		elif With_args:
 			await Function(Bridge, Remainder)
@@ -101,20 +101,14 @@ async def IRC_subcommands_dispatcher(Bridge, Command_infos, User, Remainder):
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 	Function, With_args = Subcommands[Subcommand]
-	# Subcommands that don’t require arguments
-	if not With_args:
+	if With_args and User:
+		await Dispatcher_function(Bridge, Subcommand, Function, User, Arguments)
+	elif not With_args and User:
+		await Function(Bridge, User)
+	elif not With_args and not User:
 		await Function(Bridge)
-		return
-	await Dispatcher_function(Bridge, Subcommand, Function, User, Arguments)
 
 async def Straws_dispatcher(Bridge, Subcommand, Function, User, Arguments):
-	if not Arguments:
-		if Subcommand in {"participate", "contribute"}:
-			Help_usage = f"Usage: !straws {Subcommand} Word"
-		elif Subcommand == "users":
-			Help_usage = "Usage: !straws users User1 User2 …"
-		await Gears.Send(Bridge, Help_usage)
-		return
 	if Subcommand in {"participate", "contribute"}:
 		await Function(Bridge, User, Arguments)
 	else:
@@ -306,6 +300,9 @@ async def Discord_straws_participate(Context, *, Word: str):
 		await Straws_add(Bridge, Context.author.display_name, "participate", Word, Context)
 
 async def IRC_straws_participate(Bridge, User, Word):
+	if not Word:
+		await Gears.Send(Bridge, "Usage: !straws participate Word")
+		return
 	await Straws_add(Bridge, User, "participate", Word)
 
 @straws.command(name="contribute")
@@ -316,6 +313,9 @@ async def Discord_straws_contribute(Context, *, Word: str):
 		await Straws_add(Bridge, Context.author.display_name, "contribute", Word, Context)
 
 async def IRC_straws_contribute(Bridge, User, Word):
+	if not Word:
+		await Gears.Send(Bridge, "Usage: !straws contribute Word")
+		return
 	await Straws_add(Bridge, User, "contribute", Word)
 
 async def Straws_users(Bridge, Users, Author=None):
@@ -344,6 +344,9 @@ async def Discord_straws_users(Context, *, Users: str):
 		await Straws_users(Bridge, Users, Context.author.display_name)
 
 async def IRC_straws_users(Bridge, Users):
+	if not Users:
+		await Gears.Send(Bridge, "Usage: !straws users User1 User2 …")
+		return
 	await Straws_users(Bridge, Users)
 
 async def Straws_draw(Bridge, Author=None):
@@ -608,7 +611,6 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 @polls.command(name="create")
 async def Discord_polls_create(Context, *, Arguments):
 	"""Create a new poll.
-
 	Parameters
 	----------
 	Arguments : str
