@@ -27,30 +27,30 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 	Straws_infos = {
 			"Name":			"straws",
 			"Dispatcher":	Straws_dispatcher,
-			#		 		 Fonction					User variable?	Arguments?
-			"Direct_call":	(IRC_straws,				False),
+			#		 		 Fonction					Arguments?		User variable?
+			"Direct_call":	(IRC_straws,								False),
 	"Subcommands": {
-			"help":			(IRC_straws_help,							False),
-			"participate":	(IRC_straws_participate,					True),
-			"contribute":	(IRC_straws_contribute,						True),
-			"users":		(IRC_straws_users,							True),
-			"draw":			(IRC_straws_draw,							False),
-			"reset":		(IRC_straws_reset,							False),
+			"help":			(IRC_straws_help,			False),
+			"participate":	(IRC_straws_participate,	True),
+			"contribute":	(IRC_straws_contribute,		True),
+			"users":		(IRC_straws_users,			True),
+			"draw":			(IRC_straws_draw,			False),
+			"reset":		(IRC_straws_reset,			False),
 	}}
 	Polls_infos = {
 			"Name":			"polls",
 			"Dispatcher":	Polls_dispatcher,
-			#		 		 Fonction					User variable?	Arguments?
-			"Direct_call":	(IRC_polls,					False),
+			#		 		 Fonction					Arguments?		User variable?
+			"Direct_call":	(IRC_polls,									False),
 	"Subcommands": {
-			"help":			(IRC_polls_help,							False),
-			"members":		(IRC_polls_members,							True),
-			"create":		(IRC_polls_create,							True),
+			"help":			(IRC_polls_help,			False),
+			"members":		(IRC_polls_members,			True),
+			"create":		(IRC_polls_create,			True),
 	}}
 
-	Commands = { #		 Destination (funct or dict)	User variable?	Arguments?
+	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
 			"!help":	(No_help_for_IRC,				False,			False),
-			"!roll":	(IRC_roll,						False,			True),
+			"!roll":	(IRC_roll,						True,			False),
 			"!straws":	(Straws_infos,					True,			True),
 			"!polls":	(Polls_infos,					True,			True),
 	}
@@ -63,7 +63,7 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 		Output_IRC = "Invalid command. See “!help” (on Discord)."
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
-	Command_infos, With_user, With_args = Commands[Command]
+	Command_infos, With_args, With_user = Commands[Command]
 	# Commands without subcommands
 	if inspect.isfunction(Command_infos):
 		# It’s clearer to call Function(…) with a variable named Function
