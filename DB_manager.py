@@ -588,3 +588,23 @@ def Users_manage_user(Table, Action, User_infos):
 	finally:
 		Cursor.close()
 		Connection.close()
+
+def Polls_create(Table, User, Question, Choices):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"""
+				INSERT INTO {Table} (user, question, choices)
+				VALUES (%s, %s, %s)""",
+				(User, Question, json.dumps(Choices))
+		)
+		Connection.commit()
+		return Cursor.lastrowid
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()

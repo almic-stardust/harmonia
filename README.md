@@ -51,7 +51,7 @@ Create the virtual environment:
 
 Create a base according to your Config.yaml, then create these tables:
 
-	CREATE TABLE history (
+	CREATE TABLE project_history (
 	    date_creation       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
 	    server_id           BIGINT NOT NULL,
 	    chan_id             BIGINT NOT NULL,
@@ -67,7 +67,7 @@ Create a base according to your Config.yaml, then create these tables:
 	    date_deletion       TIMESTAMP NULL,
 	);
 
-	CREATE TABLE users (
+	CREATE TABLE project_users (
 	    pseudonym           VARCHAR(255) NULL,
 	    id                  INT AUTO_INCREMENT PRIMARY KEY,
 	    mail                VARCHAR(255) NOT NULL,
@@ -83,6 +83,16 @@ Create a base according to your Config.yaml, then create these tables:
 	    renewals            JSON NULL,
 	    contributions       JSON NULL,
 	    last_medium         VARCHAR(255) NULL
+	);
+
+	CREATE TABLE project_polls (
+	    id                  INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	    creation_date       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+	    user                VARCHAR(255) NOT NULL,
+	    question            TEXT NOT NULL,
+	    choices             JSON NOT NULL,
+	    votes               JSON NULL,
+	    closed              BOOLEAN NOT NULL DEFAULT FALSE
 	);
 
 #### Last steps

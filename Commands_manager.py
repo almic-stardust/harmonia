@@ -41,10 +41,11 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 			"Name":			"polls",
 			"Dispatcher":	Polls_dispatcher,
 			#		 		 Fonction					User variable?	Arguments?
-			"Direct_call":	(IRC_polls,					True),
+			"Direct_call":	(IRC_polls,					False),
 	"Subcommands": {
 			"help":			(IRC_polls_help,							False),
 			"members":		(IRC_polls_members,							True),
+			"create":		(IRC_polls_create,							True),
 	}}
 
 	Commands = { #		 Destination (funct or dict)	User variable?	Arguments?
@@ -120,16 +121,10 @@ async def Straws_dispatcher(Bridge, Subcommand, Function, User, Arguments):
 		await Function(Bridge, Arguments)
 
 async def Polls_dispatcher(Bridge, Subcommand, Function, User, Arguments):
-	#if not Arguments:
-	#	if Subcommand == "":
-	#		Help_usage = f"Usage: !polls {Subcommand} "
-	#	await Gears.Send(Bridge, Help_usage)
-	#	return
-	#if Subcommand in {"vote"}:
-	#	await Function(Bridge, User, Arguments)
-	#else:
-	#	await Function(Bridge, Arguments)
-	await Function(Bridge, Arguments)
+	if Subcommand in {"create", "vote"}:
+		await Function(Bridge, User, Arguments)
+	else:
+		await Function(Bridge, Arguments)
 
 ###############################################################################
 # Misc
@@ -443,7 +438,7 @@ async def polls(Context):
 		if Bridge:
 			await Gears.Send(Bridge, "Display the last 5 votes, prioritizing ongoing extended.")
 
-async def IRC_polls(Bridge, User):
+async def IRC_polls(Bridge):
 	await Gears.Send(Bridge, "Display the last 5 votes, prioritizing ongoing extended.")
 
 async def Polls_help(Bridge, Author=None):
@@ -547,9 +542,6 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 			Output += f"{User_infos['Pseudo']} can’t vote "
 		Registration = datetime.datetime.strftime(User_infos["Registration"], "%d/%m/%Y")
 		Last_renewal = datetime.datetime.strftime(User_infos["Last_renewal"], "%d/%m/%Y")
-		#if User_infos["Penultimate_renewal"]:
-		#	Penultimate = datetime.datetime.strftime(User_infos["Penultimate_renewal"], "%d/%m/%Y")
-		#	Output += f"(last renewal {Last_renewal} | penultimate {Penultimate} | registration {Registration})\n"
 		if User_infos["Penultimate_year"]:
 			Penultimate_year = datetime.datetime.strftime(User_infos["Penultimate_year"], "%Y")
 			Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
@@ -567,3 +559,60 @@ async def Discord_polls_members(Context, *, List_of_users=None):
 
 async def IRC_polls_members(Bridge, List_of_users):
 	await Polls_members(Bridge, List_of_users)
+
+async def Polls_create(Bridge, User, Arguments, Author=None):
+	Polls_table = Config["polls"]["db_table"]
+	Output = ""
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if Author:
+		Output_IRC = f"<\x02{Author}\x02> !polls create {Arguments}\n"
+	if not Arguments:
+		Output += "Syntax: !polls create Subject | Choice 1 ; Choice 2 ; …"
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	if "|" in Arguments:
+		Question, Choices = Arguments.split("|", 1)
+		Question = Question.strip()
+	else:
+		Question = Arguments
+		Choices = None
+	if Choices and ";" in Choices:
+		List_of_choices = []
+		Choices = Choices.split(";")
+		for Choice in Choices:
+			Choice = Choice.strip()
+			if Choice:
+				List_of_choices.append(Choice)
+		Choices = List_of_choices
+		print("Choices =", Choices)
+		print("len(Choices) =", len(Choices))
+		if len(Choices) == 1:
+			Output += "If there’s only one choice, what’s the point of having a vote?"
+			Output_IRC += Output
+			await Gears.Send(Bridge, Output, Output_IRC)
+			return
+	else:
+		Choices = ["Yes", "No", "Abs"]
+	Poll_ID = DB_manager.Polls_create(Polls_table, User, Question, Choices)
+	Output += f"Poll #{Poll_ID}: {Question}\n["
+	for Index, Choice in enumerate(Choices):
+		Output += f"{Index + 1} = {Choice}"
+		if Index + 1 < len(Choices):
+			Output += "]   ["
+		else:
+			Output += "]\n"
+	Output += f"Vote with: !polls vote {Poll_ID} <Choice_number>"
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
+
+@polls.command(name="create")
+async def Discord_polls_create(Context, User, *, Arguments):
+	"""Create a new poll."""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_create(Bridge, User, Arguments, Context.author.display_name)
+
+async def IRC_polls_create(Bridge, User, Arguments):
+	await Polls_create(Bridge, User, Arguments)

@@ -48,6 +48,9 @@ history:
   storage_folder:         "/path/to/bot_files"
   storage_url:            "https://domain.tld/bot_files"
 
+polls:
+  db_table:               "project_polls"
+
 irc_info:
   bot_owner:              ""
   nick:                   "MyBot"
