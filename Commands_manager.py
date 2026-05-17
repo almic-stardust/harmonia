@@ -165,8 +165,12 @@ async def Roll_Dice(Bridge, Dice, Author=None):
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @bot.command()
-async def roll(Context, Dice: str):
-	"""Roll Dice in NdN format"""
+async def roll(Context, Dice):
+	"""Roll Dice in NdN format.
+	Parameters
+	----------
+	Dice : str
+		“!roll NdN”"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Roll_Dice(Bridge, Dice, Context.author.display_name)
@@ -292,8 +296,12 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 			await IRC_instance.Safe_message(User, Output)
 
 @straws.command(name="participate")
-async def Discord_straws_participate(Context, *, Word: str):
-	"""Put a straw in the bag (and participate in the draw)."""
+async def Discord_straws_participate(Context, *, Word):
+	"""Put a straw in the bag (and participate in the draw).
+	Parameters
+	----------
+	Word : str
+		“!straws participate Word”"""
 	# A straw is a word, or several that will be concatenated, in both cases up to 30 letters
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
@@ -306,8 +314,12 @@ async def IRC_straws_participate(Bridge, User, Word):
 	await Straws_add(Bridge, User, "participate", Word)
 
 @straws.command(name="contribute")
-async def Discord_straws_contribute(Context, *, Word: str):
-	"""Put a straw in the bag (without participating in the draw)."""
+async def Discord_straws_contribute(Context, *, Word):
+	"""Put a straw in the bag (without participating in the draw).
+	Parameters
+	----------
+	Word : str
+		“!straws contribute Word”"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Straws_add(Bridge, Context.author.display_name, "contribute", Word, Context)
@@ -337,8 +349,12 @@ async def Straws_users(Bridge, Users, Author=None):
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @straws.command(name="users")
-async def Discord_straws_users(Context, *, Users: str):
-	"""Set the list of users participating in the draw."""
+async def Discord_straws_users(Context, *, Users):
+	"""Set the list of users participating in the draw.
+	Parameters
+	----------
+	Users : str
+		“!straws users User1 User2 …”"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Straws_users(Bridge, Users, Context.author.display_name)
@@ -554,11 +570,16 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="members")
-async def Discord_polls_members(Context, *, List_of_users=None):
-	"""Display informations about members’ voting rights."""
+async def Discord_polls_members(Context, *, Members=None):
+	"""Display informations about members’ voting rights.
+	Parameters
+	----------
+	Members : str
+		(optional) “!straws members [Member1 Member2 …]”"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Polls_members(Bridge, List_of_users, Context.author.display_name)
+		# In the !help for this subcommand, it’s better to display Members instead of List_of_users
+		await Polls_members(Bridge, Members, Context.author.display_name)
 
 async def IRC_polls_members(Bridge, List_of_users):
 	await Polls_members(Bridge, List_of_users)
@@ -571,7 +592,7 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 	if From_Discord:
 		Output_IRC = f"<\x02{User}\x02> !polls create {Arguments}\n"
 	if not Arguments:
-		Output += "Syntax: !polls create Subject | Choice 1 ; Choice 2 ; …"
+		Output += "Usage: !polls create Subject | Choice 1 ; Choice 2 ; …"
 		Output_IRC += Output
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
