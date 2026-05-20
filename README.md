@@ -92,7 +92,7 @@ Create a base according to your Config.yaml, then create these tables:
 	    question            TEXT NOT NULL,
 	    choices             JSON NOT NULL,
 	    votes               JSON NULL,
-	    closed              BOOLEAN NOT NULL DEFAULT FALSE
+	    open                BOOLEAN NOT NULL DEFAULT TRUE
 	);
 
 #### Last steps

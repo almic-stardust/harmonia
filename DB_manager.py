@@ -608,3 +608,65 @@ def Polls_create(Table, User, Question, Choices):
 	finally:
 		Cursor.close()
 		Connection.close()
+
+def Polls_fetch(Table, Poll_ID):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"""
+				SELECT * FROM {Table}
+				WHERE id = %s""",
+				(Poll_ID,)
+		)
+		Result = Cursor.fetchone()
+		if not Result:
+			return None
+		Choices = json.loads(Result[4]) if Result[4] else {}
+		if Choices:
+			Temp = {}
+			for Index, Choice in enumerate(Choices):
+				Temp[Index + 1] = Choice
+			Choices = Temp
+		Poll_infos = {
+				"ID": Poll_ID,
+				"Creation_date": Result[1],
+				"Author": Result[2] if Result[2] else "Anonymous",
+				"Question": Result[3],
+				"Votes": json.loads(Result[5]) if Result[5] else {},
+				"Choices": Choices,
+				"Open": bool(Result[6])
+		}
+		return Poll_infos
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def Polls_vote(Table, Poll_ID, Pseudo, Choice_index):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Poll_infos = Polls_fetch(Table, Poll_ID)
+		if not Poll_infos:
+			return False
+		Votes = Poll_infos["Votes"]
+		Votes[Pseudo] = Choice_index
+		Cursor.execute(f"""
+				UPDATE {Table} SET votes = %s
+				WHERE id = %s""",
+				(json.dumps(Votes), Poll_ID)
+		)
+		Connection.commit()
+		return True
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()

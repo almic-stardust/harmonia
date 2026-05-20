@@ -31,3 +31,18 @@ async def Send(Bridge, Message, Message_IRC=None):
 				await IRC_instance.Safe_message(IRC_chan, Message_IRC)
 			else:
 				await IRC_instance.Safe_message(IRC_chan, Message)
+
+async def Send_DM(User, Context, Message, Message_IRC=None):
+	"""Send a DM both on Discord and IRC"""
+	# The user wrote to the bot via Discord, reply via DM
+	if Context:
+		await Context.author.send(Message)
+	# The user wrote to the bot via IRC, reply via query
+	else:
+		IRC_instance = IRC_manager.GCI()
+		if IRC_instance:
+			# If the message to be sent via query is different from the DM on Discord
+			if Message_IRC:
+				await IRC_instance.Safe_message(User, Message_IRC)
+			else:
+				await IRC_instance.Safe_message(User, Message)

@@ -46,6 +46,7 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 			"help":			(IRC_polls_help,			False),
 			"members":		(IRC_polls_members,			True),
 			"create":		(IRC_polls_create,			True),
+			"vote":			(IRC_polls_vote,			True),
 	}}
 
 	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
@@ -260,6 +261,13 @@ async def IRC_straws_help(Bridge):
 
 async def Straws_add(Bridge, User, Action, Straw, Context=None):
 	global Straws_bag
+	IRC_instance = IRC_manager.GCI()
+	# If the command was sent on Discord, relay it on IRC
+	if Context:
+		if IRC_instance:
+			await IRC_instance.Relay_Discord_message(
+					Bridge["irc_chan"], User, f"!straws {Action} {Straw}"
+			)
 	try:
 		# Remove dots, commas and underscores
 		Straw = Straw.replace(".", " ").replace(",", " ").replace("_", " ")
@@ -282,15 +290,10 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 		await Gears.Send(Bridge, "Your straw couldn’t be added in the bag!")
 		return
 	Output = f"Your straw “{Straw}” has been added in the bag."
-	IRC_instance = IRC_manager.GCI()
-	# The command comes from Discord: relay the command on IRC + confirmation via DM
+	# The command comes from Discord, confirmation via DM
 	if Context:
-		if IRC_instance:
-			await IRC_instance.Relay_Discord_message(
-					Bridge["irc_chan"], User, f"!straws {Action} {Straw}"
-			)
 		await Context.author.send(Output)
-	# The command comes from IRC: confirmation via query
+	# The command comes from IRC, confirmation via query
 	else:
 		if IRC_instance:
 			await IRC_instance.Safe_message(User, Output)
@@ -480,6 +483,7 @@ async def IRC_polls_help(Bridge):
 	await Polls_help(Bridge)
 
 def Polls_voting_rights(User_infos):
+	User_infos["Can_vote"] = False
 	if not User_infos["Renewals"]:
 		return User_infos
 	Renewals_years = []
@@ -548,7 +552,6 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 			return
 	for User_ID in Users_to_display:
 		User_infos = Users_to_display[User_ID]
-		User_infos["Can_vote"] = False
 		User_infos = Polls_voting_rights(User_infos)
 		if User_infos["Can_vote"]:
 			Output += f"{User_infos['Pseudo']} "
@@ -642,3 +645,70 @@ async def Discord_polls_create(Context, *, Arguments):
 
 async def IRC_polls_create(Bridge, User, Arguments):
 	await Polls_create(Bridge, User, Arguments)
+
+async def Polls_vote(Bridge, User, Arguments, Context=None):
+
+	Users_table = Config["users"]["db_table"]
+	Polls_table = Config["polls"]["db_table"]
+	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
+	IRC_instance = IRC_manager.GCI()
+	# If the command was sent on Discord, relay it on IRC
+	if Context:
+		await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User,
+				f"<\x02{User}\x02> !polls create {Arguments}"
+		)
+	if not Arguments:
+		await Gears.Send(Bridge, Help_usage)
+		return
+	Parts = Arguments.split()
+	if len(Parts) != 2:
+		await Gears.Send(Bridge, Help_usage)
+		return
+	try:
+		Choice = int(Parts[0])
+		Poll_ID = int(Parts[1])
+	except ValueError:
+		# Errors related to the poll are sent publicly, those related to the user are sent privately
+		await Gears.Send(Bridge, f"Error: invalid poll ID or choice number.\n" + Help_usage)
+		return
+
+	User_infos = {"Pseudo": User}
+	User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+	if not User_ID:
+		await Gears.Send_DM(User, Context, "Error: you’re not registered.")
+		return
+	Users = DB_manager.Users_fetch_users(Users_table)
+	User_infos = Users[User_ID]
+	User_infos = Polls_voting_rights(User_infos)
+	if not User_infos["Can_vote"]:
+		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
+		return
+
+	Poll_infos = DB_manager.Polls_fetch(Polls_table, Poll_ID)
+	if not Poll_infos:
+		await Gears.Send(Bridge, "Error: poll not found. See “!polls list”")
+		return
+	if not Poll_infos["Open"]:
+		await Gears.Send(Bridge, "Error: this poll is closed. See “!polls list active”")
+		return
+	Number_of_choices = len(Poll_infos["Choices"])
+	if Choice < 1 or Choice > Number_of_choices:
+		await Gears.Send(Bridge, f"Error: invalid choice number. See “!polls info {Poll_ID}”")
+		return
+	DB_manager.Polls_vote(Polls_table, Poll_ID, User_infos["Pseudo"], Choice)
+	Vote = Poll_infos["Choices"][Choice]
+	await Gears.Send_DM(User, Context, f"Vote “{Vote}” registered for poll #{Poll_ID}.")
+
+@polls.command(name="vote")
+async def Discord_polls_vote(Context, *, Arguments):
+	"""Vote in a poll.
+	Parameters
+	----------
+	Arguments : str
+		syntax: !polls vote <Choice_number> [Poll_ID]"""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_create(Bridge, Context.author.display_name, Arguments, Context)
+
+async def IRC_polls_vote(Bridge, User, Arguments):
+	await Polls_vote(Bridge, User, Arguments)
