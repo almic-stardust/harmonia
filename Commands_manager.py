@@ -46,6 +46,7 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 			"help":			(IRC_polls_help,			False),
 			"members":		(IRC_polls_members,			True),
 			"create":		(IRC_polls_create,			True),
+			"close":		(IRC_polls_close,			True),
 			"vote":			(IRC_polls_vote,			True),
 	}}
 
@@ -116,7 +117,7 @@ async def Straws_dispatcher(Bridge, Subcommand, Function, User, Arguments):
 		await Function(Bridge, Arguments)
 
 async def Polls_dispatcher(Bridge, Subcommand, Function, User, Arguments):
-	if Subcommand in {"create", "vote"}:
+	if Subcommand in {"create", "close", "vote"}:
 		await Function(Bridge, User, Arguments)
 	else:
 		await Function(Bridge, Arguments)
@@ -645,6 +646,63 @@ async def Discord_polls_create(Context, *, Arguments):
 
 async def IRC_polls_create(Bridge, User, Arguments):
 	await Polls_create(Bridge, User, Arguments)
+
+async def Polls_close(Bridge, User, Poll_ID, Is_moderator, From_Discord=False):
+	Polls_table = Config["polls"]["db_table"]
+	Output = ""
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if From_Discord:
+		Output_IRC = f"<\x02{User}\x02> !polls create {Arguments}\n"
+	try:
+		Poll_ID = int(Poll_ID)
+		Poll_infos = DB_manager.Polls_fetch(Polls_table, Poll_ID)
+	except (TypeError, ValueError):
+		Output += "Error: invalid poll ID."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	if not Poll_infos:
+		Output += f"Error: poll #{Poll_ID} does not exist."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	if not Poll_infos["Open"]:
+		Output += f"Poll #{Poll_ID} is already closed."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	# Moderators can always close polls
+	if User == Poll_infos["Author"] or Is_moderator:
+		Can_close = True
+	else:
+		Can_close = False
+	if not Can_close:
+		Output += "Error: only the poll author or a moderator can close this poll."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	DB_manager.Polls_close(Polls_table, Poll_ID)
+	Output = f"{User} closed poll #{Poll_ID}: {Poll_infos['Question']}"
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
+
+@polls.command(name="close")
+async def Discord_polls_close(Context, Poll_ID: int):
+	"""Close a poll.
+	Parameters
+	----------
+	Poll_ID : str
+		 “!polls close [Poll_ID]”"""
+	Is_moderator = Context.author.guild_permissions.manage_messages
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_close(Bridge, Context.author.display_name, Poll_ID, Is_moderator, True)
+
+async def IRC_polls_close(Bridge, User, Poll_ID):
+	# TODO
+	Is_moderator = False
+	await Polls_close(Bridge, User, Poll_ID, Is_moderator)
 
 async def Polls_vote(Bridge, User, Arguments, Context=None):
 
