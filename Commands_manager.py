@@ -700,8 +700,13 @@ async def Discord_polls_close(Context, Poll_ID: int):
 		await Polls_close(Bridge, Context.author.display_name, Poll_ID, Is_moderator, True)
 
 async def IRC_polls_close(Bridge, User, Poll_ID):
-	# TODO
 	Is_moderator = False
+	IRC_instance = IRC_manager.GCI()
+	if IRC_instance:
+		IRC_chan = IRC_instance.channels.get(Bridge["irc_chan"])
+		if IRC_chan:
+			if User in IRC_chan["modes"].get("o", set()):
+				Is_moderator = True
 	await Polls_close(Bridge, User, Poll_ID, Is_moderator)
 
 async def Polls_vote(Bridge, User, Arguments, Context=None):
