@@ -668,6 +668,28 @@ def Polls_fetch(Table, Poll_ID):
 		Cursor.close()
 		Connection.close()
 
+def Polls_fetch_last(Table):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"""
+				SELECT id FROM {Table}
+				ORDER BY id DESC
+				LIMIT 1"""
+		)
+		Result = Cursor.fetchone()
+		if not Result:
+			return None
+		return Polls_fetch(Table, Result[0])
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
 def Polls_vote(Table, Poll_ID, Pseudo, Choice_index):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()

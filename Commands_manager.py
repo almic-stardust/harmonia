@@ -585,7 +585,7 @@ async def Discord_polls_members(Context, *, Members=None):
 		# In the !help for this subcommand, it’s better to display Members instead of List_of_users
 		await Polls_members(Bridge, Members, Context.author.display_name)
 
-async def IRC_polls_members(Bridge, List_of_users):
+async def IRC_polls_members(Bridge, List_of_users=None):
 	await Polls_members(Bridge, List_of_users)
 
 async def Polls_create(Bridge, User, Arguments, From_Discord=False):
@@ -647,21 +647,34 @@ async def Discord_polls_create(Context, *, Arguments):
 async def IRC_polls_create(Bridge, User, Arguments):
 	await Polls_create(Bridge, User, Arguments)
 
+def Polls_determine_ID(Polls_table, Poll_ID=None):
+	if Poll_ID:
+		try:
+			return int(Poll_ID), None
+		except (TypeError, ValueError):
+			return None, "Error: invalid poll ID."
+	# Otherwise fetch the latest poll
+	Poll_infos = DB_manager.Polls_fetch_last(Polls_table)
+	if not Poll_infos:
+		return None, "Error: no polls in the DB."
+	return Poll_infos["ID"], None
+
 async def Polls_close(Bridge, User, Poll_ID, Is_moderator, From_Discord=False):
 	Polls_table = Config["polls"]["db_table"]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
 	if From_Discord:
-		Output_IRC = f"<\x02{User}\x02> !polls create {Arguments}\n"
-	try:
-		Poll_ID = int(Poll_ID)
-		Poll_infos = DB_manager.Polls_fetch(Polls_table, Poll_ID)
-	except (TypeError, ValueError):
-		Output += "Error: invalid poll ID."
-		Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		if Poll_ID:
+			Output_IRC = f"<\x02{User}\x02> !polls close {Poll_ID}\n"
+		else:
+			Output_IRC = f"<\x02{User}\x02> !polls close\n"
+	Poll_ID, Error = Polls_determine_ID(Polls_table, Poll_ID)
+	if Error:
+		Output_IRC += Error
+		await Gears.Send(Bridge, Error, Output_IRC)
 		return
+	Poll_infos = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 	if not Poll_infos:
 		Output += f"Error: poll #{Poll_ID} does not exist."
 		Output_IRC += Output
@@ -688,18 +701,18 @@ async def Polls_close(Bridge, User, Poll_ID, Is_moderator, From_Discord=False):
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="close")
-async def Discord_polls_close(Context, Poll_ID: int):
-	"""Close a poll.
+async def Discord_polls_close(Context, Poll_ID=None):
+	"""Close a poll (the latest if no ID is specified).
 	Parameters
 	----------
-	Poll_ID : str
+	Poll_ID : int
 		 “!polls close [Poll_ID]”"""
 	Is_moderator = Context.author.guild_permissions.manage_messages
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_close(Bridge, Context.author.display_name, Poll_ID, Is_moderator, True)
 
-async def IRC_polls_close(Bridge, User, Poll_ID):
+async def IRC_polls_close(Bridge, User, Poll_ID=None):
 	Is_moderator = False
 	IRC_instance = IRC_manager.GCI()
 	if IRC_instance:
@@ -718,7 +731,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	# If the command was sent on Discord, relay it on IRC
 	if Context:
 		await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User,
-				f"<\x02{User}\x02> !polls create {Arguments}"
+				f"<\x02{User}\x02> !polls vote {Arguments}"
 		)
 	if not Arguments:
 		await Gears.Send(Bridge, Help_usage)
