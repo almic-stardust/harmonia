@@ -207,6 +207,35 @@ def GCI():
 		 return None
 	return Current_instance
 
+def Is_op(Chan, User):
+	Is_user_op = False
+	IRC_instance = GCI()
+	if IRC_instance:
+		Normalized_chan = pydle.features.rfc1459.parsing.normalize(
+				Chan, case_mapping=IRC_instance._case_mapping
+		)
+		Chan = None
+		for Chan_name, Chan_instance in IRC_instance.channels.items():
+			Normalized_item = pydle.features.rfc1459.parsing.normalize(
+					Chan_name, case_mapping=IRC_instance._case_mapping
+			)
+			if Normalized_chan.lower() == Normalized_item.lower():
+				Chan = Chan_instance
+				break
+		if Chan:
+			Normalized_user = pydle.features.rfc1459.parsing.normalize(
+					User, case_mapping=IRC_instance._case_mapping
+			)
+			Operators = Chan["modes"].get("o", set())
+			for Operator in Operators:
+				Normalized_item = pydle.features.rfc1459.parsing.normalize(
+						Operator, case_mapping=IRC_instance._case_mapping
+				)
+				if Normalized_user.lower() == Normalized_item.lower():
+					Is_user_op = True
+					break
+	return Is_user_op
+
 ###############################################################################
 # pydle class
 ###############################################################################

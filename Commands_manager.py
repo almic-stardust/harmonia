@@ -689,7 +689,7 @@ async def Polls_close(Bridge, User, Poll_ID, Is_moderator, From_Discord=False):
 		Output_IRC += Output
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
-	# Moderators can always close polls
+	# Moderators can also close polls
 	if User == Poll_infos["Author"] or Is_moderator:
 		Can_close = True
 	else:
@@ -717,14 +717,8 @@ async def Discord_polls_close(Context, Poll_ID=None):
 		await Polls_close(Bridge, Context.author.display_name, Poll_ID, Is_moderator, True)
 
 async def IRC_polls_close(Bridge, User, Poll_ID=None):
-	Is_moderator = False
-	IRC_instance = IRC_manager.GCI()
-	if IRC_instance:
-		IRC_chan = IRC_instance.channels.get(Bridge["irc_chan"])
-		if IRC_chan:
-			if User in IRC_chan["modes"].get("o", set()):
-				Is_moderator = True
-	await Polls_close(Bridge, User, Poll_ID, Is_moderator)
+	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
+	await Polls_close(Bridge, User, Poll_ID, Is_user_op)
 
 async def Polls_vote(Bridge, User, Arguments, Context=None):
 
