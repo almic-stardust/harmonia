@@ -48,6 +48,7 @@ async def IRC_commands_dispatcher(Bridge, User, Text):
 			"create":		(IRC_polls_create,			True),
 			"close":		(IRC_polls_close,			True),
 			"vote":			(IRC_polls_vote,			True),
+			"info":			(IRC_polls_info,			True),
 	}}
 
 	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
@@ -218,7 +219,6 @@ async def Straws_current_state(Bridge, Author=None):
 	if Presence_participants and not Presence_straws:
 		Display_help = True
 		Output += "But the bag is empty. "
-	Output = Output
 	Output_IRC += Output
 	if Display_help:
 		Output += "See “!help straws”."
@@ -264,7 +264,7 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 	global Straws_bag
 	IRC_instance = IRC_manager.GCI()
 	# If the command was sent on Discord, relay it on IRC
-	# No usage of Output_IRC in this function, because confirmations are sent privately
+	# No usage of Output_IRC for this function, because confirmations are sent privately
 	if Context:
 		if IRC_instance:
 			await IRC_instance.Relay_Discord_message(
@@ -409,7 +409,6 @@ async def Straws_draw(Bridge, Author=None):
 		Output += f"[{User}] {Beginning_hash}[…]\n"
 	# Shortest straw = smallest hash 
 	Output += f"\nAnd {Users[0]} is the lucky (?) participant who pulls the shortest straw."
-	Output = Output
 	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 
@@ -661,7 +660,7 @@ async def Polls_close(Bridge, User, Poll_ID, Is_moderator, From_Discord=False):
 	if Poll_ID:
 		try:
 			Poll_ID = int(Poll_ID)
-			# To avoid a DB query later, in cases where the lastest poll is automatically selected
+			# To avoid a DB query later (when the lastest poll is automatically selected)
 			Poll_infos = None
 		except (TypeError, ValueError):
 			Output += "Error: invalid poll ID."
@@ -710,7 +709,7 @@ async def Discord_polls_close(Context, Poll_ID=None):
 	Parameters
 	----------
 	Poll_ID : int
-		 “!polls close [Poll_ID]”"""
+		“!polls close [Poll_ID]”"""
 	Is_moderator = Context.author.guild_permissions.manage_messages
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
@@ -726,7 +725,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	Polls_table = Config["polls"]["db_table"]
 	IRC_instance = IRC_manager.GCI()
 	# If the command was sent on Discord, relay it on IRC
-	# No usage of Output_IRC in this function, because user related errors are sent privately
+	# No usage of Output_IRC for this function, because user related errors are sent privately
 	if Context:
 		await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User,
 				f"<\x02{User}\x02> !polls vote {Arguments}"
@@ -741,7 +740,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		try:
 			Choice = int(Parts[0])
 			Poll_ID = int(Parts[1])
-			# To avoid a DB query later, in cases where the lastest poll is automatically selected
+			# To avoid a DB query later (when the lastest poll is automatically selected)
 			Poll_infos = None
 		except ValueError:
 			await Gears.Send(Bridge, f"Error: invalid poll ID or choice number.\n" + Help_usage)
@@ -804,3 +803,88 @@ async def Discord_polls_vote(Context, *, Arguments):
 
 async def IRC_polls_vote(Bridge, User, Arguments):
 	await Polls_vote(Bridge, User, Arguments)
+
+async def Polls_info(Bridge, Poll_ID=None, Author=None):
+
+	Polls_table = Config["polls"]["db_table"]
+	Output = ""
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if Author:
+		if Poll_ID:
+			Output_IRC = f"<\x02{User}\x02> !polls info {Poll_ID}\n"
+		else:
+			Output_IRC = f"<\x02{User}\x02> !polls info\n"
+	if Poll_ID:
+		try:
+			Poll_ID = int(Poll_ID)
+			# To avoid a DB query later (when the lastest poll is automatically selected)
+			Poll_infos = None
+		except (TypeError, ValueError):
+			Output += "Error: invalid poll ID."
+			Output_IRC += Output
+			await Gears.Send(Bridge, Output, Output_IRC)
+			return
+	# If no poll ID was given, automatically select the lastest
+	else:
+		Poll_infos = DB_manager.Polls_fetch_last(Polls_table)
+		if not Poll_infos:
+			Output += "Error: no polls in the DB."
+			Output_IRC += Output
+			await Gears.Send(Bridge, Output, Output_IRC)
+		Poll_ID = Poll_infos["ID"]
+	# Avoid a DB query, in case the lastest poll was automatically selected
+	if not Poll_infos:
+		Poll_infos = DB_manager.Polls_fetch(Polls_table, Poll_ID)
+	if not Poll_infos:
+		Output += f"Error: poll #{Poll_ID} doesn’t exist."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+
+	Status = "open" if Poll_infos["Open"] else "closed"
+	Creation_date = datetime.datetime.strftime(Poll_infos["Creation_date"], "%d/%m/%Y")
+	Number_of_voters = 0
+	Votes_for_each_choice = {}
+	Result_count = 0
+	for Choice_ID in Poll_infos["Choices"]:
+		Votes_for_each_choice[Choice_ID] = []
+	for Voter, Choice_ID in Poll_infos["Votes"].items():
+		if Choice_ID in Votes_for_each_choice:
+			Votes_for_each_choice[Choice_ID].append(Voter)
+			Number_of_voters += 1
+	Output += f"#{Poll_ID} created {Creation_date} by {Poll_infos['Author']} [{Status}] : "
+	Output += f"{Poll_infos['Question']}\n"
+	if Number_of_voters > 0:
+		for Choice_ID, Choice_text in Poll_infos["Choices"].items():
+			Choice_voters = Votes_for_each_choice[Choice_ID]
+			Choice_count = len(Choice_voters)
+			if Choice_count > 0:
+				# Can’t be a division by zero since Number_of_voters > 0
+				Percentage = int((Choice_count / Number_of_voters) * 100)
+				Output += f"{Percentage}% {Choice_text} {Choice_count} "
+				Output += "(" + " ".join(Choice_voters) + ")\n"
+			if Choice_count > Result_count:
+				Result_count = Choice_count
+				Result_text = Choice_text
+		Output += f"The result is {Result_text} with {Result_count} vote"
+		if Number_of_voters > 1:
+			Output += "s"
+		Output += "."
+	else:
+		Output += f"No one has voted in this poll yet."
+	await Gears.Send(Bridge, Output, Output_IRC)
+
+@polls.command(name="info")
+async def Discord_polls_info(Context, Poll_ID=None):
+	"""Display informations about a poll.
+	Parameters
+	----------
+	Poll_ID : int
+		“!polls info [Poll_ID]”"""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_info(Bridge, Poll_ID, Context.author.display_name)
+
+async def IRC_polls_info(Bridge, Poll_ID):
+	await Polls_info(Bridge, Poll_ID)
