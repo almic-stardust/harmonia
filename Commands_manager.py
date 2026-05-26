@@ -22,106 +22,80 @@ Straws_bag["Users"] = []
 # Dispatch IRC commands
 ###############################################################################
 
-async def IRC_commands_dispatcher(Bridge, User, Text):
+async def IRC_dispatcher(Bridge, User, Text):
 
-	Straws_infos = {
-			"Name":			"straws",
-			"Dispatcher":	Straws_dispatcher,
-			#		 		 Fonction					Arguments?		User variable?
-			"Direct_call":	(IRC_straws,								False),
+	Infos_straws = {
+	#				 		 Fonction					Arguments?		User variable?
+	"Direct_call":			(Straws_current_state,						False),
 	"Subcommands": {
-			"help":			(IRC_straws_help,			False),
-			"participate":	(IRC_straws_participate,	True),
-			"contribute":	(IRC_straws_contribute,		True),
-			"users":		(IRC_straws_users,			True),
-			"draw":			(IRC_straws_draw,			False),
-			"reset":		(IRC_straws_reset,			False),
+			"help":			(Straws_help,				False,			False),
+			"participate":	(IRC_straws_participate,	True,			True),
+			"contribute":	(IRC_straws_contribute,		True,			True),
+			"users":		(IRC_straws_users,			True,			False),
+			"draw":			(Straws_draw,				False,			False),
+			"reset":		(Straws_reset,				False,			False),
 	}}
-	Polls_infos = {
-			"Name":			"polls",
-			"Dispatcher":	Polls_dispatcher,
-			#		 		 Fonction					Arguments?		User variable?
-			"Direct_call":	(IRC_polls,									False),
+	Infos_polls = {
+	#				 		 Fonction					Arguments?		User variable?
+	"Direct_call":			(IRC_polls,									False),
 	"Subcommands": {
-			"help":			(IRC_polls_help,			False),
-			"members":		(IRC_polls_members,			True),
-			"create":		(IRC_polls_create,			True),
-			"close":		(IRC_polls_close,			True),
-			"vote":			(IRC_polls_vote,			True),
-			"info":			(IRC_polls_info,			True),
+			"help":			(Polls_help,				False,			False),
+			"members":		(Polls_members,				True,			False),
+			"create":		(Polls_create,				True,			True),
+			"close":		(IRC_polls_close,			True,			True),
+			"vote":			(Polls_vote,				True,			True),
+			"info":			(Polls_info,				True,			False),
 	}}
 
 	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
-			"!help":	(No_help_for_IRC,				False,			False),
-			"!roll":	(IRC_roll,						True,			False),
-			"!straws":	(Straws_infos,					True,			True),
-			"!polls":	(Polls_infos,					True,			True),
+			"help":		(No_help_for_IRC,				False,			False),
+			"roll":		(IRC_roll,						True,			False),
+			"straws":	(Infos_straws,					True,			True),
+			"polls":	(Infos_polls,					True,			True),
 	}
 
 	Parts = Text.split(maxsplit=1)
-	Command = Parts[0]
+	Command = Parts[0].replace("!", "")
 	Remainder = Parts[1] if len(Parts) > 1 else None
 	if Command not in Commands:
-		Output = "Invalid command. See “!help”."
-		Output_IRC = "Invalid command. See “!help” (on Discord)."
+		Output = "Invalid command. See “!help”"
+		Output_IRC = Output + " (on Discord)."
+		Output += "."
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
-	Command_infos, With_args, With_user = Commands[Command]
+	Infos_command, With_args, With_user = Commands[Command]
 	# Commands without subcommands
-	if inspect.isfunction(Command_infos):
-		# It’s clearer to call Function(…) with a variable named Function
-		Function = Command_infos
-		if With_args and With_user:
-			await Function(Bridge, User, Remainder)
-		elif With_args:
-			await Function(Bridge, Remainder)
-		elif With_user:
-			await Function(Bridge, User)
-		else:
-			await Function(Bridge)
+	if inspect.isfunction(Infos_command):
+		Function = Infos_command
+		Arguments = Remainder
 	else:
-		if With_user:
-			await IRC_subcommands_dispatcher(Bridge, Command_infos, User, Remainder)
-		else:
-			await IRC_subcommands_dispatcher(Bridge, Command_infos, None, Remainder)
+		if not Remainder:
+			Function, With_user = Infos_command["Direct_call"]
+			if With_user:
+				await Function(Bridge, User)
+			else:
+				await Function(Bridge)
+			return
+		Infos_subcommands = Infos_command["Subcommands"]
+		Parts = Remainder.split(maxsplit=1)
+		Subcommand_called = Parts[0]
+		Arguments = Parts[1] if len(Parts) > 1 else None
+		if Subcommand_called not in Infos_subcommands:
+			Output = f"Invalid subcommand. See “!help {Command}”"
+			Output_IRC = Output + " (on Discord)."
+			Output += "."
+			await Gears.Send(Bridge, Output, Output_IRC)
+			return
+		Function, With_args, With_user = Infos_subcommands[Subcommand_called]
 
-async def IRC_subcommands_dispatcher(Bridge, Command_infos, User, Remainder):
-	if not Remainder:
-		Function, With_user = Command_infos["Direct_call"]
-		if With_user:
-			await Function(Bridge, User)
-		else:
-			await Function(Bridge)
-		return
-	Dispatcher_function = Command_infos["Dispatcher"]
-	Subcommands = Command_infos["Subcommands"]
-	Parts = Remainder.split(maxsplit=1)
-	Subcommand = Parts[0]
-	Arguments = Parts[1] if len(Parts) > 1 else None
-	if Subcommand not in Subcommands:
-		Output = f"Invalid subcommand. See “!help {Command_infos['Name']}”."
-		Output_IRC = f"Invalid subcommand. See “!help {Command_infos['Name']}” (on Discord)."
-		await Gears.Send(Bridge, Output, Output_IRC)
-		return
-	Function, With_args = Subcommands[Subcommand]
-	if With_args and User:
-		await Dispatcher_function(Bridge, Subcommand, Function, User, Arguments)
-	elif not With_args and User:
+	if With_args and With_user:
+		await Function(Bridge, User, Arguments)
+	elif With_args:
+		await Function(Bridge, Arguments)
+	elif With_user:
 		await Function(Bridge, User)
-	elif not With_args and not User:
+	else:
 		await Function(Bridge)
-
-async def Straws_dispatcher(Bridge, Subcommand, Function, User, Arguments):
-	if Subcommand in {"participate", "contribute"}:
-		await Function(Bridge, User, Arguments)
-	else:
-		await Function(Bridge, Arguments)
-
-async def Polls_dispatcher(Bridge, Subcommand, Function, User, Arguments):
-	if Subcommand in {"create", "close", "vote"}:
-		await Function(Bridge, User, Arguments)
-	else:
-		await Function(Bridge, Arguments)
 
 ###############################################################################
 # Misc
@@ -221,8 +195,9 @@ async def Straws_current_state(Bridge, Author=None):
 		Output += "But the bag is empty. "
 	Output_IRC += Output
 	if Display_help:
-		Output += "See “!help straws”."
-		Output_IRC += "See “!help straws” (on Discord)."
+		Help_usage = "See “!help straws”"
+		Output += Help_usage + "."
+		Output_IRC += Help_usage + " (on Discord)."
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @bot.group()
@@ -238,27 +213,22 @@ async def straws(Context):
 		if Bridge:
 			await Straws_current_state(Bridge, Context.author.display_name)
 
-async def IRC_straws(Bridge):
-	await Straws_current_state(Bridge)
-
 async def Straws_help(Bridge, Author=None):
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
 		Output_IRC = f"<\x02{Author}\x02> !straws help\n"
-	Output = "See “!help straws”."
-	Output_IRC += "See “!help straws” (on Discord)."
+	Output = "See “!help straws”"
+	Output_IRC += Output + " (on Discord)."
+	Output += "."
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @straws.command(name="help")
 async def Discord_straws_help(Context):
-	"""Placeholder to redirect towards “!help straws”."""
+	"""Placeholder redirecting towards “!help straws”."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Straws_help(Bridge, Context.author.display_name)
-
-async def IRC_straws_help(Bridge):
-	await Straws_help(Bridge)
 
 async def Straws_add(Bridge, User, Action, Straw, Context=None):
 	global Straws_bag
@@ -379,13 +349,15 @@ async def Straws_draw(Bridge, Author=None):
 		Output_IRC = f"<\x02{Author}\x02> !straws draw\n"
 
 	if len(Straws_bag["Users"]) == 0:
-		Output = "No participants between whom to draw. See “!help straws”."
-		Output_IRC += "No participants between whom to draw. See “!help straws” (on Discord)."
+		Output = "No participants between whom to draw. See “!help straws”"
+		Output_IRC += Output + " (on Discord)."
+		Output += "."
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 	if len(Straws_bag["Common_key"]) == 0:
-		Output = "No straws to draw from. See “!help straws”."
-		Output_IRC += "No straws to draw from. See “!help straws” (on Discord)."
+		Output = "No straws to draw from. See “!help straws”"
+		Output_IRC += Output + " (on Discord)."
+		Output += "."
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 
@@ -419,9 +391,6 @@ async def Discord_straws_draw(Context):
 	if Bridge:
 		await Straws_draw(Bridge, Context.author.display_name)
 
-async def IRC_straws_draw(Bridge):
-	await Straws_draw(Bridge)
-
 async def Straws_reset(Bridge, Author=None):
 	global Straws_bag
 	Output_IRC = ""
@@ -441,9 +410,6 @@ async def Discord_straws_reset(Context):
 	if Bridge:
 		await Straws_reset(Bridge, Context.author.display_name)
 
-async def IRC_straws_reset(Bridge):
-	await Straws_reset(Bridge)
-
 ###############################################################################
 # !polls
 ###############################################################################
@@ -459,29 +425,27 @@ async def polls(Context):
 		# If no subcommand is invoked: “!polls” = “!polls list”
 		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 		if Bridge:
-			await Gears.Send(Bridge, "Display the last 5 votes, prioritizing ongoing extended.")
+			await Gears.Send(Bridge, "Last 5 polls (prioritizing active extended) :")
 
 async def IRC_polls(Bridge):
-	await Gears.Send(Bridge, "Display the last 5 votes, prioritizing ongoing extended.")
+	await Gears.Send(Bridge, "Last 5 polls (prioritizing active extended) :")
 
 async def Polls_help(Bridge, Author=None):
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
 		Output_IRC = f"<\x02{Author}\x02> !polls help\n"
-	Output = "See “!help polls”."
-	Output_IRC += "See “!help polls” (on Discord)."
+	Output = "See “!help polls”"
+	Output_IRC += Output + " (on Discord)."
+	Output += "."
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="help")
 async def Discord_polls_help(Context):
-	"""Placeholder to redirect towards “!help polls”."""
+	"""Placeholder redirecting towards “!help polls”."""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_help(Bridge, Context.author.display_name)
-
-async def IRC_polls_help(Bridge):
-	await Polls_help(Bridge)
 
 def Polls_voting_rights(User_infos):
 	User_infos["Can_vote"] = False
@@ -585,9 +549,6 @@ async def Discord_polls_members(Context, *, Members=None):
 		# In the !help for this subcommand, it’s better to display Members instead of List_of_users
 		await Polls_members(Bridge, Members, Context.author.display_name)
 
-async def IRC_polls_members(Bridge, List_of_users=None):
-	await Polls_members(Bridge, List_of_users)
-
 async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 	Polls_table = Config["polls"]["db_table"]
 	Output = ""
@@ -629,7 +590,7 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 			Output += "]   ["
 		else:
 			Output += "]\n"
-	Output += f"Vote with: !polls vote {Poll_ID} <Choice_number>"
+	Output += f"Vote with: “!polls vote <Choice_number> [{Poll_ID}]”"
 	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 
@@ -643,9 +604,6 @@ async def Discord_polls_create(Context, *, Arguments):
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_create(Bridge, Context.author.display_name, Arguments, True)
-
-async def IRC_polls_create(Bridge, User, Arguments):
-	await Polls_create(Bridge, User, Arguments)
 
 async def Polls_close(Bridge, User, Poll_ID, Is_moderator, From_Discord=False):
 	Polls_table = Config["polls"]["db_table"]
@@ -683,7 +641,7 @@ async def Polls_close(Bridge, User, Poll_ID, Is_moderator, From_Discord=False):
 		Output_IRC += Output
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
-	if not Poll_infos["Open"]:
+	if not Poll_infos["Active"]:
 		Output += f"Error: poll #{Poll_ID} is already closed."
 		Output_IRC += Output
 		await Gears.Send(Bridge, Output, Output_IRC)
@@ -779,7 +737,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if not Poll_infos:
 		await Gears.Send(Bridge, "Error: poll not found. See “!polls list”")
 		return
-	if not Poll_infos["Open"]:
+	if not Poll_infos["Active"]:
 		await Gears.Send(Bridge, f"Error: poll #{Poll_ID} is closed. See “!polls list active”")
 		return
 	Number_of_choices = len(Poll_infos["Choices"])
@@ -787,8 +745,9 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		await Gears.Send(Bridge, f"Error: invalid choice number. See “!polls info {Poll_ID}”")
 		return
 	DB_manager.Polls_vote(Polls_table, Poll_ID, User_infos["Pseudo"], Choice)
+	Question = Poll_infos["Question"]
 	Vote = Poll_infos["Choices"][Choice]
-	await Gears.Send_DM(User, Context, f"Vote “{Vote}” registered for poll #{Poll_ID}.")
+	await Gears.Send_DM(User, Context, f"Vote “{Vote}” registered for poll #{Poll_ID} ({Question})")
 
 @polls.command(name="vote")
 async def Discord_polls_vote(Context, *, Arguments):
@@ -800,9 +759,6 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_create(Bridge, Context.author.display_name, Arguments, Context)
-
-async def IRC_polls_vote(Bridge, User, Arguments):
-	await Polls_vote(Bridge, User, Arguments)
 
 async def Polls_info(Bridge, Poll_ID=None, Author=None):
 
@@ -842,7 +798,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 
-	Status = "open" if Poll_infos["Open"] else "closed"
+	Status = "active" if Poll_infos["Active"] else "closed"
 	Creation_date = datetime.datetime.strftime(Poll_infos["Creation_date"], "%d/%m/%Y")
 	Number_of_voters = 0
 	Votes_for_each_choice = {}
@@ -885,6 +841,3 @@ async def Discord_polls_info(Context, Poll_ID=None):
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_info(Bridge, Poll_ID, Context.author.display_name)
-
-async def IRC_polls_info(Bridge, Poll_ID):
-	await Polls_info(Bridge, Poll_ID)

@@ -616,7 +616,7 @@ def Polls_close(Table, Poll_ID):
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
 		Cursor.execute(f"""
-				UPDATE {Table} SET open = FALSE
+				UPDATE {Table} SET active = FALSE
 				WHERE id = %s""",
 				(Poll_ID,)
 		)
@@ -658,7 +658,7 @@ def Polls_fetch(Table, Poll_ID):
 				"Question": Result[3],
 				"Votes": json.loads(Result[5]) if Result[5] else {},
 				"Choices": Choices,
-				"Open": bool(Result[6])
+				"Active": bool(Result[6])
 		}
 		return Poll_infos
 	except MySQLdb.Error as Error:
