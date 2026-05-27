@@ -46,6 +46,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 			"close":		(IRC_polls_close,			True,			True),
 			"vote":			(Polls_vote,				True,			True),
 			"info":			(Polls_info,				True,			False),
+			"list":			(Polls_list,				True,			False),
 	}}
 
 	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
@@ -621,7 +622,7 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 
 	# If no poll ID was given, automatically select the lastest
 	if not Arguments:
-		Poll_infos = DB_manager.Polls_fetch_last(Polls_table)
+		Poll_infos = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Poll_infos:
 			Output += "Error: no polls in the DB."
 			Output_IRC += Output
@@ -706,7 +707,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		except ValueError:
 			await Gears.Send(Bridge, f"Error: invalid choice number.\n" + Help_usage)
 			return
-		Poll_infos = DB_manager.Polls_fetch_last(Polls_table)
+		Poll_infos = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Poll_infos:
 			await Gears.Send(Bridge, "Error: no polls in the DB.")
 			return
@@ -764,9 +765,9 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
 		if Poll_ID:
-			Output_IRC = f"<\x02{User}\x02> !polls info {Poll_ID}\n"
+			Output_IRC = f"<\x02{Author}\x02> !polls info {Poll_ID}\n"
 		else:
-			Output_IRC = f"<\x02{User}\x02> !polls info\n"
+			Output_IRC = f"<\x02{Author}\x02> !polls info\n"
 	if Poll_ID:
 		try:
 			Poll_ID = int(Poll_ID)
@@ -779,12 +780,13 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			return
 	# If no poll ID was given, automatically select the lastest
 	else:
-		Poll_infos = DB_manager.Polls_fetch_last(Polls_table)
+		Poll_infos = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Poll_infos:
 			Output += "Error: no polls in the DB."
 			Output_IRC += Output
 			await Gears.Send(Bridge, Output, Output_IRC)
 			return
+		print("Poll_infos =", Poll_infos)
 		Poll_ID = Poll_infos["ID"]
 	# Avoid a DB query, in case the lastest poll was automatically selected
 	if not Poll_infos:
@@ -838,3 +840,73 @@ async def Discord_polls_info(Context, Poll_ID=None):
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_info(Bridge, Poll_ID, Context.author.display_name)
+
+async def Polls_list(Bridge, Arguments, Author=None):
+	Polls_table = Config["polls"]["db_table"]
+	Status = None
+	Number = None
+	Output = ""
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if Author:
+		if Status and Number:
+			Output_IRC = f"<\x02{Author}\x02> !polls list {Status} {Number}\n"
+		elif Status:
+			Output_IRC = f"<\x02{Author}\x02> !polls list {Status}\n"
+		elif Number:
+			Output_IRC = f"<\x02{Author}\x02> !polls list {Number}\n"
+		else:
+			Output_IRC = f"<\x02{Author}\x02> !polls list\n"
+	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"""
+	if Arguments:
+		Parts = Arguments.split()
+		if len(Parts) > 2:
+			Output = "Error: invalid syntax.\n" + Help_usage
+			Output_IRC += Output
+			await Gears.Send(Bridge, Help_usage, Output_IRC)
+			return
+		if Parts[0] in ("active", "closed"):
+			Status = Parts[0]
+			if len(Parts) == 2:
+				Number = Parts[1]
+		# If the first argument isn’t "active" or "closed", then it should be the number of polls
+		else:
+			Number = Parts[0]
+	if Number:
+		try:
+			Number = int(Number)
+		except (TypeError, ValueError):
+			Output += "Error: invalid poll ID. " + Help_usage
+			Output_IRC += Output
+			await Gears.Send(Bridge, Output, Output_IRC)
+			return
+	# If the number of polls is not specified, display the last 3
+	if not Number:
+		Number = 3
+	if Number > 10:
+		Number = 10
+	Polls = DB_manager.Polls_fetch_list(Polls_table, Number, Status)
+	if not Polls:
+		Output += "Error: no polls in the DB."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	for Poll_infos in Polls:
+		if Poll_infos["Active"]:
+			Poll_status = "active"
+		else:
+			Poll_status = "closed"
+		Output += f"#{Poll_infos['ID']} [{Poll_status}] {Poll_infos['Question']}\n"
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
+
+@polls.command(name="list")
+async def Discord_polls_list(Context, *, Arguments=None):
+	"""Display a list of polls (10 max | no number given = last 3 polls).
+	Parameters
+	----------
+	Arguments : str
+		syntax: !polls list [Number] | !polls list [active/closed] [Number]"""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_list(Bridge, Arguments, Context.author.display_name)

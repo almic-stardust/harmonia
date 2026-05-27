@@ -668,21 +668,33 @@ def Polls_fetch(Table, Poll_ID):
 		Cursor.close()
 		Connection.close()
 
-def Polls_fetch_last(Table):
+def Polls_fetch_list(Table, Number, Status=None):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		Cursor.execute(f"""
-				SELECT id FROM {Table}
-				ORDER BY id DESC
-				LIMIT 1"""
-		)
-		Result = Cursor.fetchone()
-		if not Result:
-			return None
-		return Polls_fetch(Table, Result[0])
+		Query = f"SELECT id FROM {Table} "
+		Values = []
+		if Status == "active":
+			Query += "WHERE active = TRUE "
+		elif Status == "closed":
+			Query += "WHERE active = FALSE "
+		if Status == "latest":
+			Query += f"ORDER BY id DESC LIMIT {Number}"
+		else:
+			Query += f"ORDER BY active DESC, id DESC LIMIT {Number}"
+		Cursor.execute(Query)
+		Results = Cursor.fetchall()
+		Polls = []
+		for Result in Results:
+			Poll_ID = Result[0]
+			Poll_infos = Polls_fetch(Table, Poll_ID)
+			if Poll_infos:
+				Polls.append(Poll_infos)
+		# Sort the list from oldest to newest
+		Polls.reverse()
+		return Polls
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
