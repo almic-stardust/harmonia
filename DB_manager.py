@@ -676,13 +676,14 @@ def Polls_fetch_list(Table, Number, Status=None):
 			raise ValueError("[DB] Error: invalid table name.")
 		Query = f"SELECT id FROM {Table} "
 		Values = []
-		if Status == "active":
-			Query += "WHERE active = TRUE "
-		elif Status == "closed":
-			Query += "WHERE active = FALSE "
+		# If the latest poll is requested, return it whether it’s active or not
 		if Status == "latest":
 			Query += f"ORDER BY id DESC LIMIT {Number}"
 		else:
+			if Status == "active":
+				Query += "WHERE active = TRUE "
+			else Status == "closed":
+				Query += "WHERE active = FALSE "
 			Query += f"ORDER BY active DESC, id DESC LIMIT {Number}"
 		Cursor.execute(Query)
 		Results = Cursor.fetchall()
