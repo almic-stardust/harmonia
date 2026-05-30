@@ -70,8 +70,8 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 	Last_date = Parse_date(Normalized_lines[-1].get("date de la commande"))
 	File_year = Last_date.year
 
-	for User_infos in Users.values():
-		if File_year in User_infos["Renewals"]:
+	for Infos_user in Users.values():
+		if File_year in Infos_user["Renewals"]:
 			print(f"Error: memberships for year {File_year} already exist in the DB.")
 			print("This script must not be run twice on the same CSV file.")
 			sys.exit(1)
@@ -88,7 +88,7 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 		Pseudo = Line.get("pseudo", "").strip()
 		Date = Parse_date(Line.get("date de la commande"))
 		Contribution = Parse_contribution(Line.get("montant tarif"))
-		User_infos = {
+		Infos_user = {
 				"Pseudo": Pseudo,
 				"Mail": Mail,
 				"First_name": First_name,
@@ -96,63 +96,63 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 				"Contribution": Contribution
 		}
 
-		User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+		User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
 		# Renewal
 		if User_ID:
-			User_infos = Users[User_ID]
-			Output += f"{User_infos['Pseudo']} ({User_infos['ID']})\n"
+			Infos_user = Users[User_ID]
+			Output += f"{Infos_user['Pseudo']} ({Infos_user['ID']})\n"
 			# Some infos are updated only if it’s the latest renewal
 			Renewals = []
-			for Dates in User_infos["Renewals"].values():
+			for Dates in Infos_user["Renewals"].values():
 				Renewals.extend(Dates)
 			Renewals.sort()
 			Last_renewal = Renewals[-1] if len(Renewals) > 0 else None
 			if not Last_renewal or Last_renewal < Date:
-				User_infos["Mail"] = Mail
-				User_infos["Last_medium"] = "HelloAsso"
+				Infos_user["Mail"] = Mail
+				Infos_user["Last_medium"] = "HelloAsso"
 			if Contribution > 0:
-				if File_year not in User_infos["Contributions"]:
-					User_infos["Contributions"][File_year] = Contribution
+				if File_year not in Infos_user["Contributions"]:
+					Infos_user["Contributions"][File_year] = Contribution
 				# If a member makes multiple contributions in the same file, add them together, and
 				# the total becomes the member’s contribution for that year of membership.
 				# Handling this case is the reason why this script must not be run twice on the same
 				# CSV file.
 				else:
-					User_infos["Contributions"][File_year] += Contribution
+					Infos_user["Contributions"][File_year] += Contribution
 			# Import regardless of whether it’s the newest CSV file, or one from a previous year
-			if File_year not in User_infos["Renewals"]:
-				User_infos["Renewals"][File_year] = []
-			if Date not in User_infos["Renewals"][File_year]:
-				User_infos["Renewals"][File_year].append(Date)
-				User_infos["Renewals"][File_year].sort()
-			DB_manager.Users_manage_user(Users_table, "Update", User_infos)
+			if File_year not in Infos_user["Renewals"]:
+				Infos_user["Renewals"][File_year] = []
+			if Date not in Infos_user["Renewals"][File_year]:
+				Infos_user["Renewals"][File_year].append(Date)
+				Infos_user["Renewals"][File_year].sort()
+			DB_manager.Users_manage_user(Users_table, "Update", Infos_user)
 		# New member
 		else:
-			if not User_infos["Pseudo"]:
-				Pseudo_from_name = User_infos['First_name'] + "." + User_infos['Last_name'][0]
-				Pseudo_from_mail = User_infos["Mail"].split("@")[0].capitalize()
+			if not Infos_user["Pseudo"]:
+				Pseudo_from_name = Infos_user['First_name'] + "." + Infos_user['Last_name'][0]
+				Pseudo_from_mail = Infos_user["Mail"].split("@")[0].capitalize()
 				Pseudo_from_mail = Pseudo_from_mail.split("+")[0]
 				Pseudo_from_mail = Pseudo_from_mail.split("-")[0]
-				if User_infos["First_name"] and User_infos["Last_name"]:
-					User_infos["Pseudo"] = Pseudo_from_name
-				elif User_infos["Mail"]:
-					User_infos["Pseudo"] = Pseudo_from_mail
-				elif User_infos["First_name"]:
-					User_infos["Pseudo"] = User_infos["First_name"]
+				if Infos_user["First_name"] and Infos_user["Last_name"]:
+					Infos_user["Pseudo"] = Pseudo_from_name
+				elif Infos_user["Mail"]:
+					Infos_user["Pseudo"] = Pseudo_from_mail
+				elif Infos_user["First_name"]:
+					Infos_user["Pseudo"] = Infos_user["First_name"]
 				else:
 					Pseudo = None
-			Output += f"→→→→→→→→→→ New: {User_infos['Pseudo']}\n"
+			Output += f"→→→→→→→→→→ New: {Infos_user['Pseudo']}\n"
 			# Complete the dictionary, in addition to what we got from the CSV
-			User_infos["ML_pseudo"] = None
-			User_infos["Wiki_pseudo"] = None
-			User_infos["IRC_pseudo"] = None
-			User_infos["Forum_pseudo"] = None
-			User_infos["Discord_pseudo"] = None
-			User_infos["Discord_expiration"] = None
-			User_infos["Avatar"] = None
-			User_infos["Renewals"] = {File_year: [Date]}
-			User_infos["Contributions"] = {File_year: Contribution} if Contribution > 0 else None
-			User_infos["Last_medium"] = "HelloAsso"
-			DB_manager.Users_manage_user(Users_table, "Add", User_infos)
+			Infos_user["ML_pseudo"] = None
+			Infos_user["Wiki_pseudo"] = None
+			Infos_user["IRC_pseudo"] = None
+			Infos_user["Forum_pseudo"] = None
+			Infos_user["Discord_pseudo"] = None
+			Infos_user["Discord_expiration"] = None
+			Infos_user["Avatar"] = None
+			Infos_user["Renewals"] = {File_year: [Date]}
+			Infos_user["Contributions"] = {File_year: Contribution} if Contribution > 0 else None
+			Infos_user["Last_medium"] = "HelloAsso"
+			DB_manager.Users_manage_user(Users_table, "Add", Infos_user)
 
 	print(Output)

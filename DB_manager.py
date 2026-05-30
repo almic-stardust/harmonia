@@ -78,7 +78,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 			Attachments = None
 		Cursor.execute(f"""
 				INSERT INTO {Table} (
-					date_creation,
+					creation_date,
 					server_id, chan_id, message_id,
 					reply_to,
 					user, content, attachments, relayed)
@@ -106,7 +106,7 @@ def History_fetch_message(Table, Message_ID):
 			raise ValueError("[DB] Error: invalid table name.")
 		Cursor.execute(f"""
 				SELECT
-					date_creation,
+					creation_date,
 					server_id,
 					chan_id,
 					message_id,
@@ -115,7 +115,7 @@ def History_fetch_message(Table, Message_ID):
 					content,
 					attachments,
 					reactions,
-					date_deletion
+					deletion_date
 				FROM {Table} WHERE message_id = %s""",
 				(Message_ID,))
 		Result = Cursor.fetchone()
@@ -157,17 +157,17 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 				edited,
 				attachments,
 				reactions,
-				date_creation,
-				date_deletion
+				creation_date,
+				deletion_date
 			FROM {Table}
 			WHERE server_id = %s
 			AND chan_id = %s
-			AND date_deletion IS NULL"""
+			AND deletion_date IS NULL"""
 		Values = [Server_ID, Chan_ID]
 		if Before is not None:
-			Query += " AND date_creation < %s"
+			Query += " AND creation_date < %s"
 			Values.append(Before)
-		Query += " ORDER BY date_creation DESC LIMIT %s"
+		Query += " ORDER BY creation_date DESC LIMIT %s"
 		Values.append(Limit)
 		Cursor.execute(Query, Values)
 		Result = Cursor.fetchall()
@@ -245,13 +245,13 @@ def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 			if Updated_filenames:
 				Updated_filenames = json.dumps(Updated_filenames)
 				Cursor.execute(f"""
-						UPDATE {Table} SET attachments = %s, date_deletion = %s
+						UPDATE {Table} SET attachments = %s, deletion_date = %s
 						WHERE message_id = %s""",
 						(Updated_filenames, Date, Message_ID)
 				)
 			else:
 				Cursor.execute(f"""
-						UPDATE {Table} SET date_deletion = %s
+						UPDATE {Table} SET deletion_date = %s
 						WHERE message_id = %s""",
 						(Date, Message_ID)
 				)
@@ -311,17 +311,17 @@ def Messages_potentially_expired(Table):
 			raise ValueError("[DB] Error: invalid table name.")
 		Messages = []
 		Cursor.execute(f"""
-				SELECT date_creation, chan_id, message_id, user FROM {Table}
+				SELECT creation_date, chan_id, message_id, user FROM {Table}
 				WHERE relayed = TRUE
 				AND expired = FALSE
-				AND date_creation BETWEEN UTC_TIMESTAMP() - INTERVAL 13 MONTH
+				AND creation_date BETWEEN UTC_TIMESTAMP() - INTERVAL 13 MONTH
 						AND UTC_TIMESTAMP() - INTERVAL 1 MONTH"""
 		)
 		Result = Cursor.fetchall()
 		if Result:
 			for Row in Result:
 				Messages.append({
-						"date_creation": Row[0],
+						"creation_date": Row[0],
 						"chan_id": Row[1],
 						"message_id": Row[2],
 						"user": Row[3],
@@ -353,7 +353,7 @@ def Mark_message_expired(Table, Message_ID):
 		Cursor.close()
 		Connection.close()
 
-def Users_check_presence(Table, User_infos):
+def Users_check_presence(Table, Infos_user):
 	"""Check if the identifiers of this user (pseudo, first name, last name, etc) match other
 	identifiers already present in the DB."""
 
@@ -370,24 +370,24 @@ def Users_check_presence(Table, User_infos):
 			"forum_pseudo": "",
 			"discord_pseudo": ""
 	}
-	if "Pseudo" in User_infos.keys():
-		Fields["pseudonym"] = User_infos["Pseudo"]
-	if "Mail" in User_infos.keys():
-		Fields["mail"] = User_infos["Mail"]
-	if "First_name" in User_infos.keys():
-		Fields["first_name"] = User_infos["First_name"]
-	if "Last_name" in User_infos.keys():
-		Fields["last_name"] = User_infos["Last_name"]
-	if "ML_pseudo" in User_infos.keys():
-		Fields["ml_pseudo"] = User_infos["ML_pseudo"]
-	if "Wiki_pseudo" in User_infos.keys():
-		Fields["wiki_pseudo"] = User_infos["Wiki_pseudo"]
-	if "IRC_pseudo" in User_infos.keys():
-		Fields["irc_pseudo"] = User_infos["IRC_pseudo"]
-	if "Forum_pseudo" in User_infos.keys():
-		Fields["forum_pseudo"] = User_infos["Forum_pseudo"]
-	if "Discord_pseudo" in User_infos.keys():
-		Fields["discord_pseudo"] = User_infos["Discord_pseudo"]
+	if "Pseudo" in Infos_user.keys():
+		Fields["pseudonym"] = Infos_user["Pseudo"]
+	if "Mail" in Infos_user.keys():
+		Fields["mail"] = Infos_user["Mail"]
+	if "First_name" in Infos_user.keys():
+		Fields["first_name"] = Infos_user["First_name"]
+	if "Last_name" in Infos_user.keys():
+		Fields["last_name"] = Infos_user["Last_name"]
+	if "ML_pseudo" in Infos_user.keys():
+		Fields["ml_pseudo"] = Infos_user["ML_pseudo"]
+	if "Wiki_pseudo" in Infos_user.keys():
+		Fields["wiki_pseudo"] = Infos_user["Wiki_pseudo"]
+	if "IRC_pseudo" in Infos_user.keys():
+		Fields["irc_pseudo"] = Infos_user["IRC_pseudo"]
+	if "Forum_pseudo" in Infos_user.keys():
+		Fields["forum_pseudo"] = Infos_user["Forum_pseudo"]
+	if "Discord_pseudo" in Infos_user.keys():
+		Fields["discord_pseudo"] = Infos_user["Discord_pseudo"]
 
 	try:
 		if not Table.isidentifier():
@@ -427,24 +427,24 @@ def Users_check_presence(Table, User_infos):
 
 		if len(Other_identifiers) > 0:
 			for Candidate_ID in Other_identifiers:
-				Candidate_infos = Other_identifiers[Candidate_ID]
-				Old_pseudo = Candidate_infos["Pseudos"]["Main"]
-				New_pseudo = User_infos.get("Pseudo")
-				if (Candidate_infos.get("First_name") == User_infos.get("First_name") \
-						and Candidate_infos.get("Last_name") == User_infos.get("Last_name") \
-				) or Candidate_infos.get("Mail") == User_infos.get("Mail"):
+				Infos_candidate = Other_identifiers[Candidate_ID]
+				Old_pseudo = Infos_candidate["Pseudos"]["Main"]
+				New_pseudo = Infos_user.get("Pseudo")
+				if (Infos_candidate.get("First_name") == Infos_user.get("First_name") \
+						and Infos_candidate.get("Last_name") == Infos_user.get("Last_name") \
+				) or Infos_candidate.get("Mail") == Infos_user.get("Mail"):
 					if New_pseudo and New_pseudo != Old_pseudo:
 						print(f"[DB] New pseudo? “{Old_pseudo}” vs new “{New_pseudo}”")
 					return Candidate_ID
 
 				# Check if there’s a match in the pseudos of the different platforms
 				Candidate_values = set()
-				for Value in Candidate_infos["Pseudos"].values():
+				for Value in Infos_candidate["Pseudos"].values():
 					if Value:
 						Candidate_values.add(Value.strip().lower())
 				User_values = set()
 				for Key in ["Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_pseudo"]:
-					Value = User_infos.get(Key)
+					Value = Infos_user.get(Key)
 					if Value:
 						User_values.add(Value.strip().lower())
 				for Value in User_values:
@@ -487,7 +487,7 @@ def Users_fetch_users(Table):
 			if len(Amounts) > 0:
 				for Year, Amount in Amounts.items():
 					Contributions[int(Year)] = Amount
-			User_infos = {
+			Infos_user = {
 					"Pseudo":				Result[0],
 					"ID":					User_ID,
 					"Mail":					Result[2],
@@ -504,7 +504,7 @@ def Users_fetch_users(Table):
 					"Contributions":		Contributions,
 					"Last_medium":			Result[14],
 			}
-			Users[User_ID] = User_infos
+			Users[User_ID] = Infos_user
 		return Users
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -513,18 +513,18 @@ def Users_fetch_users(Table):
 		Cursor.close()
 		Connection.close()
 
-def Users_manage_user(Table, Action, User_infos):
+def Users_manage_user(Table, Action, Infos_user):
 	"""This function expects a complete and clean dictionary as input. All necessary checks are
 	assumed to have been performed."""
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	Dates = {}
-	for Year, Dates_for_year in User_infos["Renewals"].items():
+	for Year, Dates_for_year in Infos_user["Renewals"].items():
 		Dates[Year] = []
 		for Date in Dates_for_year:
 			Dates[Year].append(Date.isoformat(sep=" "))
 	Renewals = json.dumps(Dates)
-	Contributions = json.dumps(User_infos["Contributions"]) if User_infos["Contributions"] else None
+	Contributions = json.dumps(Infos_user["Contributions"]) if Infos_user["Contributions"] else None
 	if Action == "Add":
 		Query = f"""
 				INSERT INTO {Table} (
@@ -560,22 +560,22 @@ def Users_manage_user(Table, Action, User_infos):
 					renewals = %s,
 					contributions = %s,
 					last_medium = %s
-				WHERE id = {User_infos['ID']}"""
+				WHERE id = {Infos_user['ID']}"""
 	Values = [
-			User_infos["Pseudo"],
-			User_infos["Mail"],
-			User_infos["First_name"],
-			User_infos["Last_name"],
-			User_infos["ML_pseudo"],
-			User_infos["Wiki_pseudo"],
-			User_infos["IRC_pseudo"],
-			User_infos["Forum_pseudo"],
-			User_infos["Discord_pseudo"],
-			User_infos["Discord_expiration"],
-			User_infos["Avatar"],
+			Infos_user["Pseudo"],
+			Infos_user["Mail"],
+			Infos_user["First_name"],
+			Infos_user["Last_name"],
+			Infos_user["ML_pseudo"],
+			Infos_user["Wiki_pseudo"],
+			Infos_user["IRC_pseudo"],
+			Infos_user["Forum_pseudo"],
+			Infos_user["Discord_pseudo"],
+			Infos_user["Discord_expiration"],
+			Infos_user["Avatar"],
 			Renewals,
 			Contributions,
-			User_infos["Last_medium"]
+			Infos_user["Last_medium"]
 	]
 	try:
 		if not Table.isidentifier():
@@ -651,7 +651,7 @@ def Polls_fetch(Table, Poll_ID):
 			for Index, Choice in enumerate(Choices):
 				Temp[Index + 1] = Choice
 			Choices = Temp
-		Poll_infos = {
+		Infos_poll = {
 				"ID": Poll_ID,
 				"Creation_date": Result[1],
 				"Author": Result[2] if Result[2] else "Anonymous",
@@ -660,7 +660,7 @@ def Polls_fetch(Table, Poll_ID):
 				"Choices": Choices,
 				"Active": bool(Result[6])
 		}
-		return Poll_infos
+		return Infos_poll
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
@@ -690,9 +690,9 @@ def Polls_fetch_list(Table, Number, Status=None):
 		Polls = []
 		for Result in Results:
 			Poll_ID = Result[0]
-			Poll_infos = Polls_fetch(Table, Poll_ID)
-			if Poll_infos:
-				Polls.append(Poll_infos)
+			Infos_poll = Polls_fetch(Table, Poll_ID)
+			if Infos_poll:
+				Polls.append(Infos_poll)
 		# Sort the list from oldest to newest
 		Polls.reverse()
 		return Polls
@@ -709,10 +709,10 @@ def Polls_vote(Table, Poll_ID, Pseudo, Choice_index):
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		Poll_infos = Polls_fetch(Table, Poll_ID)
-		if not Poll_infos:
+		Infos_poll = Polls_fetch(Table, Poll_ID)
+		if not Infos_poll:
 			return False
-		Votes = Poll_infos["Votes"]
+		Votes = Infos_poll["Votes"]
 		Votes[Pseudo] = Choice_index
 		Cursor.execute(f"""
 				UPDATE {Table} SET votes = %s

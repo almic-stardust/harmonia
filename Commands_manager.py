@@ -446,34 +446,34 @@ async def Discord_polls_help(Context):
 	if Bridge:
 		await Polls_help(Bridge, Context.author.display_name)
 
-def Polls_voting_rights(User_infos):
-	User_infos["Can_vote"] = False
-	if not User_infos["Renewals"]:
-		return User_infos
+def Polls_voting_rights(Infos_user):
+	Infos_user["Can_vote"] = False
+	if not Infos_user["Renewals"]:
+		return Infos_user
 	Renewals_years = []
 	Renewals_dates = []
-	for Year in User_infos["Renewals"]:
+	for Year in Infos_user["Renewals"]:
 		Renewals_years.append(Year)
-		Renewals_dates.extend(User_infos["Renewals"][Year])
+		Renewals_dates.extend(Infos_user["Renewals"][Year])
 	Renewals_years.sort()
 	Renewals_dates.sort()
-	User_infos["Registration"] = Renewals_dates[0]
-	User_infos["Last_renewal"] = Renewals_dates[-1]
-	User_infos["Penultimate_year"] = None
+	Infos_user["Registration"] = Renewals_dates[0]
+	Infos_user["Last_renewal"] = Renewals_dates[-1]
+	Infos_user["Penultimate_year"] = None
 	if len(Renewals_years) >= 2:
 		Penultimate_year = Renewals_years[-2]
-		User_infos["Penultimate_year"] = datetime.datetime.strptime(str(Penultimate_year), "%Y")
+		Infos_user["Penultimate_year"] = datetime.datetime.strptime(str(Penultimate_year), "%Y")
 	Now = datetime.datetime.now()
 	# Registration over a year ago
-	if User_infos["Registration"] + timedelta(days=365) <= Now \
-			and User_infos["Last_renewal"] + timedelta(days=365) >= Now:
-		User_infos["Can_vote"] = True
+	if Infos_user["Registration"] + timedelta(days=365) <= Now \
+			and Infos_user["Last_renewal"] + timedelta(days=365) >= Now:
+		Infos_user["Can_vote"] = True
 	# Former member who renewed their membership less than 3 months ago
-	elif User_infos["Penultimate_year"] \
-			and User_infos["Penultimate_year"] + timedelta(days=365) <= Now \
-			and User_infos["Last_renewal"] + timedelta(days=90) >= Now:
-		User_infos["Can_vote"] = True
-	return User_infos
+	elif Infos_user["Penultimate_year"] \
+			and Infos_user["Penultimate_year"] + timedelta(days=365) <= Now \
+			and Infos_user["Last_renewal"] + timedelta(days=90) >= Now:
+		Infos_user["Can_vote"] = True
+	return Infos_user
 
 async def Polls_members(Bridge, List_of_users, Author=None):
 	Users_table = Config["users"]["db_table"]
@@ -496,9 +496,9 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 		Users_to_display = {}
 		# List_of_users is a string
 		for User in List_of_users.split():
-			User_infos = {}
-			User_infos["Pseudo"] = User
-			User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+			Infos_user = {}
+			Infos_user["Pseudo"] = User
+			User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
 			if User_ID:
 				Users_to_display[User_ID] = Users[User_ID]
 			else:
@@ -515,21 +515,21 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 			await Gears.Send(Bridge, Output, Output_IRC)
 			return
 	for User_ID in Users_to_display:
-		User_infos = Users_to_display[User_ID]
-		User_infos = Polls_voting_rights(User_infos)
-		if User_infos["Can_vote"]:
-			Output += f"{User_infos['Pseudo']} "
+		Infos_user = Users_to_display[User_ID]
+		Infos_user = Polls_voting_rights(Infos_user)
+		if Infos_user["Can_vote"]:
+			Output += f"{Infos_user['Pseudo']} "
 		# If we display all voting members, keep a concise display
 		if not List_of_users_from_argument:
 			continue
-		if User_infos["Can_vote"]:
+		if Infos_user["Can_vote"]:
 			Output += f"can vote "
 		else:
-			Output += f"{User_infos['Pseudo']} can’t vote "
-		Registration = datetime.datetime.strftime(User_infos["Registration"], "%d/%m/%Y")
-		Last_renewal = datetime.datetime.strftime(User_infos["Last_renewal"], "%d/%m/%Y")
-		if User_infos["Penultimate_year"]:
-			Penultimate_year = datetime.datetime.strftime(User_infos["Penultimate_year"], "%Y")
+			Output += f"{Infos_user['Pseudo']} can’t vote "
+		Registration = datetime.datetime.strftime(Infos_user["Registration"], "%d/%m/%Y")
+		Last_renewal = datetime.datetime.strftime(Infos_user["Last_renewal"], "%d/%m/%Y")
+		if Infos_user["Penultimate_year"]:
+			Penultimate_year = datetime.datetime.strftime(Infos_user["Penultimate_year"], "%Y")
 			Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
 		else:
 			Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
@@ -714,15 +714,15 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		await Gears.Send(Bridge, Help_usage)
 		return
 
-	User_infos = {"Pseudo": User}
-	User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+	Infos_user = {"Pseudo": User}
+	User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
 	if not User_ID:
 		await Gears.Send_DM(User, Context, "Error: you’re not registered.")
 		return
 	Users = DB_manager.Users_fetch_users(Users_table)
-	User_infos = Users[User_ID]
-	User_infos = Polls_voting_rights(User_infos)
-	if not User_infos["Can_vote"]:
+	Infos_user = Users[User_ID]
+	Infos_user = Polls_voting_rights(Infos_user)
+	if not Infos_user["Can_vote"]:
 		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
 		return
 
@@ -739,7 +739,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if Choice < 1 or Choice > Number_of_choices:
 		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
-	DB_manager.Polls_vote(Polls_table, Poll_ID, User_infos["Pseudo"], Choice)
+	DB_manager.Polls_vote(Polls_table, Poll_ID, Infos_user["Pseudo"], Choice)
 	Question = Infos_poll["Question"]
 	Vote = Infos_poll["Choices"][Choice]
 	await Gears.Send_DM(User, Context, f"Vote “{Vote}” registered for poll #{Poll_ID} ({Question})")
@@ -924,28 +924,28 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
 		return
 	# Only members with voting rights can give proxies
-	User_infos = {}
-	User_infos["Pseudo"] = User
-	User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+	Infos_user = {}
+	Infos_user["Pseudo"] = User
+	User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
 	if not User_ID:
 		await Gears.Send_DM(User, Context, "Error: you’re not registered.")
 		return
 	Users = DB_manager.Users_fetch_users(Users_table)
-	User_infos = Users[User_ID]
-	User_infos = Polls_voting_rights(User_infos)
-	if not User_infos["Can_vote"]:
+	Infos_user = Users[User_ID]
+	Infos_user = Polls_voting_rights(Infos_user)
+	if not Infos_user["Can_vote"]:
 		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
 		return
 	# Only members with voting rights can receive proxies
-	Holder_infos = {}
-	Holder_infos["Pseudo"] = Proxy_holder
-	Holder_ID = DB_manager.Users_check_presence(Users_table, Holder_infos)
+	Infos_holder = {}
+	Infos_holder["Pseudo"] = Proxy_holder
+	Holder_ID = DB_manager.Users_check_presence(Users_table, Infos_holder)
 	if not Holder_ID:
 		await Gears.Send_DM(User, Context, f"{Proxy_holder} isn’t registered.")
 		return
-	Holder_infos = Users[Holder_ID]
-	Holder_infos = Polls_voting_rights(Holder_infos)
-	if not Holder_infos["Can_vote"]:
+	Infos_holder = Users[Holder_ID]
+	Infos_holder = Polls_voting_rights(Infos_holder)
+	if not Infos_holder["Can_vote"]:
 		await Gears.Send_DM(User, Context, f"{Proxy_holder} don’t have voting rights.")
 		return
 
@@ -969,8 +969,6 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 	Proxies[User] = {}
 	Proxies[User]["Holder"] = Proxy_holder
 	Proxies[User]["Date"] = datetime.datetime.now()
-	import pprint
-	pprint.pprint(Proxies)
 	Output = f"{User} appointed {Proxy_holder} as their "
 	if Change_of_holder:
 		Output += "new "

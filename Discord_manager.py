@@ -128,7 +128,7 @@ async def Delete_expired_messages():
 			Expiration = Expiration_for_user(Row["user"])
 			if Expiration is None:
 				continue
-			Date_creation = Row["date_creation"].replace(tzinfo=datetime.timezone.utc)
+			Date_creation = Row["creation_date"].replace(tzinfo=datetime.timezone.utc)
 			if Date_creation + datetime.timedelta(days=Expiration) <= Now:
 					Chan = bot.get_channel(Row["chan_id"])
 					if not Chan:

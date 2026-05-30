@@ -52,7 +52,7 @@ Create the virtual environment:
 Create a base according to your Config.yaml, then create these tables:
 
 	CREATE TABLE project_history (
-	    date_creation       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+	    creation_date       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
 	    server_id           BIGINT NOT NULL,
 	    chan_id             BIGINT NOT NULL,
 	    message_id          BIGINT NOT NULL PRIMARY KEY,
@@ -64,7 +64,7 @@ Create a base according to your Config.yaml, then create these tables:
 	    reactions           JSON NULL,
 	    relayed             BOOLEAN NOT NULL DEFAULT FALSE,
 	    expired             BOOLEAN NOT NULL DEFAULT FALSE,
-	    date_deletion       TIMESTAMP NULL,
+	    deletion_date       TIMESTAMP NULL,
 	);
 
 	CREATE TABLE project_users (
@@ -86,7 +86,7 @@ Create a base according to your Config.yaml, then create these tables:
 	);
 
 	CREATE TABLE project_polls (
-	    id                  INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	    id                  INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	    creation_date       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
 	    user                VARCHAR(255) NOT NULL,
 	    question            TEXT NOT NULL,
@@ -118,10 +118,10 @@ Here is the procedure to set up this feature.
 
 For performance, create composite indexes in the DB:
 
-	CREATE INDEX Index_messages ON history (server_id, chan_id, date_creation);
+	CREATE INDEX Index_messages ON history (server_id, chan_id, creation_date);
 	CREATE INDEX Index_replies ON history (reply_to);
-	CREATE INDEX Index_deletions ON history (server_id, chan_id, date_deletion);
-	CREATE INDEX Index_expiration ON history (relayed, expired, date_creation);
+	CREATE INDEX Index_deletions ON history (server_id, chan_id, deletion_date);
+	CREATE INDEX Index_expiration ON history (relayed, expired, creation_date);
 
 The ASGI server I use is Hypercorn. On the system where you want to run it:
 
