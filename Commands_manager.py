@@ -17,6 +17,7 @@ import IRC_manager
 Straws_bag = {}
 Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
+Proxies = {}
 
 ###############################################################################
 # Dispatch IRC commands
@@ -47,6 +48,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 			"vote":			(Polls_vote,				True,			True),
 			"info":			(Polls_info,				True,			False),
 			"list":			(Polls_list,				True,			False),
+			"proxy":		(Polls_proxy,				True,			True),
 	}}
 
 	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
@@ -677,9 +679,10 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	# If the command was sent on Discord, relay it on IRC
 	# No usage of Output_IRC for this function, because user related errors are sent privately
 	if Context:
-		await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User,
-				f"<\x02{User}\x02> !polls vote {Arguments}"
-		)
+		if IRC_instance:
+			await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User,
+					f"<\x02{User}\x02> !polls vote {Arguments}"
+			)
 	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
 	if not Arguments:
 		await Gears.Send(Bridge, Help_usage)
@@ -781,7 +784,6 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			Output_IRC += Output
 			await Gears.Send(Bridge, Output, Output_IRC)
 			return
-		print("Infos_poll =", Infos_poll)
 		Poll_ID = Infos_poll["ID"]
 	# Avoid a DB query, in case the lastest poll was automatically selected
 	if not Infos_poll:
@@ -898,3 +900,90 @@ async def Discord_polls_list(Context, *, Arguments=None):
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_list(Bridge, Arguments, Context.author.display_name)
+
+async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
+
+	global Proxies
+	Users_table = Config["users"]["db_table"]
+	Polls_table = Config["polls"]["db_table"]
+	Change_of_holder = False
+	IRC_instance = IRC_manager.GCI()
+	# If the command was sent on Discord, relay it on IRC
+	# No usage of Output_IRC for this function, because user related errors are sent privately
+	if Context:
+		if IRC_instance:
+			await IRC_instance.Relay_Discord_message(
+					Bridge["irc_chan"], User, f"!polls proxy {Proxy_holder}"
+			)
+	if not Proxy_holder:
+		await Gears.Send(Bridge, "Usage: !polls proxy Another_member")
+		return
+
+	# No self-proxy
+	if User == Proxy_holder:
+		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
+		return
+	# Only members with voting rights can give proxies
+	User_infos = {}
+	User_infos["Pseudo"] = User
+	User_ID = DB_manager.Users_check_presence(Users_table, User_infos)
+	if not User_ID:
+		await Gears.Send_DM(User, Context, "Error: you’re not registered.")
+		return
+	Users = DB_manager.Users_fetch_users(Users_table)
+	User_infos = Users[User_ID]
+	User_infos = Polls_voting_rights(User_infos)
+	if not User_infos["Can_vote"]:
+		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
+		return
+	# Only members with voting rights can receive proxies
+	Holder_infos = {}
+	Holder_infos["Pseudo"] = Proxy_holder
+	Holder_ID = DB_manager.Users_check_presence(Users_table, Holder_infos)
+	if not Holder_ID:
+		await Gears.Send_DM(User, Context, f"{Proxy_holder} isn’t registered.")
+		return
+	Holder_infos = Users[Holder_ID]
+	Holder_infos = Polls_voting_rights(Holder_infos)
+	if not Holder_infos["Can_vote"]:
+		await Gears.Send_DM(User, Context, f"{Proxy_holder} don’t have voting rights.")
+		return
+
+	if User in Proxies:
+		if Proxies[User]["Holder"] == Proxy_holder:
+			await Gears.Send_DM(User, Context, f"You already gave your proxy to {Proxy_holder}.")
+			return
+		# Proxy are valid for all poll of a meeting (approximated to 24 hours)
+		Delay = datetime.datetime.now() - Proxies[User]["Date"]
+		if Delay <= timedelta(days=1):
+			# A member can only have one proxy holder
+			Change_of_holder = True
+	# Each member can receive a proxy from a maximum of 3 members
+	Count = 0
+	for Iterated in Proxies:
+		if Proxies[Iterated]["Holder"] == Proxy_holder:
+			Count += 1
+	if Count >= 3:
+		await Gears.Send(Bridge, f"{Proxy_holder} already holds 3 proxies.")
+		return
+	Proxies[User] = {}
+	Proxies[User]["Holder"] = Proxy_holder
+	Proxies[User]["Date"] = datetime.datetime.now()
+	import pprint
+	pprint.pprint(Proxies)
+	Output = f"{User} appointed {Proxy_holder} as their "
+	if Change_of_holder:
+		Output += "new "
+	Output += "proxy holder."
+	await Gears.Send(Bridge, Output)
+
+@polls.command(name="proxy")
+async def Discord_polls_proxy(Context, *, Proxy_holder):
+	"""Designate another member as a proxy holder (valid until !polls proxy revoke all).
+	Parameters
+	----------
+	Proxy_holder : str
+		!polls proxy Proxy_holder"""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_proxy(Bridge, User, Proxy_holder, Context)
