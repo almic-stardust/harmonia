@@ -422,10 +422,11 @@ async def polls(Context):
 		# If no subcommand is invoked: “!polls” = “!polls list”
 		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 		if Bridge:
-			await Gears.Send(Bridge, "Last 5 polls (prioritizing active ones) :")
+			# Polls_list(Bridge, Arguments=None, Author=None):
+			await Polls_list(Bridge, None, Context.author.display_name)
 
 async def IRC_polls(Bridge):
-	await Gears.Send(Bridge, "Last 5 polls (prioritizing active ones) :")
+	await Polls_list(Bridge)
 
 async def Polls_help(Bridge, Author=None):
 	Output_IRC = ""
@@ -835,7 +836,7 @@ async def Discord_polls_info(Context, Poll_ID=None):
 	if Bridge:
 		await Polls_info(Bridge, Poll_ID, Context.author.display_name)
 
-async def Polls_list(Bridge, Arguments, Author=None):
+async def Polls_list(Bridge, Arguments=None, Author=None):
 	Polls_table = Config["polls"]["db_table"]
 	Status = None
 	Number = None
@@ -843,12 +844,8 @@ async def Polls_list(Bridge, Arguments, Author=None):
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
 	if Author:
-		if Status and Number:
-			Output_IRC = f"<\x02{Author}\x02> !polls list {Status} {Number}\n"
-		elif Status:
-			Output_IRC = f"<\x02{Author}\x02> !polls list {Status}\n"
-		elif Number:
-			Output_IRC = f"<\x02{Author}\x02> !polls list {Number}\n"
+		if Arguments:
+			Output_IRC = f"<\x02{Author}\x02> !polls list {Arguments}\n"
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls list\n"
 	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"""

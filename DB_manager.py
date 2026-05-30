@@ -682,7 +682,7 @@ def Polls_fetch_list(Table, Number, Status=None):
 		else:
 			if Status == "active":
 				Query += "WHERE active = TRUE "
-			else Status == "closed":
+			elif Status == "closed":
 				Query += "WHERE active = FALSE "
 			Query += f"ORDER BY active DESC, id DESC LIMIT {Number}"
 		Cursor.execute(Query)
