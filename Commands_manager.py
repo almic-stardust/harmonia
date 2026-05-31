@@ -5,7 +5,7 @@ import random
 import re
 import hashlib
 import datetime
-from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 
 from Config_manager import Config
 import DB_manager
@@ -464,15 +464,18 @@ def Polls_voting_rights(Infos_user):
 		Penultimate_year = Renewals_years[-2]
 		Infos_user["Penultimate_year"] = datetime.datetime.strptime(str(Penultimate_year), "%Y")
 	Now = datetime.datetime.now()
-	# Registration over a year ago
-	if Infos_user["Registration"] + timedelta(days=365) <= Now \
-			and Infos_user["Last_renewal"] + timedelta(days=365) >= Now:
+	# relativedelta rather than timedelta, to calculate voting rights with calendar years and months
+	Has_one_year_membership = Infos_user["Registration"] <= Now - relativedelta(years=1)
+	Renewal_within_last_year = Infos_user["Last_renewal"] >= Now - relativedelta(years=1)
+	# Current membership
+	if Has_one_year_membership and Renewal_within_last_year:
 		Infos_user["Can_vote"] = True
-	# Former member who renewed their membership less than 3 months ago
-	elif Infos_user["Penultimate_year"] \
-			and Infos_user["Penultimate_year"] + timedelta(days=365) <= Now \
-			and Infos_user["Last_renewal"] + timedelta(days=90) >= Now:
-		Infos_user["Can_vote"] = True
+	# Former member who renewed their membership in the year, but more than 3 months ago
+	elif Infos_user["Penultimate_year"]:
+		Penultimate_over_1y = Infos_user["Penultimate_year"] >= Now - relativedelta(years=1)
+		Renewal_over_3m = Infos_user["Last_renewal"] >= Now - relativedelta(months=3)
+		if Penultimate_over_1y and Renewal_within_last_year and Renewal_over_3m:
+			Infos_user["Can_vote"] = True
 	return Infos_user
 
 async def Polls_members(Bridge, List_of_users, Author=None):
@@ -949,15 +952,17 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 		await Gears.Send_DM(User, Context, f"{Proxy_holder} don’t have voting rights.")
 		return
 
+	Now = datetime.datetime.now(datetime.timezone.utc)
 	if User in Proxies:
 		if Proxies[User]["Holder"] == Proxy_holder:
 			await Gears.Send_DM(User, Context, f"You already gave your proxy to {Proxy_holder}.")
 			return
-		# Proxy are valid for all poll of a meeting (approximated to 24 hours)
-		Delay = datetime.datetime.now() - Proxies[User]["Date"]
-		if Delay <= timedelta(days=1):
+		# Proxies are valid for a complete meeting (approximated to 12 hours)
+		Proxy_duration = Now - Proxies[User]["Date"]
+		if Proxy_duration < datetime.timedelta(hours=12):
 			# A member can only have one proxy holder
 			Change_of_holder = True
+
 	# Each member can receive a proxy from a maximum of 3 members
 	Count = 0
 	for Iterated in Proxies:
@@ -968,7 +973,7 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 		return
 	Proxies[User] = {}
 	Proxies[User]["Holder"] = Proxy_holder
-	Proxies[User]["Date"] = datetime.datetime.now()
+	Proxies[User]["Date"] = Now
 	Output = f"{User} appointed {Proxy_holder} as their "
 	if Change_of_holder:
 		Output += "new "

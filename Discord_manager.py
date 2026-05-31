@@ -122,22 +122,23 @@ def Expiration_for_user(User):
 @tasks.loop(hours=24)
 async def Delete_expired_messages():
 	try:
-		Now = datetime.datetime.now(datetime.timezone.utc)
 		Rows = DB_manager.Messages_potentially_expired(History_table)
 		for Row in Rows:
 			Expiration = Expiration_for_user(Row["user"])
 			if Expiration is None:
 				continue
+			Now = datetime.datetime.now(datetime.timezone.utc)
 			Date_creation = Row["creation_date"].replace(tzinfo=datetime.timezone.utc)
-			if Date_creation + datetime.timedelta(days=Expiration) <= Now:
-					Chan = bot.get_channel(Row["chan_id"])
-					if not Chan:
-						Chan = await bot.fetch_channel(Row["chan_id"])
-					Message_ID = Row["message_id"]
-					Message = await Chan.fetch_message(Message_ID)
-					await Message.delete()
-					DB_manager.Mark_message_expired(History_table, Message_ID)
-					print(f"Deleted expired message {Message_ID}")
+			Message_duration = Now - Date_creation
+			if Message_duration > datetime.timedelta(days=Expiration):
+				Chan = bot.get_channel(Row["chan_id"])
+				if not Chan:
+					Chan = await bot.fetch_channel(Row["chan_id"])
+				Message_ID = Row["message_id"]
+				Message = await Chan.fetch_message(Message_ID)
+				await Message.delete()
+				DB_manager.Mark_message_expired(History_table, Message_ID)
+				print(f"Deleted expired message {Message_ID}")
 	except Exception as Error:
 		print(f"[Discord_m] Delete_expired_messages(): {Error}")
 
