@@ -676,6 +676,7 @@ async def IRC_polls_close(Bridge, User, Arguments=None):
 
 async def Polls_vote(Bridge, User, Arguments, Context=None):
 
+	global Proxies
 	Users_table = Config["users"]["db_table"]
 	Polls_table = Config["polls"]["db_table"]
 	IRC_instance = IRC_manager.GCI()
@@ -692,7 +693,14 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		return
 
 	Parts = Arguments.split()
-	if len(Parts) == 2:
+	Vote_by_proxy = False
+	if len(Parts) == 3:
+		Proxy_giver = Parts[2]
+		if Proxy_giver in Proxies:
+			Vote_by_proxy = True
+		else:
+			await Gears.Send(Bridge, f"Error: {Proxy_giver} didn’t gave a proxy to {User}.")
+	if len(Parts) == 2 or (len(Parts) == 3 and Vote_by_proxy):
 		try:
 			Choice = int(Parts[0])
 			Poll_ID = int(Parts[1])
@@ -742,10 +750,24 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if Choice < 1 or Choice > Number_of_choices:
 		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
-	DB_manager.Polls_vote(Polls_table, Poll_ID, Infos_user["Pseudo"], Choice)
+	Recorded_into_DB = False
 	Question = Infos_poll["Question"]
 	Vote = Infos_poll["Choices"][Choice]
-	await Gears.Send_DM(User, Context, f"Vote “{Vote}” registered for poll #{Poll_ID} ({Question})")
+	if not Vote_by_proxy:
+		# {Infos_user["Pseudo"]} instead of {User} to detect if the bot mistakes users
+		Recorded_into_DB = DB_manager.Polls_vote(
+				Polls_table, Poll_ID, Infos_user["Pseudo"], Choice
+		)
+	else:
+		Recorded_into_DB = DB_manager.Polls_vote(
+				Polls_table, Poll_ID, Proxy_giver, Choice, Infos_user["Pseudo"]
+		)
+	if Recorded_into_DB:
+		if not Vote_by_proxy:
+			Output = f"Poll #{Poll_ID}: Vote “{Vote}” registered ({Question})"
+		else:
+			Output = f"Poll #{Poll_ID}: Vote “{Vote}” registered for {Proxy_giver} ({Question})"
+		await Gears.Send_DM(User, Context, Output)
 
 @polls.command(name="vote")
 async def Discord_polls_vote(Context, *, Arguments):
@@ -964,11 +986,11 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 			Change_of_holder = True
 
 	# Each member can receive a proxy from a maximum of 3 members
-	Count = 0
+	Received = 0
 	for Iterated in Proxies:
 		if Proxies[Iterated]["Holder"] == Proxy_holder:
-			Count += 1
-	if Count >= 3:
+			Received += 1
+	if Received >= 3:
 		await Gears.Send(Bridge, f"{Proxy_holder} already holds 3 proxies.")
 		return
 	Proxies[User] = {}

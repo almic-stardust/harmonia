@@ -656,9 +656,10 @@ def Polls_fetch(Table, Poll_ID):
 				"Creation_date": Result[1],
 				"Author": Result[2] if Result[2] else "Anonymous",
 				"Question": Result[3],
-				"Votes": json.loads(Result[5]) if Result[5] else {},
 				"Choices": Choices,
-				"Active": bool(Result[6])
+				"Votes": json.loads(Result[5]) if Result[5] else {},
+				"Proxies": json.loads(Result[6]) if Result[6] else {},
+				"Active": bool(Result[7])
 		}
 		return Infos_poll
 	except MySQLdb.Error as Error:
@@ -675,7 +676,6 @@ def Polls_fetch_list(Table, Number, Status=None):
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
 		Query = f"SELECT id FROM {Table} "
-		Values = []
 		# If the latest poll is requested, return it whether it’s active or not
 		if Status == "latest":
 			Query += f"ORDER BY id DESC LIMIT {Number}"
@@ -703,7 +703,7 @@ def Polls_fetch_list(Table, Number, Status=None):
 		Cursor.close()
 		Connection.close()
 
-def Polls_vote(Table, Poll_ID, Pseudo, Choice_index):
+def Polls_vote(Table, Poll_ID, Pseudo, Choice_index, Proxy_holder=None):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -714,11 +714,15 @@ def Polls_vote(Table, Poll_ID, Pseudo, Choice_index):
 			return False
 		Votes = Infos_poll["Votes"]
 		Votes[Pseudo] = Choice_index
-		Cursor.execute(f"""
-				UPDATE {Table} SET votes = %s
-				WHERE id = %s""",
-				(json.dumps(Votes), Poll_ID)
-		)
+		Query = f"UPDATE {Table} SET votes = %s"
+		Values = [json.dumps(Votes)]
+		if Proxy_holder:
+			Proxies = Infos_poll["Proxies"]
+			Proxies[Pseudo] = Proxy_holder
+			Query += ", proxies = %s"
+			Values.append(json.dumps(Proxies))
+		Query += f" WHERE id = {Poll_ID}"
+		Cursor.execute(Query, Values)
 		Connection.commit()
 		return True
 	except MySQLdb.Error as Error:
