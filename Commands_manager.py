@@ -693,14 +693,17 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		return
 
 	Parts = Arguments.split()
-	Vote_by_proxy = False
+	Proxy_giver = None
+	# If the user casts a different vote for one of their proxies giver
 	if len(Parts) == 3:
-		Proxy_giver = Parts[2]
-		if Proxy_giver in Proxies:
-			Vote_by_proxy = True
+		Claimed_proxy_giver = Parts[2]
+		if Claimed_proxy_giver in Proxies[User]:
+			Proxy_giver = Claimed_proxy_giver
 		else:
-			await Gears.Send(Bridge, f"Error: {Proxy_giver} didn’t gave a proxy to {User}.")
-	if len(Parts) == 2 or (len(Parts) == 3 and Vote_by_proxy):
+			await Gears.Send(Bridge,
+					f"Error: {Claimed_proxy_giver} didn’t delegate a proxy to {User}."
+			)
+	if len(Parts) == 2 or (len(Parts) == 3 and Proxy_giver):
 		try:
 			Choice = int(Parts[0])
 			Poll_ID = int(Parts[1])
@@ -736,7 +739,6 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if not Infos_user["Can_vote"]:
 		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
 		return
-
 	# Avoid a DB query, in case the lastest poll was automatically selected
 	if not Infos_poll:
 		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
@@ -750,24 +752,38 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if Choice < 1 or Choice > Number_of_choices:
 		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
-	Recorded_into_DB = False
+
+	Recorded_in_DB = False
 	Question = Infos_poll["Question"]
 	Vote = Infos_poll["Choices"][Choice]
-	if not Vote_by_proxy:
-		# {Infos_user["Pseudo"]} instead of {User} to detect if the bot mistakes users
-		Recorded_into_DB = DB_manager.Polls_vote(
+	if Proxy_giver:
+		Recorded_in_DB = DB_manager.Polls_vote(
+				Polls_table, Poll_ID, Proxy_giver, Choice, User
+		)
+		if Recorded_in_DB:
+			await Gears.Send_DM(User, Context,
+					f"Poll #{Poll_ID}: Vote “{Vote}” registered for {Proxy_giver} [{Question}]"
+			)
+	else:
+		# {Infos_user["Pseudo"]} instead of {User}, to see in the results if the bot mistakes users
+		Recorded_in_DB = DB_manager.Polls_vote(
 				Polls_table, Poll_ID, Infos_user["Pseudo"], Choice
 		)
-	else:
-		Recorded_into_DB = DB_manager.Polls_vote(
-				Polls_table, Poll_ID, Proxy_giver, Choice, Infos_user["Pseudo"]
-		)
-	if Recorded_into_DB:
-		if not Vote_by_proxy:
-			Output = f"Poll #{Poll_ID}: Vote “{Vote}” registered ({Question})"
-		else:
-			Output = f"Poll #{Poll_ID}: Vote “{Vote}” registered for {Proxy_giver} ({Question})"
-		await Gears.Send_DM(User, Context, Output)
+		if Recorded_in_DB:
+			await Gears.Send_DM(User, Context,
+					f"Poll #{Poll_ID}: Your vote “{Vote}” has been registered [{Question}]"
+			)
+		# Those who have delegated a proxy vote by default as their proxy holder
+		if User in Proxies:
+			for Proxy_giver in Proxies[User]:
+				Recorded_in_DB = False
+				Recorded_in_DB = DB_manager.Polls_vote(
+						Polls_table, Poll_ID, Proxy_giver, Choice, User
+				)
+				if Recorded_in_DB:
+					await Gears.Send_DM(User, Context,
+							f"Poll #{Poll_ID}: Vote “{Vote}” registered for {Proxy_giver} [{Question}]"
+					)
 
 @polls.command(name="vote")
 async def Discord_polls_vote(Context, *, Arguments):
@@ -802,7 +818,7 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 	if User == Proxy_holder:
 		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
 		return
-	# Only members with voting rights can give proxies
+	# Only members with voting rights can delegate a proxy
 	Infos_user = {}
 	Infos_user["Pseudo"] = User
 	User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
@@ -829,31 +845,30 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 		return
 
 	Now = datetime.datetime.now(datetime.timezone.utc)
-	if User in Proxies:
-		if Proxies[User]["Holder"] == Proxy_holder:
-			await Gears.Send_DM(User, Context, f"You already gave your proxy to {Proxy_holder}.")
-			return
-		# Proxies are valid for a complete meeting (approximated to 12 hours)
-		Proxy_duration = Now - Proxies[User]["Date"]
-		if Proxy_duration < datetime.timedelta(hours=12):
-			# A member can only have one proxy holder
-			Change_of_holder = True
-
+	for Old_holder in Proxies:
+		if User in Proxies[Old_holder]:
+			if Old_holder == Proxy_holder:
+				await Gears.Send_DM(User, Context,
+						f"You’ve already delegated your proxy to {Proxy_holder}."
+				)
+				return
+			# Proxies are valid for a complete meeting (approximated to 12 hours)
+			Proxy_duration = Now - Proxies[Old_holder][User]
+			if Proxy_duration < datetime.timedelta(hours=12):
+				# A member can only have one proxy holder
+				del Proxies[Old_holder][User]
+				Change_of_holder = True
+	if Proxy_holder not in Proxies:
+		Proxies[Proxy_holder] = {}
 	# Each member can receive a proxy from a maximum of 3 members
-	Received = 0
-	for Iterated in Proxies:
-		if Proxies[Iterated]["Holder"] == Proxy_holder:
-			Received += 1
-	if Received >= 3:
+	if len(Proxies[Proxy_holder]) >=3:
 		await Gears.Send(Bridge, f"{Proxy_holder} already holds 3 proxies.")
 		return
-	Proxies[User] = {}
-	Proxies[User]["Holder"] = Proxy_holder
-	Proxies[User]["Date"] = Now
-	Output = f"{User} appointed {Proxy_holder} as their "
+	Proxies[Proxy_holder][User] = Now
+	Output = f"{User} delegated their proxy to {Proxy_holder}"
 	if Change_of_holder:
-		Output += "new "
-	Output += "proxy holder."
+		Output += f" (previously to {Old_holder})"
+	Output += "."
 	await Gears.Send(Bridge, Output)
 
 @polls.command(name="proxy")
@@ -926,7 +941,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			if Choice_count > 0:
 				# Can’t be a division by zero since Number_of_voters > 0
 				Percentage = int((Choice_count / Number_of_voters) * 100)
-				Output += f"{Percentage}% <{Choice_count}> {Choice_text} ("
+				Output += f"{Percentage}% ({Choice_count}) {Choice_text} ("
 				Output += " ".join(Choice_voters) + ")\n"
 			if Choice_count > Result_count:
 				Result_count = Choice_count
