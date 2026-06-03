@@ -47,6 +47,9 @@ def History_update_filename(Table, Old_filename, New_filename):
 				WHERE message_id = %s""",
 				(Updated_filenames, Message_ID)
 		)
+		# Autocommit could leave the DB in a partially updated state: a batch of related updates
+		# could be only partially applied, because one of them raised an exception. Therefore, it’s
+		# preferable to commit every time
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -561,6 +564,9 @@ def Users_manage_user(Table, Action, Infos_user):
 					contributions = %s,
 					last_medium = %s
 				WHERE id = {Infos_user['ID']}"""
+	# Avoid directly inserting JSON into a SQL query, since it could break if the JSON contains
+	# quotes. Using %s instead, in combination with this Values list, allows mysqlclient to escape
+	# JSON strings, thus avoiding the risk of SQL syntax errors
 	Values = [
 			Infos_user["Pseudo"],
 			Infos_user["Mail"],
