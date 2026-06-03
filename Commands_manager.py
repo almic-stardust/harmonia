@@ -585,11 +585,11 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 	else:
 		Choices = ["Yes", "No", "Abs"]
 	Poll_ID = DB_manager.Polls_create(Polls_table, User, Question, Choices)
-	Output += f"Poll #{Poll_ID}: {Question}\n["
+	Output += f"Poll {Poll_ID}: {Question}\n["
 	for Index, Choice in enumerate(Choices):
-		Output += f"{Index + 1} = {Choice}"
+		Output += f"#{Index + 1} {Choice}"
 		if Index + 1 < len(Choices):
-			Output += "]   ["
+			Output += "] ["
 		else:
 			Output += "]\n"
 	Output += f"Vote with: !polls vote <Choice_number> [{Poll_ID}]"
@@ -748,21 +748,21 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if not Infos_poll["Active"]:
 		await Gears.Send(Bridge, f"Error: poll #{Poll_ID} is closed. See !polls list active")
 		return
-	Number_of_choices = len(Infos_poll["Choices"])
-	if Choice < 1 or Choice > Number_of_choices:
+	Choices = Infos_poll["Choices"]
+	if Choice < 1 or Choice > len(Choices):
 		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
 
 	Recorded_in_DB = False
 	Question = Infos_poll["Question"]
-	Vote = Infos_poll["Choices"][Choice]
+	Vote_text = Choices[Choice]
 	if Proxy_giver:
 		Recorded_in_DB = DB_manager.Polls_vote(
 				Polls_table, Poll_ID, Proxy_giver, Choice, User
 		)
 		if Recorded_in_DB:
 			await Gears.Send_DM(User, Context,
-					f"Poll #{Poll_ID}: Vote “{Vote}” registered for {Proxy_giver} [{Question}]"
+					f"Poll #{Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
 			)
 	else:
 		# {Infos_user["Pseudo"]} instead of {User}, to see in the results if the bot mistakes users
@@ -771,7 +771,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		)
 		if Recorded_in_DB:
 			await Gears.Send_DM(User, Context,
-					f"Poll #{Poll_ID}: Your vote “{Vote}” has been registered [{Question}]"
+					f"Poll #{Poll_ID}: Your vote “{Vote_text}” has been registered [{Question}]"
 			)
 		# Those who have delegated a proxy vote by default as their proxy holder
 		if User in Proxies:
@@ -782,7 +782,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 				)
 				if Recorded_in_DB:
 					await Gears.Send_DM(User, Context,
-							f"Poll #{Poll_ID}: Vote “{Vote}” registered for {Proxy_giver} [{Question}]"
+							f"Poll #{Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
 					)
 
 @polls.command(name="vote")
@@ -921,31 +921,47 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
 
-	Status = "active" if Infos_poll["Active"] else "closed"
 	Creation_date = datetime.datetime.strftime(Infos_poll["Creation_date"], "%d/%m/%Y")
+	Choices = Infos_poll["Choices"]
+	Status = "active" if Infos_poll["Active"] else "closed"
 	Number_of_voters = 0
 	Votes_for_each_choice = {}
 	Result_count = 0
-	for Choice_ID in Infos_poll["Choices"]:
+	for Choice_ID in Choices:
 		Votes_for_each_choice[Choice_ID] = []
 	for Voter, Choice_ID in Infos_poll["Votes"].items():
 		if Choice_ID in Votes_for_each_choice:
 			Votes_for_each_choice[Choice_ID].append(Voter)
 			Number_of_voters += 1
-	Output += f"#{Poll_ID} created {Creation_date} by {Infos_poll['Author']} ({Status}) : "
+	Output += f"Poll {Poll_ID} created {Creation_date} by {Infos_poll['Author']} ({Status}) : "
 	Output += f"{Infos_poll['Question']}\n"
 	if Number_of_voters > 0:
-		for Choice_ID, Choice_text in Infos_poll["Choices"].items():
+		Output_for_voters = ""
+		Choices_without_votes = []
+		for Choice_ID, Choice_text in Choices.items():
 			Choice_voters = Votes_for_each_choice[Choice_ID]
 			Choice_count = len(Choice_voters)
 			if Choice_count > 0:
 				# Can’t be a division by zero since Number_of_voters > 0
 				Percentage = int((Choice_count / Number_of_voters) * 100)
-				Output += f"{Percentage}% ({Choice_count}) {Choice_text} ("
-				Output += " ".join(Choice_voters) + ")\n"
-			if Choice_count > Result_count:
-				Result_count = Choice_count
-				Result_text = Choice_text
+				Output_for_voters += f"{Percentage}% #{Choice_ID} {Choice_text} ({Choice_count} = "
+				Output_for_voters += ", ".join(Choice_voters) + ")\n"
+				if Choice_count > Result_count:
+					Result_count = Choice_count
+					Result_text = Choice_text
+			else:
+				Choices_without_votes.append([Choice_ID, Choice_text])
+		if len(Choices_without_votes) > 0:
+			Output += "Choices without votes: ["
+			Index = 0
+			for Choice_ID, Choice_text in Choices_without_votes:
+				Index += 1
+				Output += f"#{Choice_ID} {Choice_text}"
+				if Index < len(Choices_without_votes):
+					Output += "] ["
+				else:
+					Output += "]\n"
+		Output += Output_for_voters
 		Output += f"The result is “{Result_text}”, with {Result_count} vote"
 		if Result_count > 1:
 			Output += "s"
