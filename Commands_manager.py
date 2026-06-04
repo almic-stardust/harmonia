@@ -796,28 +796,17 @@ async def Discord_polls_vote(Context, *, Arguments):
 	if Bridge:
 		await Polls_create(Bridge, Context.author.display_name, Arguments, Context)
 
-async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
+async def Polls_proxy_delegate(Bridge, User, Context, Proxy_holder, Proxy_giver):
 
 	global Proxies
 	Users_table = Config["users"]["db_table"]
 	Polls_table = Config["polls"]["db_table"]
 	Change_of_holder = False
-	IRC_instance = IRC_manager.GCI()
-	# If the command was sent on Discord, relay it on IRC
-	# No usage of Output_IRC for this function, because user related errors are sent privately
-	if Context:
-		if IRC_instance:
-			await IRC_instance.Relay_Discord_message(
-					Bridge["irc_chan"], User, f"!polls proxy {Proxy_holder}"
-			)
-	if not Proxy_holder:
-		await Gears.Send(Bridge, "Usage: !polls proxy Another_member")
-		return
-
 	# No self-proxy
 	if User == Proxy_holder:
 		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
 		return
+
 	# Only members with voting rights can delegate a proxy
 	Infos_user = {}
 	Infos_user["Pseudo"] = User
@@ -831,6 +820,7 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 	if not Infos_user["Can_vote"]:
 		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
 		return
+
 	# Only members with voting rights can receive proxies
 	Infos_holder = {}
 	Infos_holder["Pseudo"] = Proxy_holder
@@ -871,16 +861,51 @@ async def Polls_proxy(Bridge, User, Proxy_holder, Context=None):
 	Output += "."
 	await Gears.Send(Bridge, Output)
 
+async def Polls_proxy(Bridge, User, Arguments, Context=None):
+
+	IRC_instance = IRC_manager.GCI()
+	# If the command was sent on Discord, relay it on IRC
+	# No usage of Output_IRC for this function, because user related errors are sent privately
+	if Context:
+		if IRC_instance:
+			await IRC_instance.Relay_Discord_message(
+					Bridge["irc_chan"], User, f"!polls proxy {Proxy_holder}"
+			)
+	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy list Member | !polls proxy revoke [all]"""
+	if not Arguments:
+		await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+		return
+	if Arguments:
+		Parts = Arguments.split()
+		if len(Parts) < 0 or Parts[0] not in ("delegate", "list", "revoke"):
+			await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+			return
+	Action = Parts[0]
+
+	if Action == "delegate":
+		if len(Parts) < 2 or len(Parts) > 3:
+			await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+			return
+		Proxy_holder = Parts[1]
+		Proxy_giver = None
+		if len(Parts) == 3:
+			Proxy_giver = Parts[2]
+		await Polls_proxy_delegate(Bridge, User, Context, Proxy_holder, Proxy_giver)
+
 @polls.command(name="proxy")
-async def Discord_polls_proxy(Context, *, Proxy_holder):
-	"""Designate another member as a proxy holder (valid until !polls proxy revoke all).
+async def Discord_polls_proxy(Context, *, Arguments):
+	"""Manage votes by proxy.\n
+	 \n
+	!polls proxy delegate Holder [Member]\n
+	!polls proxy list Member\n
+	!polls proxy revoke [all]
 	Parameters
 	----------
-	Proxy_holder : str
-		!polls proxy Proxy_holder"""
+	Arguments : str"""
+
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Polls_proxy(Bridge, User, Proxy_holder, Context)
+		await Polls_proxy(Bridge, User, Arguments, Context)
 
 async def Polls_info(Bridge, Poll_ID=None, Author=None):
 
