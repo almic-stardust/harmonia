@@ -848,17 +848,50 @@ async def Polls_proxy_delegate(Bridge, User, Context, Proxy_holder, Proxy_giver)
 				# A member can only have one proxy holder
 				del Proxies[Old_holder][User]
 				Change_of_holder = True
+	# To be able to do checks on Proxies[Proxy_holder]
 	if Proxy_holder not in Proxies:
 		Proxies[Proxy_holder] = {}
 	# Each member can receive a proxy from a maximum of 3 members
-	if len(Proxies[Proxy_holder]) >=3:
+	if len(Proxies[Proxy_holder]) >= 3:
 		await Gears.Send(Bridge, f"{Proxy_holder} already holds 3 proxies.")
 		return
 	Proxies[Proxy_holder][User] = Now
 	Output = f"{User} delegated their proxy to {Proxy_holder}"
 	if Change_of_holder:
 		Output += f" (previously to {Old_holder})"
-	Output += "."
+
+	# Simplest case: User doesn’t hold proxy to subdelegate, and Proxy_holder held up to 2 proxies.
+	# Therefore by adding the proxy of User, Proxy_holder don’t exceed the limit of 3
+	if not User in Proxies:
+		Output += "."
+		await Gears.Send(Bridge, Output)
+		return
+	# When User holds proxies, but Proxy_holder can’t receive any of them
+	if len(Proxies[Proxy_holder]) == 3:
+		Output += f" (who now hold 3 proxies), however {User} held proxies ["
+		Output += ", ".join(Proxy for Proxy in Proxies[User])
+		Output += f"] that can’t be subdelegated."
+		del Proxies[User]
+		await Gears.Send(Bridge, Output)
+		return
+	# When User holds proxies, and Proxy_holder can receive at least some of them
+	Output += f", and the following proxies were subdelegated ["
+	Subdelegated = []
+	for Proxy in Proxies[User]:
+		if len(Proxies[Proxy_holder]) < 3:
+			Proxies[Proxy_holder][Proxy] = Proxies[User][Proxy]
+			Subdelegated.append(Proxy)
+	Output += ", ".join(Subdelegated)
+	# If the limit was reached before all proxies were subdelegated
+	if len(Proxies[User]) > len(Subdelegated):
+		Output += "] while the following ones couldn’t ["
+		Not_subdelegated = []
+		for Proxy in Proxies[User]:
+			if Proxy not in Subdelegated:
+				Not_subdelegated.append(Proxy)
+		Output += ", ".join(Not_subdelegated)
+	Output += "]."
+	del Proxies[User]
 	await Gears.Send(Bridge, Output)
 
 async def Polls_proxy(Bridge, User, Arguments, Context=None):
