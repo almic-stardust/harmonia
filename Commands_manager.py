@@ -909,15 +909,11 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			await IRC_instance.Relay_Discord_message(
 					Bridge["irc_chan"], User, f"!polls proxy {Proxy_holder}"
 			)
-	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy list Member | !polls proxy revoke [all]"""
+	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [all]"""
 	if not Arguments:
 		await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
 		return
-	if Arguments:
-		Parts = Arguments.split()
-		if len(Parts) < 0 or Parts[0] not in ("delegate", "list", "revoke"):
-			await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
-			return
+	Parts = Arguments.split()
 	Action = Parts[0]
 
 	if Action == "delegate":
@@ -930,12 +926,37 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			Proxy_giver = Parts[2]
 		await Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver)
 
+	elif Action == "info":
+		if len(Parts) != 2:
+			await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+			return
+		Member = Parts[1]
+		Output = ""
+		if Member == "all":
+			if len(Proxies) > 0:
+				for Proxy_holder in Proxies:
+					Output += f"{Proxy_holder} = "
+					Output += ", ".join(Proxy for Proxy in Proxies[Proxy_holder])
+			else:
+				Output += f"No one has delegated a proxy."
+		elif Member in Proxies:
+			Output += f"{Member} hold the following proxies: "
+			Output += ", ".join(Proxy for Proxy in Proxies[Member])
+		else:
+			Output += f"{Member} doesn’t hold any proxies."
+		await Gears.Send(Bridge, Output)
+
+	# Action isn’t delegate, info or revoke
+	else:
+		await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+		return
+
 @polls.command(name="proxy")
 async def Discord_polls_proxy(Context, *, Arguments):
 	"""Manage votes by proxy.\n
 	 \n
 	!polls proxy delegate Holder [Member]\n
-	!polls proxy list Member\n
+	!polls proxy info Member | all\n
 	!polls proxy revoke [all]
 	Parameters
 	----------
@@ -948,8 +969,6 @@ async def Discord_polls_proxy(Context, *, Arguments):
 
 async def IRC_polls_proxy(Bridge, User, Arguments):
 	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
-	if Is_user_op:
-		print("ben oui mais")
 	await Polls_proxy(Bridge, User, Is_user_op, Arguments)
 
 async def Polls_info(Bridge, Poll_ID=None, Author=None):
