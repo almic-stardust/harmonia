@@ -25,7 +25,7 @@ def Chan_page(Server_ID: str, Chan_ID: str):
 @Display_history.get("/api/messages")
 def API_messages(Server_ID: str, Chan_ID: str, Before: str|None = None):
 	Messages = DB_manager.History_messages_to_display(History_table, Server_ID, Chan_ID, Before)
-	Next_cursor = Messages[-1]["date_creation"] if Messages else None
+	Next_cursor = Messages[-1]["creation_date"] if Messages else None
 	Messages.reverse()
 	return {
 		"Messages": Messages,

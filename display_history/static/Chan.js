@@ -284,15 +284,15 @@ async function Load_messages(Initial=false){
 	const Fragment = document.createDocumentFragment();
 
 	// Determine UTaM (Unix Time at Midnight) of the first and last messages of this batch
-	const UTaM_top_batch = Unix_time_at_midnight(DB_to_local_time(Data.Messages[0].date_creation));
+	const UTaM_top_batch = Unix_time_at_midnight(DB_to_local_time(Data.Messages[0].creation_date));
 	// We reuse Date_bottom_batch. No need for a Date_top_batch variable since it wouldn’t be reused
-	const Date_bottom_batch = DB_to_local_time(Data.Messages.at(-1).date_creation);
+	const Date_bottom_batch = DB_to_local_time(Data.Messages.at(-1).creation_date);
 	const UTaM_bottom_batch = Unix_time_at_midnight(Date_bottom_batch);
 	let UTaM_previous_message = UTaM_top_batch;
 
 	Data.Messages.forEach(Message => {
 		// Insert the date separators when needed, inside the current batch
-		const Date_current_message = DB_to_local_time(Message.date_creation);
+		const Date_current_message = DB_to_local_time(Message.creation_date);
 		const UTaM_current_message = Unix_time_at_midnight(Date_current_message);
 		if (UTaM_current_message !== UTaM_previous_message)
 			Fragment.appendChild(Create_date_separator(Date_current_message));

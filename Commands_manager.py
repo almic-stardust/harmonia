@@ -48,7 +48,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 			"vote":			(Polls_vote,				True,			True),
 			"info":			(Polls_info,				True,			False),
 			"list":			(Polls_list,				True,			False),
-			"proxy":		(Polls_proxy,				True,			True),
+			"proxy":		(IRC_polls_proxy,			True,			True),
 	}}
 
 	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
@@ -650,11 +650,11 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 			Output += f"Error: poll #{Poll_ID}: already closed.\n"
 			continue
 		# Moderators can also close polls
-		if not (User == Infos_poll["Author"] or Is_moderator):
+		if User == Infos_poll["Author"] or Is_moderator:
+			DB_manager.Polls_close(Polls_table, Poll_ID)
+			Output += f"{User} closed poll #{Poll_ID} ({Infos_poll['Question']})\n"
+		else:
 			Output += f"Error: poll #{Poll_ID}: only the author or a moderator can close a poll.\n"
-			continue
-		DB_manager.Polls_close(Polls_table, Poll_ID)
-		Output += f"{User} closed poll #{Poll_ID} ({Infos_poll['Question']})\n"
 	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 
@@ -796,14 +796,13 @@ async def Discord_polls_vote(Context, *, Arguments):
 	if Bridge:
 		await Polls_create(Bridge, Context.author.display_name, Arguments, Context)
 
-async def Polls_proxy_delegate(Bridge, User, Context, Proxy_holder, Proxy_giver):
-
+async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 	global Proxies
 	Users_table = Config["users"]["db_table"]
 	Polls_table = Config["polls"]["db_table"]
 	Change_of_holder = False
-	# No self-proxy
-	if User == Proxy_holder:
+	# No self-proxy (“not Proxy_giver” in case User is a moderator)
+	if User == Proxy_holder and not Proxy_giver:
 		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
 		return
 
@@ -834,6 +833,12 @@ async def Polls_proxy_delegate(Bridge, User, Context, Proxy_holder, Proxy_giver)
 		await Gears.Send_DM(User, Context, f"{Proxy_holder} don’t have voting rights.")
 		return
 
+	if Proxy_giver:
+		if Is_moderator:
+			User = Proxy_giver
+		else:
+			await Gears.Send(Bridge, "Only moderators can delegate the proxy of someone else")
+			return
 	Now = datetime.datetime.now(datetime.timezone.utc)
 	for Old_holder in Proxies:
 		if User in Proxies[Old_holder]:
@@ -894,7 +899,7 @@ async def Polls_proxy_delegate(Bridge, User, Context, Proxy_holder, Proxy_giver)
 	del Proxies[User]
 	await Gears.Send(Bridge, Output)
 
-async def Polls_proxy(Bridge, User, Arguments, Context=None):
+async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 
 	IRC_instance = IRC_manager.GCI()
 	# If the command was sent on Discord, relay it on IRC
@@ -923,7 +928,7 @@ async def Polls_proxy(Bridge, User, Arguments, Context=None):
 		Proxy_giver = None
 		if len(Parts) == 3:
 			Proxy_giver = Parts[2]
-		await Polls_proxy_delegate(Bridge, User, Context, Proxy_holder, Proxy_giver)
+		await Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver)
 
 @polls.command(name="proxy")
 async def Discord_polls_proxy(Context, *, Arguments):
@@ -936,9 +941,16 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	----------
 	Arguments : str"""
 
+	Is_moderator = Context.author.guild_permissions.manage_messages
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Polls_proxy(Bridge, User, Arguments, Context)
+		await Polls_proxy(Bridge, User, Is_moderator, Arguments, Context)
+
+async def IRC_polls_proxy(Bridge, User, Arguments):
+	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
+	if Is_user_op:
+		print("ben oui mais")
+	await Polls_proxy(Bridge, User, Is_user_op, Arguments)
 
 async def Polls_info(Bridge, Poll_ID=None, Author=None):
 
