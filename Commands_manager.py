@@ -797,6 +797,7 @@ async def Discord_polls_vote(Context, *, Arguments):
 		await Polls_create(Bridge, Context.author.display_name, Arguments, Context)
 
 async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
+
 	global Proxies
 	Users_table = Config["users"]["db_table"]
 	Polls_table = Config["polls"]["db_table"]
@@ -837,7 +838,7 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		if Is_moderator:
 			User = Proxy_giver
 		else:
-			await Gears.Send(Bridge, "Only moderators can delegate the proxy of someone else")
+			await Gears.Send(Bridge, "Only moderators can delegate the proxy of someone else.")
 			return
 	Now = datetime.datetime.now(datetime.timezone.utc)
 	for Old_holder in Proxies:
@@ -851,8 +852,8 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 			Proxy_duration = Now - Proxies[Old_holder][User]
 			if Proxy_duration < datetime.timedelta(hours=12):
 				# A member can only have one proxy holder
-				del Proxies[Old_holder][User]
 				Change_of_holder = True
+				del Proxies[Old_holder][User]
 	# To be able to do checks on Proxies[Proxy_holder]
 	if Proxy_holder not in Proxies:
 		Proxies[Proxy_holder] = {}
@@ -873,14 +874,14 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		return
 	# When User holds proxies, but Proxy_holder can’t receive any of them
 	if len(Proxies[Proxy_holder]) == 3:
-		Output += f" (who now hold 3 proxies), however {User} held proxies ["
+		Output += f" (who now hold 3 proxies), however {User} held proxies that can’t be subdelegated ("
 		Output += ", ".join(Proxy for Proxy in Proxies[User])
-		Output += f"] that can’t be subdelegated."
+		Output += f")."
 		del Proxies[User]
 		await Gears.Send(Bridge, Output)
 		return
 	# When User holds proxies, and Proxy_holder can receive at least some of them
-	Output += f", and the following proxies were subdelegated ["
+	Output += f", and the following proxies were subdelegated ("
 	Subdelegated = []
 	for Proxy in Proxies[User]:
 		if len(Proxies[Proxy_holder]) < 3:
@@ -889,27 +890,29 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 	Output += ", ".join(Subdelegated)
 	# If the limit was reached before all proxies were subdelegated
 	if len(Proxies[User]) > len(Subdelegated):
-		Output += "] while the following ones couldn’t ["
+		Output += ") while the following ones couldn’t ("
 		Not_subdelegated = []
 		for Proxy in Proxies[User]:
 			if Proxy not in Subdelegated:
 				Not_subdelegated.append(Proxy)
 		Output += ", ".join(Not_subdelegated)
-	Output += "]."
+	Output += ")."
 	del Proxies[User]
 	await Gears.Send(Bridge, Output)
 
 async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 
+	global Proxies
+	Output = ""
 	IRC_instance = IRC_manager.GCI()
 	# If the command was sent on Discord, relay it on IRC
 	# No usage of Output_IRC for this function, because user related errors are sent privately
 	if Context:
 		if IRC_instance:
 			await IRC_instance.Relay_Discord_message(
-					Bridge["irc_chan"], User, f"!polls proxy {Proxy_holder}"
+					Bridge["irc_chan"], User, f"!polls proxy {Arguments}"
 			)
-	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [all]"""
+	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"""
 	if not Arguments:
 		await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
 		return
@@ -931,12 +934,12 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
 			return
 		Member = Parts[1]
-		Output = ""
 		if Member == "all":
 			if len(Proxies) > 0:
 				for Proxy_holder in Proxies:
-					Output += f"{Proxy_holder} = "
+					Output += f"{Proxy_holder} ← "
 					Output += ", ".join(Proxy for Proxy in Proxies[Proxy_holder])
+					Output += "\n"
 			else:
 				Output += f"No one has delegated a proxy."
 		elif Member in Proxies:
@@ -944,6 +947,35 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			Output += ", ".join(Proxy for Proxy in Proxies[Member])
 		else:
 			Output += f"{Member} doesn’t hold any proxies."
+		await Gears.Send(Bridge, Output)
+
+	elif Action == "revoke":
+		Member_revoking = None
+		# Handle “!proxy revoke”
+		if len(Parts) == 1:
+			Member_revoking = User
+		# Handle “!proxy revoke Member|all”
+		if len(Parts) == 2:
+			if Is_moderator:
+				if Parts[1] == "all":
+					Proxies = {}
+					Output += f"All proxies have been revoked."
+				else:
+					Member_revoking = Parts[1]
+			else:
+				Output += "Only moderators can revoke proxies for other than themselves."
+		if Member_revoking:
+			Handler_revoked = None
+			for Proxy_holder in Proxies:
+				if Member_revoking in Proxies[Proxy_holder]:
+					Handler_revoked = Proxy_holder
+			if Handler_revoked:
+				del Proxies[Handler_revoked][Member_revoking]
+				if len(Proxies[Proxy_holder]) == 0:
+					del Proxies[Proxy_holder]
+				Output += f"{Member_revoking} no longer delegate their proxy to {Handler_revoked}."
+			else:
+				Output += f"{Member_revoking} didn’t delegate their proxy to anyone."
 		await Gears.Send(Bridge, Output)
 
 	# Action isn’t delegate, info or revoke
@@ -957,7 +989,7 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	 \n
 	!polls proxy delegate Holder [Member]\n
 	!polls proxy info Member | all\n
-	!polls proxy revoke [all]
+	!polls proxy revoke [Member | all]
 	Parameters
 	----------
 	Arguments : str"""
@@ -965,7 +997,7 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	Is_moderator = Context.author.guild_permissions.manage_messages
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Polls_proxy(Bridge, User, Is_moderator, Arguments, Context)
+		await Polls_proxy(Bridge, Context.author.display_name, Is_moderator, Arguments, Context)
 
 async def IRC_polls_proxy(Bridge, User, Arguments):
 	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
