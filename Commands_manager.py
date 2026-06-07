@@ -1101,6 +1101,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			Output_IRC = f"<\x02{Author}\x02> !polls info {Poll_ID}\n"
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls info\n"
+
 	if Poll_ID:
 		try:
 			Poll_ID = int(Poll_ID)
@@ -1141,41 +1142,53 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 		if Choice_ID in Votes_for_each_choice:
 			Votes_for_each_choice[Choice_ID].append(Voter)
 			Number_of_voters += 1
-	Output += f"Poll {Poll_ID} created {Creation_date} by {Infos_poll['Author']} ({Status}) : "
+	Output += f"Poll {Poll_ID} ({Status}) created {Creation_date} by {Infos_poll['Author']} : "
 	Output += f"{Infos_poll['Question']}\n"
-	if Number_of_voters > 0:
-		Output_for_voters = ""
-		Choices_without_votes = []
-		for Choice_ID, Choice_text in Choices.items():
-			Choice_voters = Votes_for_each_choice[Choice_ID]
-			Choice_count = len(Choice_voters)
-			if Choice_count > 0:
-				# Can’t be a division by zero since Number_of_voters > 0
-				Percentage = int((Choice_count / Number_of_voters) * 100)
-				Output_for_voters += f"{Percentage}% #{Choice_ID} {Choice_text} ({Choice_count} = "
-				Output_for_voters += ", ".join(Choice_voters) + ")\n"
-				if Choice_count > Result_count:
-					Result_count = Choice_count
-					Result_text = Choice_text
-			else:
-				Choices_without_votes.append([Choice_ID, Choice_text])
-		if len(Choices_without_votes) > 0:
-			Output += "Choices without votes: ["
-			Index = 0
-			for Choice_ID, Choice_text in Choices_without_votes:
-				Index += 1
-				Output += f"#{Choice_ID} {Choice_text}"
-				if Index < len(Choices_without_votes):
-					Output += "] ["
-				else:
-					Output += "]\n"
-		Output += Output_for_voters
-		Output += f"The result is “{Result_text}”, with {Result_count} vote"
-		if Result_count > 1:
-			Output += "s"
-		Output += f" out of {Number_of_voters}."
-	else:
+	if Number_of_voters == 0:
 		Output += f"No one has voted in this poll yet."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+
+	Choices_with_votes = []
+	Choices_without_votes = []
+	for Choice_ID, Choice_text in Choices.items():
+		Choice_voters = Votes_for_each_choice[Choice_ID]
+		Choice_count = len(Choice_voters)
+		if Choice_count > 0:
+			Choices_with_votes.append([Choice_count, {
+					# Can’t be a division by zero since Number_of_voters > 0
+					"Percentage": int((Choice_count / Number_of_voters) * 100),
+					"ID": Choice_ID,
+					"Text": Choice_text,
+					"Voters": Choice_voters
+			}])
+		else:
+			Choices_without_votes.append([Choice_ID, Choice_text])
+	# Sort the list by the first element of each sublist (= Percentage)
+	Choices_with_votes.sort(key=lambda Choice: Choice[0], reverse=True)
+	# No tie: only one choice voted, or the first choice has more votes than the second choice
+	if len(Choices_with_votes) == 1 or Choices_with_votes[0][0] > Choices_with_votes[1][0]:
+		Output += f"Result: {Choices_with_votes[0][1]['Text']} "
+		Output += f"({Choices_with_votes[0][0]}/{Number_of_voters})"
+	else:
+		Output += f"Result: tie"
+	if len(Choices_without_votes) > 0:
+		Output += " § Choices without votes: ["
+		Index = 0
+		for Choice_ID, Choice_text in Choices_without_votes:
+			Index += 1
+			Output += f"#{Choice_ID} {Choice_text}"
+			if Index < len(Choices_without_votes):
+				Output += "] ["
+			else:
+				Output += "]\n"
+	else:
+		Output += "\n"
+	for Choice_count, Choice in Choices_with_votes:
+		Output += f"#{Choice['ID']} {Choice['Percentage']}% {Choice['Text']} ({Choice_count} = "
+		Output += ", ".join(Choice['Voters']) + ")\n"
+	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 
 @polls.command(name="info")
