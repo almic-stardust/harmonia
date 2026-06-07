@@ -753,6 +753,20 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
 
+	# If a user votes in a poll, it automatically revokes any proxy they may have given
+	Handler_to_revoke = None
+	for Proxy_holder in Proxies:
+		for Proxy_giver in Proxies[Proxy_holder]:
+			if Proxy_giver == User:
+				Handler_to_revoke = Proxy_holder
+	if Handler_to_revoke:
+		del Proxies[Proxy_holder][User]
+		if len(Proxies[Proxy_holder]) == 0:
+			del Proxies[Proxy_holder]
+		await Gears.Send_DM(User, Context,
+			f"Your vote has revoked the proxy delegated to {Proxy_holder}."
+		)
+
 	Recorded_in_DB = False
 	Question = Infos_poll["Question"]
 	Vote_text = Choices[Choice]
@@ -965,17 +979,17 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			else:
 				Output += "Only moderators can revoke proxies for other than themselves."
 		if Member_revoking:
-			Handler_revoked = None
+			Handler_to_revoke = None
 			for Proxy_holder in Proxies:
 				if Member_revoking in Proxies[Proxy_holder]:
-					Handler_revoked = Proxy_holder
-			if Handler_revoked:
-				del Proxies[Handler_revoked][Member_revoking]
+					Handler_to_revoke = Proxy_holder
+			if Handler_to_revoke:
+				del Proxies[Handler_to_revoke][Member_revoking]
 				if len(Proxies[Proxy_holder]) == 0:
 					del Proxies[Proxy_holder]
-				Output += f"{Member_revoking} no longer delegate their proxy to {Handler_revoked}."
+				Output += f"{Member_revoking} no longer delegate a proxy to {Handler_to_revoke}."
 			else:
-				Output += f"{Member_revoking} didn’t delegate their proxy to anyone."
+				Output += f"{Member_revoking} didn’t delegate a proxy to anyone."
 		await Gears.Send(Bridge, Output)
 
 	# Action isn’t delegate, info or revoke
