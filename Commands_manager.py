@@ -763,8 +763,8 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	# If a member votes in a poll, it automatically revokes any proxy they may have given
 	Handler_to_revoke = None
 	for Proxy_holder in Proxies:
-		for Proxy_giver in Proxies[Proxy_holder]:
-			if Proxy_giver == User:
+		for Proxy_given_to_holder in Proxies[Proxy_holder]:
+			if Proxy_given_to_holder == User:
 				Handler_to_revoke = Proxy_holder
 	if Handler_to_revoke:
 		del Proxies[Proxy_holder][User]
