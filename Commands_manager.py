@@ -636,7 +636,7 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 			return
 		Polls_IDs.append(Infos_poll["ID"])
 	else:
-		# To avoid a DB query later, if the lastest poll has been automatically selected
+		# To avoid a DB query in the other case, when the lastest poll is automatically selected
 		Infos_poll = None
 		for Poll_ID in Arguments.split():
 			try:
@@ -650,17 +650,17 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 		if len(Polls_IDs) > 1 or (len(Polls_IDs) == 1 and not Infos_poll):
 			Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 		if not Infos_poll:
-			Output += f"Error: poll #{Poll_ID}: doesn’t exist.\n"
+			Output += f"Error: poll {Poll_ID}: doesn’t exist.\n"
 			continue
 		if not Infos_poll["Active"]:
-			Output += f"Error: poll #{Poll_ID}: already closed.\n"
+			Output += f"Error: poll {Poll_ID}: already closed.\n"
 			continue
 		# Moderators can also close polls
 		if User == Infos_poll["Author"] or Is_moderator:
 			DB_manager.Polls_close(Polls_table, Poll_ID)
-			Output += f"{User} closed poll #{Poll_ID} ({Infos_poll['Question']})\n"
+			Output += f"{User} closed poll {Poll_ID} ({Infos_poll['Question']})\n"
 		else:
-			Output += f"Error: poll #{Poll_ID}: only the author or a moderator can close a poll.\n"
+			Output += f"Error: poll {Poll_ID}: only the author or a moderator can close a poll.\n"
 	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 
@@ -714,7 +714,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		try:
 			Choice = int(Parts[0])
 			Poll_ID = int(Parts[1])
-			# To avoid a DB query later, if the lastest poll has been automatically selected
+			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except ValueError:
 			await Gears.Send(Bridge, f"Error: invalid poll ID or choice number.\n" + Help_usage)
@@ -753,7 +753,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		await Gears.Send(Bridge, "Error: poll not found. See !polls list")
 		return
 	if not Infos_poll["Active"]:
-		await Gears.Send(Bridge, f"Error: poll #{Poll_ID} is closed. See !polls list active")
+		await Gears.Send(Bridge, f"Error: poll {Poll_ID} is closed. See !polls list active")
 		return
 	Choices = Infos_poll["Choices"]
 	if Choice < 1 or Choice > len(Choices):
@@ -783,16 +783,16 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		)
 		if Recorded_in_DB:
 			await Gears.Send_DM(User, Context,
-					f"Poll #{Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
+					f"Poll {Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
 			)
 	else:
-		# {Infos_user["Pseudo"]} instead of {User}, to see in the results if the bot mistakes users
+		# {Infos_user["Pseudo"]} instead of {User}, to see user misidentifications in the results
 		Recorded_in_DB = DB_manager.Polls_vote(
 				Polls_table, Poll_ID, Infos_user["Pseudo"], Choice
 		)
 		if Recorded_in_DB:
 			await Gears.Send_DM(User, Context,
-					f"Poll #{Poll_ID}: Your vote “{Vote_text}” has been registered [{Question}]"
+					f"Poll {Poll_ID}: Your vote “{Vote_text}” has been registered [{Question}]"
 			)
 		# Those who have delegated a proxy vote by default as their proxy holder
 		if User in Proxies:
@@ -803,7 +803,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 				)
 				if Recorded_in_DB:
 					await Gears.Send_DM(User, Context,
-							f"Poll #{Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
+							f"Poll {Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
 					)
 
 @polls.command(name="vote")
@@ -1104,7 +1104,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 	if Poll_ID:
 		try:
 			Poll_ID = int(Poll_ID)
-			# To avoid a DB query later, if the lastest poll has been automatically selected
+			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except (TypeError, ValueError):
 			Output += "Error: invalid poll ID."
@@ -1124,7 +1124,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 	if not Infos_poll:
 		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 	if not Infos_poll:
-		Output += f"Error: poll #{Poll_ID} doesn’t exist."
+		Output += f"Error: poll {Poll_ID} doesn’t exist."
 		Output_IRC += Output
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
