@@ -145,11 +145,12 @@ async def Roll_Dice(Bridge, Dice, Author=None):
 
 @bot.command()
 async def roll(Context, Dice):
-	"""Roll Dice in NdN format.
+	"""Roll Dice in NdN format.\n
+	 \n
+	!roll NdN
 	Parameters
 	----------
-	Dice : str
-		!roll NdN"""
+	Dice : str"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Roll_Dice(Bridge, Dice, Context.author.display_name)
@@ -273,11 +274,12 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 
 @straws.command(name="participate")
 async def Discord_straws_participate(Context, *, Word):
-	"""Put a straw in the bag (and participate in the draw).
+	"""Put a straw in the bag (and participate in the draw).\n
+	 \n
+	!straws participate Word
 	Parameters
 	----------
-	Word : str
-		!straws participate Word"""
+	Word : str"""
 	# A straw is a word, or several that will be concatenated, in both cases up to 30 letters
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
@@ -291,11 +293,12 @@ async def IRC_straws_participate(Bridge, User, Word):
 
 @straws.command(name="contribute")
 async def Discord_straws_contribute(Context, *, Word):
-	"""Put a straw in the bag (without participating in the draw).
+	"""Put a straw in the bag (without participating in the draw).\n
+	 \n
+	!straws contribute Word
 	Parameters
 	----------
-	Word : str
-		!straws contribute Word"""
+	Word : str"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Straws_add(Bridge, Context.author.display_name, "contribute", Word, Context)
@@ -326,11 +329,12 @@ async def Straws_users(Bridge, Users, Author=None):
 
 @straws.command(name="users")
 async def Discord_straws_users(Context, *, Users):
-	"""Set the list of users participating in the draw.
+	"""Set the list of users participating in the draw.\n
+	 \n
+	!straws users User1 [User2] […]
 	Parameters
 	----------
-	Users : str
-		!straws users User1 [User2] […]"""
+	Users : str"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Straws_users(Bridge, Users, Context.author.display_name)
@@ -541,11 +545,12 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 
 @polls.command(name="members")
 async def Discord_polls_members(Context, *, Members=None):
-	"""Display informations about members’ voting rights.
+	"""Display informations about members’ voting rights.\n
+	 \n
+	!straws members [Member1 Member2 …]
 	Parameters
 	----------
-	Members : str
-		(optional) !straws members [Member1 Member2 …]"""
+	Members : str"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		# In the !help for this subcommand, it’s better to display Members instead of List_of_users
@@ -598,11 +603,12 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 
 @polls.command(name="create")
 async def Discord_polls_create(Context, *, Arguments):
-	"""Create a new poll.
+	"""Create a new poll.\n
+	 \n
+	!polls create Subject [§ Choice 1 ; Choice 2 ; …]
 	Parameters
 	----------
-	Arguments : str
-		syntax: !polls create Subject [§ Choice 1 ; Choice 2 ; …]"""
+	Arguments : str"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_create(Bridge, Context.author.display_name, Arguments, True)
@@ -660,11 +666,12 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 
 @polls.command(name="close")
 async def Discord_polls_close(Context, *, Arguments=None):
-	"""Close one or several poll (the latest if no ID is specified).
+	"""Close one or several poll (the latest if no ID is specified).\n
+	 \n
+	!polls close [Poll_ID] [Poll_ID] […]
 	Parameters
 	----------
-	Arguments : int
-		syntax: !polls close [Poll_ID] [Poll_ID] […]"""
+	Arguments : int"""
 	Is_moderator = Context.author.guild_permissions.manage_messages
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
@@ -753,7 +760,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
 
-	# If a user votes in a poll, it automatically revokes any proxy they may have given
+	# If a member votes in a poll, it automatically revokes any proxy they may have given
 	Handler_to_revoke = None
 	for Proxy_holder in Proxies:
 		for Proxy_giver in Proxies[Proxy_holder]:
@@ -801,11 +808,12 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 
 @polls.command(name="vote")
 async def Discord_polls_vote(Context, *, Arguments):
-	"""Vote in a poll.
+	"""Vote in a poll.\n
+	 \n
+	!polls vote <Choice_number> [Poll_ID]
 	Parameters
 	----------
-	Arguments : str
-		syntax: !polls vote <Choice_number> [Poll_ID]"""
+	Arguments : str"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_create(Bridge, Context.author.display_name, Arguments, Context)
@@ -1017,6 +1025,71 @@ async def IRC_polls_proxy(Bridge, User, Arguments):
 	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
 	await Polls_proxy(Bridge, User, Is_user_op, Arguments)
 
+async def Polls_list(Bridge, Arguments=None, Author=None):
+	Polls_table = Config["polls"]["db_table"]
+	Status = None
+	Number = None
+	Output = ""
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if Author:
+		if Arguments:
+			Output_IRC = f"<\x02{Author}\x02> !polls list {Arguments}\n"
+		else:
+			Output_IRC = f"<\x02{Author}\x02> !polls list\n"
+	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
+	if Arguments:
+		Parts = Arguments.split()
+		if len(Parts) > 2:
+			Output = "Error: invalid syntax.\n" + Help_usage
+			Output_IRC += Output
+			await Gears.Send(Bridge, Help_usage, Output_IRC)
+			return
+		if Parts[0] in ("active", "closed"):
+			Status = Parts[0]
+			if len(Parts) == 2:
+				Number = Parts[1]
+		# If the first argument isn’t "active" or "closed", then it should be the number of polls
+		else:
+			Number = Parts[0]
+	if Number:
+		try:
+			Number = int(Number)
+		except (TypeError, ValueError):
+			Output += "Error: invalid poll ID. " + Help_usage
+			Output_IRC += Output
+			await Gears.Send(Bridge, Output, Output_IRC)
+			return
+	# If the number of polls is not specified, display the last 3
+	if not Number:
+		Number = 3
+	if Number > 10:
+		Number = 10
+	Polls = DB_manager.Polls_fetch_list(Polls_table, Number, Status)
+	if not Polls:
+		Output += "Error: no polls in the DB."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	for Infos_poll in Polls:
+		Status = "active" if Infos_poll["Active"] else "closed"
+		Output += f"#{Infos_poll['ID']} ({Status}) {Infos_poll['Question']}\n"
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
+
+@polls.command(name="list")
+async def Discord_polls_list(Context, *, Arguments=None):
+	"""Display a list of polls (10 max | no number given = last 3 polls).\n
+	 \n
+	!polls list [Number]\n
+	!polls list [active/closed] [Number]
+	Parameters
+	----------
+	Arguments : str"""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_list(Bridge, Arguments, Context.author.display_name)
+
 async def Polls_info(Bridge, Poll_ID=None, Author=None):
 
 	Polls_table = Config["polls"]["db_table"]
@@ -1107,74 +1180,12 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 
 @polls.command(name="info")
 async def Discord_polls_info(Context, Poll_ID=None):
-	"""Display informations about a poll.
+	"""Display informations about a poll.\n
+	 \n
+	!polls info [Poll_ID]
 	Parameters
 	----------
-	Poll_ID : int
-		!polls info [Poll_ID]"""
+	Poll_ID : int"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_info(Bridge, Poll_ID, Context.author.display_name)
-
-async def Polls_list(Bridge, Arguments=None, Author=None):
-	Polls_table = Config["polls"]["db_table"]
-	Status = None
-	Number = None
-	Output = ""
-	Output_IRC = ""
-	# If the command was sent on Discord, relay it on IRC
-	if Author:
-		if Arguments:
-			Output_IRC = f"<\x02{Author}\x02> !polls list {Arguments}\n"
-		else:
-			Output_IRC = f"<\x02{Author}\x02> !polls list\n"
-	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"""
-	if Arguments:
-		Parts = Arguments.split()
-		if len(Parts) > 2:
-			Output = "Error: invalid syntax.\n" + Help_usage
-			Output_IRC += Output
-			await Gears.Send(Bridge, Help_usage, Output_IRC)
-			return
-		if Parts[0] in ("active", "closed"):
-			Status = Parts[0]
-			if len(Parts) == 2:
-				Number = Parts[1]
-		# If the first argument isn’t "active" or "closed", then it should be the number of polls
-		else:
-			Number = Parts[0]
-	if Number:
-		try:
-			Number = int(Number)
-		except (TypeError, ValueError):
-			Output += "Error: invalid poll ID. " + Help_usage
-			Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
-			return
-	# If the number of polls is not specified, display the last 3
-	if not Number:
-		Number = 3
-	if Number > 10:
-		Number = 10
-	Polls = DB_manager.Polls_fetch_list(Polls_table, Number, Status)
-	if not Polls:
-		Output += "Error: no polls in the DB."
-		Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
-		return
-	for Infos_poll in Polls:
-		Status = "active" if Infos_poll["Active"] else "closed"
-		Output += f"#{Infos_poll['ID']} ({Status}) {Infos_poll['Question']}\n"
-	Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
-
-@polls.command(name="list")
-async def Discord_polls_list(Context, *, Arguments=None):
-	"""Display a list of polls (10 max | no number given = last 3 polls).
-	Parameters
-	----------
-	Arguments : str
-		syntax: !polls list [Number] | !polls list [active/closed] [Number]"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_list(Bridge, Arguments, Context.author.display_name)
