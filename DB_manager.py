@@ -412,7 +412,7 @@ def Users_check_presence(Table, Infos_user):
 						Mail_login = Mail_login.split("+")[0]
 						# Sometimes used as an alternative recipient delimiter
 						Mail_login = Mail_login.split("-")[0]
-						# Other_identifiers[user ID] (Result[1] = user ID)
+						# Result[1] = user ID so this line means “Other_identifiers[user ID]”
 						Other_identifiers[Result[1]] = {
 								"Mail":					Result[2],
 								"First_name":			Result[3],

@@ -428,7 +428,6 @@ async def polls(Context):
 		# If no subcommand is invoked: “!polls” = “!polls list”
 		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 		if Bridge:
-			# Polls_list(Bridge, Arguments=None, Author=None):
 			await Polls_list(Bridge, None, Context.author.display_name)
 
 async def IRC_polls(Bridge):
@@ -588,9 +587,9 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 			await Gears.Send(Bridge, Output, Output_IRC)
 			return
 	else:
-		Choices = ["Yes", "No", "Abs"]
+		Choices = ["Yes", "No"]
 	Poll_ID = DB_manager.Polls_create(Polls_table, User, Question, Choices)
-	Output += f"Poll {Poll_ID}: {Question}\n["
+	Output += f"Poll {Poll_ID}: {Question}\n[#0 Blank] ["
 	for Index, Choice in enumerate(Choices):
 		Output += f"#{Index + 1} {Choice}"
 		if Index + 1 < len(Choices):
@@ -756,7 +755,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		await Gears.Send(Bridge, f"Error: poll {Poll_ID} is closed. See !polls list active")
 		return
 	Choices = Infos_poll["Choices"]
-	if Choice < 1 or Choice > len(Choices):
+	if Choice < 0 or Choice > len(Choices):
 		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
 
@@ -776,7 +775,10 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 
 	Recorded_in_DB = False
 	Question = Infos_poll["Question"]
-	Vote_text = Choices[Choice]
+	if Choice == 0:
+		Vote_text = "Blank"
+	else:
+		Vote_text = Choices[Choice]
 	if Proxy_giver:
 		Recorded_in_DB = DB_manager.Polls_vote(
 				Polls_table, Poll_ID, Proxy_giver, Choice, User
@@ -1132,10 +1134,11 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 
 	Creation_date = datetime.datetime.strftime(Infos_poll["Creation_date"], "%d/%m/%Y")
 	Choices = Infos_poll["Choices"]
+	# Blank votes will be displayed after the votes
+	Choices[0] = "Blank"
 	Status = "active" if Infos_poll["Active"] else "closed"
 	Number_of_voters = 0
 	Votes_for_each_choice = {}
-	Result_count = 0
 	for Choice_ID in Choices:
 		Votes_for_each_choice[Choice_ID] = []
 	for Voter, Choice_ID in Infos_poll["Votes"].items():
@@ -1149,7 +1152,6 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 		Output_IRC += Output
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
-
 	Choices_with_votes = []
 	Choices_without_votes = []
 	for Choice_ID, Choice_text in Choices.items():
@@ -1167,12 +1169,32 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			Choices_without_votes.append([Choice_ID, Choice_text])
 	# Sort the list by the first element of each sublist (= Percentage)
 	Choices_with_votes.sort(key=lambda Choice: Choice[0], reverse=True)
+
+	Result = "tied"
+	First_choice_count = Choices_with_votes[0][0]
+	Second_choice_count = Choices_with_votes[1][0]
 	# No tie: only one choice voted, or the first choice has more votes than the second choice
-	if len(Choices_with_votes) == 1 or Choices_with_votes[0][0] > Choices_with_votes[1][0]:
+	if len(Choices_with_votes) == 1 or First_choice_count > Second_choice_count:
+		if Choices_with_votes[0][1]["ID"] == 0:
+			Result = "blanks"
+		else:
+			Result = "decided"
+	# A choice tied only with blanks → this choice won the vote
+	else:
+		Choices_with_same_votes = 0
+		for Choice_count, Choice in Choices_with_votes:
+			# A not blank choice, with the same number of votes as the first choice
+			if Choice["ID"] > 0 and Choice_count == First_choice_count:
+				Choices_with_same_votes += 1
+		if Choices_with_same_votes == 1:
+			Result = "decided"
+	if Result == "decided":
 		Output += f"Result: {Choices_with_votes[0][1]['Text']} "
 		Output += f"({Choices_with_votes[0][0]}/{Number_of_voters})"
-	else:
+	elif Result == "tied":
 		Output += f"Result: tie"
+	elif Result == "blanks":
+		Output += "Result: Blanks are in the majority"
 	if len(Choices_without_votes) > 0:
 		Output += " § Choices without votes: ["
 		Index = 0
@@ -1182,12 +1204,11 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			if Index < len(Choices_without_votes):
 				Output += "] ["
 			else:
-				Output += "]\n"
-	else:
-		Output += "\n"
+				Output += "]"
+	Output += "\n"
 	for Choice_count, Choice in Choices_with_votes:
 		Output += f"#{Choice['ID']} {Choice['Percentage']}% {Choice['Text']} ({Choice_count} = "
-		Output += ", ".join(Choice['Voters']) + ")\n"
+		Output += ", ".join(Choice["Voters"]) + ")\n"
 	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 

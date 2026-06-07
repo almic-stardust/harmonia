@@ -189,7 +189,7 @@ async def Reconcile_downloaded_files():
 		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
 
 def Split_message(Message):
-	# Discord limits message size = split the message into parts of 2000 characters or less
+	# Discord limits message size → split the message into parts of 2000 characters or less
 	Splitted_message = []
 	Current_part = ""
 	# If the response contains several lines, it must be split into several strings
