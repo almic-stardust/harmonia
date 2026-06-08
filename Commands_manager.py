@@ -703,7 +703,9 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	# If the user casts a different vote for one of their proxies giver
 	if len(Parts) == 3:
 		Claimed_proxy_giver = Parts[2]
-		if Claimed_proxy_giver in Proxies[User]:
+		# For Claimed_proxy_giver to have delegated a proxy to User, User must have received at
+		# least one proxy in the first space
+		if User in Proxies and Claimed_proxy_giver in Proxies[User]:
 			Proxy_giver = Claimed_proxy_giver
 		else:
 			await Gears.Send(Bridge,
@@ -818,7 +820,7 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Arguments : str"""
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
-		await Polls_create(Bridge, Context.author.display_name, Arguments, Context)
+		await Polls_vote(Bridge, Context.author.display_name, Arguments, Context)
 
 async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 
