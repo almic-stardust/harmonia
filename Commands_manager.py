@@ -713,6 +713,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 			)
 	if len(Parts) == 2 or (len(Parts) == 3 and Proxy_giver):
 		try:
+			# Consistency over intuition: the first argument is always Choice
 			Choice = int(Parts[0])
 			Poll_ID = int(Parts[1])
 			# To avoid a DB query in the other case, when the lastest poll is automatically selected
@@ -864,7 +865,7 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		if Is_moderator:
 			User = Proxy_giver
 		else:
-			await Gears.Send(Bridge, "Only moderators can delegate the proxy of someone else.")
+			await Gears.Send(Bridge, "Error: only moderators can delegate the proxy of someone else.")
 			return
 	Now = datetime.datetime.now(datetime.timezone.utc)
 	for Old_holder in Proxies:
@@ -952,6 +953,7 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 		Proxy_holder = Parts[1]
 		Proxy_giver = None
 		if len(Parts) == 3:
+			# Consistency over intuition: the first argument is always Proxy_holder
 			Proxy_giver = Parts[2]
 		await Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver)
 
@@ -982,26 +984,33 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			Member_revoking = User
 		# Handle “!proxy revoke Member|all”
 		if len(Parts) == 2:
-			if Is_moderator:
-				if Parts[1] == "all":
-					Proxies = {}
-					Output += f"All proxies have been revoked."
-				else:
-					Member_revoking = Parts[1]
+			Member_revoking = Parts[1]
+		Handler_to_revoke = None
+		for Proxy_holder in Proxies:
+			if Member_revoking in Proxies[Proxy_holder]:
+				Handler_to_revoke = Proxy_holder
+		if not Handler_to_revoke:
+			Output += f"{Member_revoking} didn’t delegate a proxy to anyone."
+			await Gears.Send(Bridge, Output)
+			return
+		Proceed_with_revocation = False
+		if (Member_revoking == User or Handler_to_revoke == User):
+			Proceed_with_revocation = True
+		else:
+			if not Is_moderator:
+				Output += "Error: only moderators can revoke the proxy of someone else.")
+				await Gears.Send(Bridge, Output)
+				return
+			if Member_revoking == "all":
+				Proxies = {}
+				Output += f"All proxies have been revoked."
 			else:
-				Output += "Only moderators can revoke proxies for other than themselves."
-		if Member_revoking:
-			Handler_to_revoke = None
-			for Proxy_holder in Proxies:
-				if Member_revoking in Proxies[Proxy_holder]:
-					Handler_to_revoke = Proxy_holder
-			if Handler_to_revoke:
-				del Proxies[Handler_to_revoke][Member_revoking]
-				if len(Proxies[Proxy_holder]) == 0:
-					del Proxies[Proxy_holder]
-				Output += f"{Member_revoking} no longer delegate a proxy to {Handler_to_revoke}."
-			else:
-				Output += f"{Member_revoking} didn’t delegate a proxy to anyone."
+				Proceed_with_revocation = True
+		if Proceed_with_revocation:
+			del Proxies[Handler_to_revoke][Member_revoking]
+			if len(Proxies[Proxy_holder]) == 0:
+				del Proxies[Proxy_holder]
+			Output += f"{Member_revoking} no longer delegate a proxy to {Handler_to_revoke}."
 		await Gears.Send(Bridge, Output)
 
 	# Action isn’t delegate, info or revoke
