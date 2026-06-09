@@ -47,6 +47,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 			"close":		(IRC_polls_close,			True,			True),
 			"delete":		(IRC_polls_delete,			True,			True),
 			"vote":			(Polls_vote,				True,			True),
+			"unvote":		(Polls_unvote,				True,			True),
 			"info":			(Polls_info,				True,			False),
 			"list":			(Polls_list,				True,			False),
 			"proxy":		(IRC_polls_proxy,			True,			True),
@@ -626,7 +627,7 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls close\n"
 
-	# If no poll ID was given, automatically select the lastest
+	# Select latest poll if none specified
 	if not Arguments:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
@@ -657,8 +658,10 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 			continue
 		# Moderators can also close polls
 		if User == Infos_poll["Author"] or Is_moderator:
-			DB_manager.Polls_close(Polls_table, Poll_ID)
-			Output += f"{User} closed poll {Poll_ID} ({Infos_poll['Question']})\n"
+			Recorded_in_DB = False
+			Recorded_in_DB = DB_manager.Polls_close(Polls_table, Poll_ID)
+			if Recorded_in_DB:
+				Output += f"{User} closed poll {Poll_ID} ({Infos_poll['Question']})\n"
 		else:
 			Output += f"Error: poll {Poll_ID}: only the author or a moderator can close a poll.\n"
 	Output_IRC += Output
@@ -694,7 +697,7 @@ async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls delete\n"
 
-	# If no poll ID was given, automatically select the lastest
+	# Select latest poll if none specified
 	if not Arguments:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
@@ -722,8 +725,10 @@ async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False
 			continue
 		# Moderators can also delete polls
 		if User == Infos_poll["Author"] or Is_moderator:
-			DB_manager.Polls_delete(Polls_table, Poll_ID)
-			Output += f"{User} deleted poll {Poll_ID} ({Infos_poll['Question']})\n"
+			Recorded_in_DB = False
+			Recorded_in_DB = DB_manager.Polls_delete(Polls_table, Poll_ID)
+			if Recorded_in_DB:
+				Output += f"{User} deleted poll {Poll_ID} ({Infos_poll['Question']})\n"
 		else:
 			Output += f"Error: poll {Poll_ID}: only the author or a moderator can delete a poll.\n"
 	Output_IRC += Output
@@ -787,7 +792,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		except ValueError:
 			await Gears.Send(Bridge, f"Error: invalid poll ID or choice number.\n" + Help_usage)
 			return
-	# If no poll ID was given, automatically select the lastest
+	# Select latest poll if none specified
 	elif len(Parts) == 1:
 		try:
 			Choice = int(Parts[0])
@@ -888,6 +893,61 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
 	if Bridge:
 		await Polls_vote(Bridge, Context.author.display_name, Arguments, Context)
+
+async def Polls_unvote(Bridge, User, Poll_ID=None, Context=None):
+	Polls_table = Config["polls"]["db_table"]
+	IRC_instance = IRC_manager.GCI()
+	# If the command was sent on Discord, relay it on IRC
+	# No usage of Output_IRC for this function, because user related errors are sent privately
+	if Context:
+		if IRC_instance:
+			if Poll_ID:
+				Output = f"<\x02{User}\x02> !polls unvote {Poll_ID}\n"
+			else:
+				Output = f"<\x02{User}\x02> !polls unvote\n"
+			await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User, Output)
+	if Poll_ID:
+		try:
+			Poll_ID = int(Poll_ID)
+			# To avoid a DB query in the other case, when the lastest poll is automatically selected
+			Infos_poll = None
+		except (TypeError, ValueError):
+			await Gears.Send(Bridge, "Error: invalid poll ID.\nUsage: !polls unvote [Poll_ID]")
+			return
+	# Select latest poll if none specified
+	else:
+		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
+		if not Infos_poll:
+			await Gears.Send(Bridge, "Error: no polls in the DB.")
+			return
+		Poll_ID = Infos_poll["ID"]
+	# Avoid a DB query, in case the lastest poll was automatically selected
+	if not Infos_poll:
+		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
+	if not Infos_poll:
+		await Gears.Send(Bridge, "Error: poll not found. See !polls list")
+		return
+	Votes = Infos_poll["Votes"]
+	if User not in Votes:
+		await Gears.Send_DM(User, Context, "Error: you didn’t vote in this poll.")
+		return
+	del Votes[User]
+	Recorded_in_DB = False
+	Recorded_in_DB = DB_manager.Polls_unvote(Polls_table, Poll_ID, Votes)
+	if Recorded_in_DB:
+		await Gears.Send(Bridge, f"{User}’s vote has been removed from poll {Poll_ID}.")
+
+@polls.command(name="unvote")
+async def Discord_polls_unvote(Context, *, Arguments):
+	"""When a member wants to withdraw their participation in a poll.\n
+	 \n
+	!polls unvote <Choice_number> [Poll_ID]
+	Parameters
+	----------
+	Arguments : str"""
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_unvote(Bridge, Context.author.display_name, Arguments, Context)
 
 async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 
@@ -1189,11 +1249,11 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except (TypeError, ValueError):
-			Output += "Error: invalid poll ID."
+			Output += "Error: invalid poll ID.\nUsage: !polls info [Poll_ID]"
 			Output_IRC += Output
 			await Gears.Send(Bridge, Output, Output_IRC)
 			return
-	# If no poll ID was given, automatically select the lastest
+	# Select latest poll if none specified
 	else:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:

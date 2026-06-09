@@ -759,3 +759,21 @@ def Polls_vote(Table, Poll_ID, Pseudo, Choice_index, Proxy_holder=None):
 	finally:
 		Cursor.close()
 		Connection.close()
+
+def Polls_unvote(Table, Poll_ID, Votes):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Query = f"UPDATE {Table} SET votes = %s WHERE id = {Poll_ID}"
+		Values = [json.dumps(Votes)]
+		Cursor.execute(Query, Values)
+		Connection.commit()
+		return True
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		return False
+	finally:
+		Cursor.close()
+		Connection.close()
