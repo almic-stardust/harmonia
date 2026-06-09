@@ -45,6 +45,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 			"members":		(Polls_members,				True,			False),
 			"create":		(Polls_create,				True,			True),
 			"close":		(IRC_polls_close,			True,			True),
+			"delete":		(IRC_polls_delete,			True,			True),
 			"vote":			(Polls_vote,				True,			True),
 			"info":			(Polls_info,				True,			False),
 			"list":			(Polls_list,				True,			False),
@@ -680,6 +681,71 @@ async def IRC_polls_close(Bridge, User, Arguments=None):
 	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
 	await Polls_close(Bridge, User, Is_user_op, Arguments)
 
+async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False):
+
+	Polls_table = Config["polls"]["db_table"]
+	Polls_IDs = []
+	Output = ""
+	Output_IRC = ""
+	# If the command was sent on Discord, relay it on IRC
+	if From_Discord:
+		if Arguments:
+			Output_IRC = f"<\x02{User}\x02> !polls delete {Arguments}\n"
+		else:
+			Output_IRC = f"<\x02{User}\x02> !polls delete\n"
+
+	# If no poll ID was given, automatically select the lastest
+	if not Arguments:
+		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
+		if not Infos_poll:
+			Output += "Error: no polls in the DB."
+			Output_IRC += Output
+			await Gears.Send(Bridge, Output, Output_IRC)
+			return
+		Polls_IDs.append(Infos_poll["ID"])
+	else:
+		# To avoid a DB query in the other case, when the lastest poll is automatically selected
+		Infos_poll = None
+		for Poll_ID in Arguments.split():
+			try:
+				Polls_IDs.append(int(Poll_ID))
+			except (TypeError, ValueError):
+				Output += f"Error: {Poll_ID} is an invalid poll ID.\n"
+				continue
+
+	for Poll_ID in Polls_IDs:
+		# Avoid a DB query, in case the lastest poll was automatically selected
+		if len(Polls_IDs) > 1 or (len(Polls_IDs) == 1 and not Infos_poll):
+			Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
+		if not Infos_poll:
+			Output += f"Error: poll {Poll_ID}: doesn’t exist or was already deleted.\n"
+			continue
+		# Moderators can also delete polls
+		if User == Infos_poll["Author"] or Is_moderator:
+			DB_manager.Polls_delete(Polls_table, Poll_ID)
+			Output += f"{User} deleted poll {Poll_ID} ({Infos_poll['Question']})\n"
+		else:
+			Output += f"Error: poll {Poll_ID}: only the author or a moderator can delete a poll.\n"
+	Output_IRC += Output
+	await Gears.Send(Bridge, Output, Output_IRC)
+
+@polls.command(name="delete")
+async def Discord_polls_delete(Context, *, Arguments=None):
+	"""Delete one or several poll (the latest if no ID is specified).\n
+	 \n
+	!polls delete [Poll_ID] [Poll_ID] […]
+	Parameters
+	----------
+	Arguments : int"""
+	Is_moderator = Context.author.guild_permissions.manage_messages
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
+	if Bridge:
+		await Polls_delete(Bridge, Context.author.display_name, Is_moderator, Arguments, True)
+
+async def IRC_polls_delete(Bridge, User, Arguments=None):
+	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
+	await Polls_delete(Bridge, User, Is_user_op, Arguments)
+
 async def Polls_vote(Bridge, User, Arguments, Context=None):
 
 	global Proxies
@@ -865,7 +931,9 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		if Is_moderator:
 			User = Proxy_giver
 		else:
-			await Gears.Send(Bridge, "Error: only moderators can delegate the proxy of someone else.")
+			await Gears.Send(Bridge,
+					"Error: only moderators can delegate the proxy of someone else."
+			)
 			return
 	Now = datetime.datetime.now(datetime.timezone.utc)
 	for Old_holder in Proxies:
@@ -990,16 +1058,16 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			if Member_revoking in Proxies[Proxy_holder]:
 				Handler_to_revoke = Proxy_holder
 		if not Handler_to_revoke:
-			Output += f"{Member_revoking} didn’t delegate a proxy to anyone."
-			await Gears.Send(Bridge, Output)
+			await Gears.Send(Bridge, "{Member_revoking} didn’t delegate a proxy to anyone.")
 			return
 		Proceed_with_revocation = False
 		if (Member_revoking == User or Handler_to_revoke == User):
 			Proceed_with_revocation = True
 		else:
 			if not Is_moderator:
-				Output += "Error: only moderators can revoke the proxy of someone else.")
-				await Gears.Send(Bridge, Output)
+				await Gears.Send(Bridge,
+						"Error: only moderators can revoke the proxy of someone else."
+				)
 				return
 			if Member_revoking == "all":
 				Proxies = {}

@@ -637,6 +637,28 @@ def Polls_close(Table, Poll_ID):
 		Cursor.close()
 		Connection.close()
 
+def Polls_delete(Table, Poll_ID):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"""
+				DELETE FROM {Table}
+				WHERE id = %s""",
+				(Poll_ID,)
+		)
+		if Cursor.rowcount == 0:
+			return False
+		Connection.commit()
+		return True
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
 def Polls_fetch(Table, Poll_ID):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
