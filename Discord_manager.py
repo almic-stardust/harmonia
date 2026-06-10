@@ -189,26 +189,26 @@ async def Reconcile_downloaded_files():
 		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
 
 def Split_message(Message):
-	# Discord limits message size → split the message into parts of 2000 characters or less
-	Splitted_message = []
-	Current_part = ""
-	# If the response contains several lines, it must be split into several strings
-	Lines = Message.split("\n")
-	for Line in Lines:
-		# The +1 is for the newline character
-		if len(Current_part) + len(Line) + 1 > 2000:
-			Splitted_message.append(Current_part)
-			# Start a new part
-			Current_part = Line
-		else:
-			if Current_part:
-				Current_part += "\n" + Line
-			else:
-				Current_part = Line
-	# Add the remaining part (the string Message = X parts of 2000c + a remaining part)
-	if Current_part:
-		Splitted_message.append(Current_part)
-	return Splitted_message
+	# Discord limits message size → split the message into fragments of 2000 characters or less
+	Limit = 2000
+	Remainder = Message
+	Fragments = []
+	while len(Remainder) > Limit:
+		# Prefer splitting at a newline to preserve formatting
+		Where_to_split = Remainder.rfind("\n", 0, Limit)
+		# Otherwise → split at the last word boundary
+		if Where_to_split == -1:
+			Where_to_split = Remainder.rfind(" ", 0, Limit)
+		# If no suitable boundary exists → hard split
+		if Where_to_split == -1:
+			Where_to_split = Limit
+		Fragments.append(Remainder[:Where_to_split])
+		# Remove leading whitespace created by the split
+		Remainder = Remainder[Where_to_split:].lstrip()
+	# Add the final fragment (always ≤ Limit, since Message = X fragments of 2000c + a final one)
+	if Remainder:
+		Fragments.append(Remainder)
+	return Fragments
 
 def Is_command(Message):
 	return bool(re.match(r"^![A-Za-z]+", Message.content))

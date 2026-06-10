@@ -322,13 +322,15 @@ class Connection_handler(pydle.Client):
 		async with self.Send_lock:
 			for Line in Message.splitlines():
 				# No need to send a blank line
-				if Line.strip():
+				if not Line.strip():
+					continue
+				for Fragment in Split_into_IRC_messages(Line):
 					Elapsed = time.monotonic() - self.Last_send
 					# Libera allows one message to be sent every two seconds
 					# https://libera.chat/guides/faq#flood-exemptions-for-bots
 					if Elapsed < 2:
 						await asyncio.sleep(2 - Elapsed)
-					await self.message(Chan, Line)
+					await self.message(Chan, Fragment)
 					self.Last_send = time.monotonic()
 
 	async def Relay_Discord_message(self, Chan, Author, Message):

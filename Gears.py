@@ -2,6 +2,7 @@
 
 import asyncio
 
+import Discord_manager
 import IRC_manager
 
 async def Wait_for_events(*Events):
@@ -22,7 +23,8 @@ async def Get_chans(Bridge):
 async def Send(Bridge, Message, Message_IRC=None):
 	"""Send a message both on Discord and IRC"""
 	Discord_chan, IRC_chan = await Get_chans(Bridge)
-	await Discord_chan.send(Message)
+	for Fragment in Discord_manager.Split_message(Message):
+		await Discord_chan.send(Fragment)
 	if IRC_chan:
 		IRC_instance = IRC_manager.GCI()
 		if IRC_instance:
@@ -33,10 +35,11 @@ async def Send(Bridge, Message, Message_IRC=None):
 				await IRC_instance.Safe_message(IRC_chan, Message)
 
 async def Send_DM(User, Context, Message, Message_IRC=None):
-	"""Send a DM both on Discord and IRC"""
+	"""Send a DM, either on Discord or IRC"""
 	# The user wrote to the bot via Discord, reply via DM
 	if Context:
-		await Context.author.send(Message)
+		for Fragment in Discord_manager.Split_message(Message):
+			await Discord_chan.send(Fragment)
 	# The user wrote to the bot via IRC, reply via query
 	else:
 		IRC_instance = IRC_manager.GCI()
