@@ -123,25 +123,31 @@ async def Roll_Dice(Bridge, Dice, Author=None):
 	try:
 		# Accept NDN as well as NdN
 		Dice = Dice.lower()
-		Number_rolls, Limit = map(int, Dice.split("d"))
-		if Number_rolls > 500:
-			await Gears.Send(Bridge, "You really need to throw more than 500 dice at once?")
-			return
-		if Limit > 1000:
-			await Gears.Send(Bridge, "The dice are limited to 1000 faces.")
+		Number_rolls, Faces = map(int, Dice.split("d"))
+		if Faces > 100:
+			await Gears.Send(Bridge, "Error: dice faces are limited to 100.")
 			return
 		Rolls = []
 		for _ in range(Number_rolls):
-			Roll = random.randint(1, Limit)
-			Rolls.append(str(Roll))
-		Rolls = ", ".join(Rolls)
+			Roll = random.randint(1, Faces)
+			Rolls.append(Roll)
+		Output = ", ".join(map(str, Rolls))
+		if Number_rolls > 10:
+			Min = min(Rolls)
+			Max = max(Rolls)
+			Total = sum(Rolls)
+			Average = Total / Number_rolls
+			Summary = f"Min {Min} | Average {Average:.1f} | Max {Max} | Total {Total}"
+			if Number_rolls <= 100:
+				Output += "\n" + Summary
+			else:
+				Output = Summary
 	except Exception as Error:
 		print(f"[Commands] Roll_Dice(): {Error}")
 		Output = "Format has to be NdN."
 		Output_IRC += Output
 		await Gears.Send(Bridge, Output, Output_IRC)
 		return
-	Output = Rolls
 	Output_IRC += Output
 	await Gears.Send(Bridge, Output, Output_IRC)
 
