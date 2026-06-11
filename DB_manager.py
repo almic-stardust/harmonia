@@ -74,6 +74,10 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		if Result:
 			print("[DB] Warning: this message was already stored in the DB.")
 			return
+		Content = {Date.isoformat(sep=" "): {
+				"content": Content
+		}}
+		Content = json.dumps(Content)
 		if len(Attachments) > 0:
 			Attachments = json.dumps(Attachments)
 		# If the list is empty, save NULL in the attachments field
@@ -124,9 +128,13 @@ def History_fetch_message(Table, Message_ID):
 		Result = Cursor.fetchone()
 		DB_entry = []
 		if Result:
+			# Transform the tuple into a list, to be able to edit Result
 			DB_entry = list(Result)
 			# Decode only if the returned object is a string: depending on the driver version,
-			# MariaDB may return JSON columns as already-decoded # Python objects
+			# MariaDB may return JSON columns as already-decoded Python objects
+			# Content
+			if isinstance(DB_entry[6], str):
+				DB_entry[6] = json.loads(DB_entry[6])
 			# Attachments
 			if isinstance(DB_entry[7], str):
 				DB_entry[7] = json.loads(DB_entry[7])
@@ -199,8 +207,11 @@ def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filename
 			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 			return
 		if Keep:
-			Old_content = Result[1]
-			Edited_content = f"{Old_content}\n\n<|--- Edited {Date} ---|>\n\n{New_content}"
+			Content_history = json.loads(Result[1])
+			Content_history[Date] = {
+					"content": New_content
+			}
+			Edited_content = json.dumps(Content_history)
 			if Updated_filenames:
 				Updated_filenames = json.dumps(Updated_filenames)
 				Cursor.execute(f"""

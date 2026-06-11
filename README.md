@@ -49,7 +49,8 @@ Create the virtual environment:
 
 #### Database
 
-Create a base according to your Config.yaml, then create these tables:
+Create a base according to your Config.yaml, then create these tables. The creation\_date field
+prevents each request from requiring a JSON extraction.
 
 	CREATE TABLE project_history (
 	    creation_date       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
