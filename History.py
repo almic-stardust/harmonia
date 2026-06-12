@@ -31,13 +31,13 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 	)
 
 def Message_edited(Table, Keep, Message):
-	DB_entry = DB_manager.History_fetch_message(Table, Message.id)
-	if not DB_entry:
+	Infos_message = DB_manager.History_fetch_message(Table, Message.id)
+	if not Infos_message:
 		print(f"[History] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 		return
 	Content = Message.content
 	Updated_filenames = []
-	Old_attachments = DB_entry[7] if DB_entry[7] else []
+	Old_attachments = Infos_message["Attachments"]
 	if Old_attachments:
 		New_attachments = []
 		Updated_filenames = []
@@ -62,7 +62,7 @@ def Message_edited(Table, Keep, Message):
 				Updated_filenames.append(Attachment)
 			else:
 				Removed_attachments.append(Attachment)
-		if Removed_attachments:
+		if len(Removed_attachments) > 0:
 			Updated_filenames += Attachments_manager.Delete(Table, Keep, Removed_attachments)
 			Content = f"The file {Removed_attachments[0]} was deleted.\n\n{Content}"
 	DB_manager.History_edition(Table, Keep,
@@ -70,12 +70,12 @@ def Message_edited(Table, Keep, Message):
 	)
 
 def Message_deleted(Table, Keep, Message_ID):
-	DB_entry = DB_manager.History_fetch_message(Table, Message_ID)
-	if not DB_entry:
+	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
+	if not Infos_message:
 		print(f"[History] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
 		return
 	Updated_filenames = []
-	Attachments_filenames = DB_entry[7] if DB_entry[7] else []
+	Attachments_filenames = Infos_message["Attachments"]
 	if Attachments_filenames:
 		Updated_filenames = Attachments_manager.Delete(Table, Keep, Attachments_filenames)
 	DB_manager.History_deletion(Table, Keep,

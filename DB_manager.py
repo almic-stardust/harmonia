@@ -120,32 +120,53 @@ def History_fetch_message(Table, Message_ID):
 					reply_to,
 					user,
 					content,
+					edited,
 					attachments,
 					reactions,
+					relayed,
+					expired,
 					deletion_date
 				FROM {Table} WHERE message_id = %s""",
 				(Message_ID,))
 		Result = Cursor.fetchone()
-		DB_entry = []
+		Infos_message = None
 		if Result:
-			# Transform the tuple into a list, to be able to edit Result
-			DB_entry = list(Result)
-			# Decode only if the returned object is a string: depending on the driver version,
-			# MariaDB may return JSON columns as already-decoded Python objects
-			# Content
-			if isinstance(DB_entry[6], str):
-				DB_entry[6] = json.loads(DB_entry[6])
-			# Attachments
-			if isinstance(DB_entry[7], str):
-				DB_entry[7] = json.loads(DB_entry[7])
-			elif DB_entry[7] is None:
-				DB_entry[7] = []
-			# Reactions
-			if isinstance(DB_entry[8], str):
-				DB_entry[8] = json.loads(DB_entry[8])
-			elif DB_entry[8] is None:
-				DB_entry[8] = {}
-		return DB_entry
+			if Result[6]:
+				Content = Result[6]
+				# Decode only if the returned object is a string: depending on the driver version,
+				# MariaDB may return JSON columns as already-decoded Python objects
+				if isinstance(Content, str):
+					Content = json.loads(Content)
+			else:
+				Content = {}
+			if Result[8]:
+				Attachments = Result[7]
+				if isinstance(Attachments, str):
+					Attachments = json.loads(Attachments)
+			else:
+				Attachments = []
+			if Result[9]:
+				Reactions = Result[8]
+				if isinstance(Reactions, str):
+					Reactions = json.loads(Reactions)
+			else:
+				Reactions = {}
+			Infos_message = {
+					"Creation_date":	Result[0],
+					"Server_ID":		Result[1],
+					"Chan_ID":			Result[2],
+					"Message_ID":		Result[3],
+					"Reply_to":			Result[4] if Result[4] else None,
+					"User":				Result[5],
+					"Content":			Content,
+					"Edited":			bool(Result[7]),
+					"Attachments":		Attachments,
+					"Reactions":		Reactions,
+					"Relayed":			bool(Result[10]),
+					"Expired":			bool(Result[11]),
+					"Deletion_date":	Result[12] if Result[12] else None,
+			}
+		return Infos_message
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
