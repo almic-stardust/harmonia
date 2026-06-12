@@ -105,6 +105,98 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		Cursor.close()
 		Connection.close()
 
+def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filenames):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		# Check if the message is in the DB
+		Cursor.execute(f"""
+				SELECT user, content FROM {Table}
+				WHERE message_id = %s""",
+				(Message_ID,)
+		)
+		Result = Cursor.fetchone()
+		if not Result:
+			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
+			return
+		if Keep:
+			Content_history = json.loads(Result[1])
+			Content_history[Date] = {
+					"content": New_content,
+			}
+			Edited_content = json.dumps(Content_history)
+			if Updated_filenames:
+				Updated_filenames = json.dumps(Updated_filenames)
+				Cursor.execute(f"""
+						UPDATE {Table} SET content = %s, attachments = %s, edited = TRUE
+						WHERE message_id = %s""",
+						(Edited_content, Updated_filenames, Message_ID)
+				)
+			else:
+				Cursor.execute(f"""
+						UPDATE {Table} SET content = %s, edited = TRUE
+						WHERE message_id = %s""",
+						(Edited_content, Message_ID)
+				)
+		else:
+			Cursor.execute(f"""
+					UPDATE {Table} SET content = %s
+					WHERE message_id = %s""",
+					(New_content, Message_ID)
+			)
+		Connection.commit()
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		# Check if the message is in the DB
+		Cursor.execute(f"""
+				SELECT user FROM {Table}
+				WHERE message_id = %s""",
+				(Message_ID,)
+		)
+		Result = Cursor.fetchone()
+		if not Result:
+			print(f"[DB] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
+			return
+		if Keep:
+			if Updated_filenames:
+				Updated_filenames = json.dumps(Updated_filenames)
+				Cursor.execute(f"""
+						UPDATE {Table} SET attachments = %s, deletion_date = %s
+						WHERE message_id = %s""",
+						(Updated_filenames, Date, Message_ID)
+				)
+			else:
+				Cursor.execute(f"""
+						UPDATE {Table} SET deletion_date = %s
+						WHERE message_id = %s""",
+						(Date, Message_ID)
+				)
+		else:
+			Cursor.execute(f"""
+					DELETE FROM {Table} WHERE message_id = %s""",
+					(Message_ID,)
+			)
+		Connection.commit()
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
 def History_fetch_message(Table, Message_ID):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
@@ -211,98 +303,6 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 		Cursor.close()
 		Connection.close()
 
-def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filenames):
-	Connection = Connect_DB()
-	Cursor = Connection.cursor()
-	try:
-		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
-		# Check if the message is in the DB
-		Cursor.execute(f"""
-				SELECT user, content FROM {Table}
-				WHERE message_id = %s""",
-				(Message_ID,)
-		)
-		Result = Cursor.fetchone()
-		if not Result:
-			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
-			return
-		if Keep:
-			Content_history = json.loads(Result[1])
-			Content_history[Date] = {
-					"content": New_content
-			}
-			Edited_content = json.dumps(Content_history)
-			if Updated_filenames:
-				Updated_filenames = json.dumps(Updated_filenames)
-				Cursor.execute(f"""
-						UPDATE {Table} SET content = %s, attachments = %s, edited = TRUE
-						WHERE message_id = %s""",
-						(Edited_content, Updated_filenames, Message_ID)
-				)
-			else:
-				Cursor.execute(f"""
-						UPDATE {Table} SET content = %s, edited = TRUE
-						WHERE message_id = %s""",
-						(Edited_content, Message_ID)
-				)
-		else:
-			Cursor.execute(f"""
-					UPDATE {Table} SET content = %s
-					WHERE message_id = %s""",
-					(New_content, Message_ID)
-			)
-		Connection.commit()
-	except MySQLdb.Error as Error:
-		print(f"[DB] Error: {Error}")
-		sys.exit(1)
-	finally:
-		Cursor.close()
-		Connection.close()
-
-def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
-	Connection = Connect_DB()
-	Cursor = Connection.cursor()
-	try:
-		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
-		# Check if the message is in the DB
-		Cursor.execute(f"""
-				SELECT user FROM {Table}
-				WHERE message_id = %s""",
-				(Message_ID,)
-		)
-		Result = Cursor.fetchone()
-		if not Result:
-			print(f"[DB] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
-			return
-		if Keep:
-			if Updated_filenames:
-				Updated_filenames = json.dumps(Updated_filenames)
-				Cursor.execute(f"""
-						UPDATE {Table} SET attachments = %s, deletion_date = %s
-						WHERE message_id = %s""",
-						(Updated_filenames, Date, Message_ID)
-				)
-			else:
-				Cursor.execute(f"""
-						UPDATE {Table} SET deletion_date = %s
-						WHERE message_id = %s""",
-						(Date, Message_ID)
-				)
-		else:
-			Cursor.execute(f"""
-					DELETE FROM {Table} WHERE message_id = %s""",
-					(Message_ID,)
-			)
-		Connection.commit()
-	except MySQLdb.Error as Error:
-		print(f"[DB] Error: {Error}")
-		sys.exit(1)
-	finally:
-		Cursor.close()
-		Connection.close()
-
 def Get_chans_for_server(Table, Server_ID):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
@@ -403,7 +403,7 @@ def Users_check_presence(Table, Infos_user):
 			"wiki_pseudo": "",
 			"irc_pseudo": "",
 			"forum_pseudo": "",
-			"discord_pseudo": ""
+			"discord_pseudo": "",
 	}
 	if "Pseudo" in Infos_user.keys():
 		Fields["pseudonym"] = Infos_user["Pseudo"]
@@ -456,7 +456,7 @@ def Users_check_presence(Table, Infos_user):
 										"Wiki":			Result[6],
 										"IRC":			Result[7],
 										"Forum":		Result[8],
-										"Discord":		Result[9]
+										"Discord":		Result[9],
 								}
 						}
 
@@ -719,7 +719,7 @@ def Polls_fetch(Table, Poll_ID):
 				"Choices": Choices,
 				"Votes": json.loads(Result[5]) if Result[5] else {},
 				"Proxies": json.loads(Result[6]) if Result[6] else {},
-				"Active": bool(Result[7])
+				"Active": bool(Result[7]),
 		}
 		return Infos_poll
 	except MySQLdb.Error as Error:
