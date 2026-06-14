@@ -58,7 +58,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Cursor.close()
 		Connection.close()
 
-def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_message_ID, Discord_username, Content, Attachments, Relayed):
+def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_message_ID, Discord_username, Text, Attachments, Relayed):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -74,8 +74,10 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		if Result:
 			print("[DB] Warning: this message was already stored in the DB.")
 			return
-		Content = {Date.isoformat(sep=" "): {
-				"content": Content
+		Centiseconds = round(Date.microsecond / 10000)
+		Content_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
+		Content = {Content_date: {
+				"text": Text
 		}}
 		Content = json.dumps(Content)
 		if len(Attachments) > 0:
@@ -105,7 +107,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		Cursor.close()
 		Connection.close()
 
-def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filenames):
+def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -122,9 +124,11 @@ def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filename
 			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 			return
 		if Keep:
+			Centiseconds = round(Date.microsecond / 10000)
+			Content_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
 			Content_history = json.loads(Result[1])
-			Content_history[Date] = {
-					"content": New_content,
+			Content_history[Content_date] = {
+					"text": New_text,
 			}
 			Edited_content = json.dumps(Content_history)
 			if Updated_filenames:
@@ -144,7 +148,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_content, Updated_filename
 			Cursor.execute(f"""
 					UPDATE {Table} SET content = %s
 					WHERE message_id = %s""",
-					(New_content, Message_ID)
+					(New_text, Message_ID)
 			)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -229,6 +233,10 @@ def History_fetch_message(Table, Message_ID):
 				# MariaDB may return JSON columns as already-decoded Python objects
 				if isinstance(Content, str):
 					Content = json.loads(Content)
+				Content = {
+					datetime.datetime.fromisoformat(Date): Value
+					for Date, Value in Content.items()
+				}
 			else:
 				Content = {}
 			if Result[8]:

@@ -12,7 +12,14 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 	# Don’t record the content of the bot’s log chan
 	#if Config.get("log_chan") == str(Chan):
 	#	return
-
+	# An UTC timestamp, used for the creation_date field, and for the index of the dictionary in the
+	# content field.
+	# The creation_field is redundant, but necessary for efficient date comparisons in SQL, avoiding
+	# JSON extraction. MariaDB DATETIME doesn’t support timezone offsets, so the time is in UTC
+	# without timezone.
+	# The creation_field cannot be automatically created by MariaDB, because the bot might be
+	# retrieving old messages.
+	Date = Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None)
 	# Set 0 if it’s a DM
 	Server_ID = Message.guild.id if Message.guild else 0
 	Replied_message_ID = 0
@@ -23,9 +30,7 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 	else:
 		Attachments_filenames = []
 	DB_manager.History_addition(Table,
-			# Time in UTC without timezone (MariaDB DATETIME doesn’t support timezone offsets)
-			Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
-			Server_ID, Chan_ID, Message.id,
+			Date, Server_ID, Chan_ID, Message.id,
 			Replied_message_ID,
 			Author_name, Text, Attachments_filenames, Relayed
 	)
@@ -35,7 +40,8 @@ def Message_edited(Table, Keep, Message):
 	if not Infos_message:
 		print(f"[History] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 		return
-	Content = Message.content
+	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+	New_text = Message.content
 	Updated_filenames = []
 	Old_attachments = Infos_message["Attachments"]
 	if Old_attachments:
@@ -64,12 +70,11 @@ def Message_edited(Table, Keep, Message):
 				Removed_attachments.append(Attachment)
 		if len(Removed_attachments) > 0:
 			Updated_filenames += Attachments_manager.Delete(Table, Keep, Removed_attachments)
-			Content = f"The file {Removed_attachments[0]} was deleted.\n\n{Content}"
-	DB_manager.History_edition(Table, Keep,
-			Message.id, datetime.datetime.now().isoformat(), Content, Updated_filenames
-	)
+			New_text = f"The file {Removed_attachments[0]} was deleted.\n\n{New_text}"
+	DB_manager.History_edition(Table, Keep, Message.id, Date, New_text, Updated_filenames)
 
 def Message_deleted(Table, Keep, Message_ID):
+	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
 	if not Infos_message:
 		print(f"[History] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
@@ -78,6 +83,4 @@ def Message_deleted(Table, Keep, Message_ID):
 	Attachments_filenames = Infos_message["Attachments"]
 	if Attachments_filenames:
 		Updated_filenames = Attachments_manager.Delete(Table, Keep, Attachments_filenames)
-	DB_manager.History_deletion(Table, Keep,
-			Message_ID, datetime.datetime.now().isoformat(), Updated_filenames
-	)
+	DB_manager.History_deletion(Table, Keep, Message_ID, Date, Updated_filenames)

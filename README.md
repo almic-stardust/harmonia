@@ -50,10 +50,10 @@ Create the virtual environment:
 #### Database
 
 Create a base according to your Config.yaml, then create these tables. The creation\_date field
-prevents each request from requiring a JSON extraction.
+prevents the SQL requests of some functions from requiring a JSON extraction.
 
 	CREATE TABLE project_history (
-	    creation_date       TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+	    creation_date       TIMESTAMP NOT NULL,
 	    server_id           BIGINT NOT NULL,
 	    chan_id             BIGINT NOT NULL,
 	    message_id          BIGINT NOT NULL PRIMARY KEY,
@@ -65,7 +65,7 @@ prevents each request from requiring a JSON extraction.
 	    reactions           JSON NULL,
 	    relayed             BOOLEAN NOT NULL DEFAULT FALSE,
 	    expired             BOOLEAN NOT NULL DEFAULT FALSE,
-	    deletion_date       TIMESTAMP NULL,
+	    deletion_date       TIMESTAMP NULL
 	);
 
 	CREATE TABLE project_users (
