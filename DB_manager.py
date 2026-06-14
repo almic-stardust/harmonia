@@ -76,10 +76,10 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 			return
 		Centiseconds = round(Date.microsecond / 10000)
 		Content_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
-		Content = {Content_date: {
+		Content_history = {Content_date: {
 				"text": Text
 		}}
-		Content = json.dumps(Content)
+		Content_history = json.dumps(Content_history)
 		if len(Attachments) > 0:
 			Attachments = json.dumps(Attachments)
 		# If the list is empty, save NULL in the attachments field
@@ -96,7 +96,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 					Date,
 					Server_ID, Chan_ID, Message_ID,
 					Replied_message_ID,
-					Discord_username, Content, Attachments, Relayed
+					Discord_username, Content_history, Attachments, Relayed
 				)
 		)
 		Connection.commit()
@@ -228,17 +228,17 @@ def History_fetch_message(Table, Message_ID):
 		Infos_message = None
 		if Result:
 			if Result[6]:
-				Content = Result[6]
+				Content_history = Result[6]
 				# Decode only if the returned object is a string: depending on the driver version,
 				# MariaDB may return JSON columns as already-decoded Python objects
-				if isinstance(Content, str):
-					Content = json.loads(Content)
-				Content = {
-					datetime.datetime.fromisoformat(Date): Value
-					for Date, Value in Content.items()
+				if isinstance(Content_history, str):
+					Content_history = json.loads(Content_history)
+				Content_history = {
+					datetime.datetime.fromisoformat(Date): text
+					for Date, Text in Content_history.items()
 				}
 			else:
-				Content = {}
+				Content_history = {}
 			if Result[8]:
 				Attachments = Result[7]
 				if isinstance(Attachments, str):
@@ -258,7 +258,7 @@ def History_fetch_message(Table, Message_ID):
 					"Message_ID":		Result[3],
 					"Reply_to":			Result[4] if Result[4] else None,
 					"User":				Result[5],
-					"Content":			Content,
+					"Content":			Content_history,
 					"Edited":			bool(Result[7]),
 					"Attachments":		Attachments,
 					"Reactions":		Reactions,
