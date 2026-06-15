@@ -241,7 +241,7 @@ function Create_message_element(Message, Date_object){
 			<span class="user">${Escape_HTML(Message.user)}</span>
 		</div>
 		<div class="content_block">
-			<span class="content">${Normalize_content(Message.content || "")}</span>
+			<span class="content">${Normalize_content(Message.content_history || "")}</span>
 			${HTML_attachments}
 		</div>
 	`;

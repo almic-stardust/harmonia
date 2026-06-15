@@ -59,7 +59,7 @@ prevents the SQL requests of some functions from requiring a JSON extraction.
 	    message_id          BIGINT NOT NULL PRIMARY KEY,
 	    reply_to            BIGINT NULL,
 	    user                VARCHAR(255) NOT NULL,
-	    content             TEXT NOT NULL,
+	    content_history     TEXT NOT NULL,
 	    attachments         JSON NULL,
 	    reactions           JSON NULL,
 	    relayed             BOOLEAN NOT NULL DEFAULT FALSE,

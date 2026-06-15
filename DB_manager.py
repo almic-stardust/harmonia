@@ -90,7 +90,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 					creation_date,
 					server_id, chan_id, message_id,
 					reply_to,
-					user, content, attachments, relayed)
+					user, content_history, attachments, relayed)
 				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
 				(
 					Date,
@@ -115,7 +115,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames):
 			raise ValueError("[DB] Error: invalid table name.")
 		# Check if the message is in the DB
 		Cursor.execute(f"""
-				SELECT user, content FROM {Table}
+				SELECT user, content_history FROM {Table}
 				WHERE message_id = %s""",
 				(Message_ID,)
 		)
@@ -123,7 +123,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames):
 		if not Result:
 			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 			return
-		Query = f"UPDATE {Table} SET content = %s"
+		Query = f"UPDATE {Table} SET content_history = %s"
 		Content_history = json.loads(Result[1])
 		if Keep:
 			Centiseconds = round(Date.microsecond / 10000)
@@ -165,24 +165,15 @@ def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 			print(f"[DB] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
 			return
 		if Keep:
+			Query = f"UPDATE {Table} SET deletion_date = %s"
+			Values = [Date]
 			if Updated_filenames:
-				Updated_filenames = json.dumps(Updated_filenames)
-				Cursor.execute(f"""
-						UPDATE {Table} SET attachments = %s, deletion_date = %s
-						WHERE message_id = %s""",
-						(Updated_filenames, Date, Message_ID)
-				)
-			else:
-				Cursor.execute(f"""
-						UPDATE {Table} SET deletion_date = %s
-						WHERE message_id = %s""",
-						(Date, Message_ID)
-				)
+				Query += ", attachments = %s"
+				Values.append(json.dumps(Updated_filenames))
+			Query += f"WHERE message_id = {Message_ID}"
 		else:
-			Cursor.execute(f"""
-					DELETE FROM {Table} WHERE message_id = %s""",
-					(Message_ID,)
-			)
+			Query = f"DELETE FROM {Table} WHERE message_id = {Message_ID}"
+		Cursor.execute(Query, Values)
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -205,7 +196,7 @@ def History_fetch_message(Table, Message_ID):
 					message_id,
 					reply_to,
 					user,
-					content,
+					content_history,
 					attachments,
 					reactions,
 					relayed,
@@ -247,7 +238,7 @@ def History_fetch_message(Table, Message_ID):
 					"Message_ID":		Result[3],
 					"Reply_to":			Result[4] if Result[4] else None,
 					"User":				Result[5],
-					"Content":			Content_history,
+					"Content_history":	Content_history,
 					"Attachments":		Attachments,
 					"Reactions":		Reactions,
 					"Relayed":			bool(Result[9]),
@@ -273,7 +264,7 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 				message_id,
 				reply_to,
 				user,
-				content,
+				content_history,
 				attachments,
 				reactions,
 				creation_date,

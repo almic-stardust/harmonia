@@ -13,8 +13,8 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 	#if Config.get("log_chan") == str(Chan):
 	#	return
 	# An UTC timestamp, used for the creation_date field, and for the index of the dictionary in the
-	# content field.
-	# The creation_field is redundant, but necessary for efficient date comparisons in SQL, avoiding
+	# content_history field.
+	# The creation_date is redundant, but useful for efficient date comparisons in SQL, avoiding
 	# JSON extraction. MariaDB DATETIME doesn’t support timezone offsets, so the time is in UTC
 	# without timezone.
 	# The creation_field cannot be automatically created by MariaDB, because the bot might be
