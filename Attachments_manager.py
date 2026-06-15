@@ -137,6 +137,9 @@ def Delete(Table, Keep, Attachments):
 	if not os.path.exists(Storage_folder):
 		print(f"[Attachments] Warning: The folder for the attachments isn’t accessible.")
 		return
+	# Deleting a single attachment → create a list with that single item
+	if not isinstance(Attachments, list):
+		Attachments = [Attachments]
 	for Filename in Attachments:
 		# File already deleted: don’t tag it twice, instead keep it as it is
 		if Keep and "_DELETED" in Filename:

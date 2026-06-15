@@ -77,7 +77,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		Centiseconds = round(Date.microsecond / 10000)
 		Formatted_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
 		Content_history = {Formatted_date: {
-				"text": Text
+				"Text": Text
 		}}
 		Content_history = json.dumps(Content_history)
 		if len(Attachments) > 0:
@@ -107,7 +107,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		Cursor.close()
 		Connection.close()
 
-def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames):
+def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames, Deleted):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -132,8 +132,12 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames):
 			# If Keep is False, there’ll only ever be one entry in the dictionary
 			Date = next(iter(Content_history))
 		Content_history[Date] = {
-				"text": New_text,
+				"Text": New_text
 		}
+		if len(Deleted) > 0:
+			Content_history[Date] = {
+					"Deleted_attachments": Deleted
+			}
 		Values = [json.dumps(Content_history)]
 		if Updated_filenames:
 			Query += ", attachments = %s"

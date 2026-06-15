@@ -47,8 +47,7 @@ def Message_edited(Table, Keep, Message):
 	if Old_attachments:
 		New_attachments = []
 		Updated_filenames = []
-		# Must be a list because Attachments_manager.Delete() is also used by Message_deleted()
-		Removed_attachments = []
+		Deleted = []
 		for Attachment in Message.attachments:
 			New_attachments.append(Attachment.filename)
 		for Attachment in Old_attachments:
@@ -67,11 +66,10 @@ def Message_edited(Table, Keep, Message):
 			if Normalized_old_name in New_attachments:
 				Updated_filenames.append(Attachment)
 			else:
-				Removed_attachments.append(Attachment)
-		if len(Removed_attachments) > 0:
-			Updated_filenames += Attachments_manager.Delete(Table, Keep, Removed_attachments)
-			New_text = f"The file {Removed_attachments[0]} was deleted.\n\n{New_text}"
-	DB_manager.History_edition(Table, Keep, Message.id, Date, New_text, Updated_filenames)
+				New_filename = Attachments_manager.Delete(Table, Keep, Attachment)
+				Updated_filenames.append(New_filename)
+				Deleted.append(New_filename)
+	DB_manager.History_edition(Table, Keep, Message.id, Date, New_text, Updated_filenames, Deleted)
 
 def Message_deleted(Table, Keep, Message_ID):
 	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
