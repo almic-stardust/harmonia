@@ -75,8 +75,8 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 			print("[DB] Warning: this message was already stored in the DB.")
 			return
 		Centiseconds = round(Date.microsecond / 10000)
-		Content_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
-		Content_history = {Content_date: {
+		Formatted_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
+		Content_history = {Formatted_date: {
 				"text": Text
 		}}
 		Content_history = json.dumps(Content_history)
@@ -123,33 +123,23 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames):
 		if not Result:
 			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 			return
+		Query = f"UPDATE {Table} SET content = %s"
+		Content_history = json.loads(Result[1])
 		if Keep:
 			Centiseconds = round(Date.microsecond / 10000)
-			Content_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
-			Content_history = json.loads(Result[1])
-			Content_history[Content_date] = {
-					"text": New_text,
-			}
-			Edited_content = json.dumps(Content_history)
-			if Updated_filenames:
-				Updated_filenames = json.dumps(Updated_filenames)
-				Cursor.execute(f"""
-						UPDATE {Table} SET content = %s, attachments = %s, edited = TRUE
-						WHERE message_id = %s""",
-						(Edited_content, Updated_filenames, Message_ID)
-				)
-			else:
-				Cursor.execute(f"""
-						UPDATE {Table} SET content = %s, edited = TRUE
-						WHERE message_id = %s""",
-						(Edited_content, Message_ID)
-				)
+			Date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
 		else:
-			Cursor.execute(f"""
-					UPDATE {Table} SET content = %s
-					WHERE message_id = %s""",
-					(New_text, Message_ID)
-			)
+			# If Keep is False, there’ll only ever be one entry in the dictionary
+			Date = next(iter(Content_history))
+		Content_history[Date] = {
+				"text": New_text,
+		}
+		Values = [json.dumps(Content_history)]
+		if Updated_filenames:
+			Query += ", attachments = %s"
+			Values.append(json.dumps(Updated_filenames))
+		Query += f"WHERE message_id = {Message_ID}"
+		Cursor.execute(Query, Values)
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -216,7 +206,6 @@ def History_fetch_message(Table, Message_ID):
 					reply_to,
 					user,
 					content,
-					edited,
 					attachments,
 					reactions,
 					relayed,
@@ -234,18 +223,18 @@ def History_fetch_message(Table, Message_ID):
 				if isinstance(Content_history, str):
 					Content_history = json.loads(Content_history)
 				Content_history = {
-					datetime.datetime.fromisoformat(Date): text
+					datetime.datetime.fromisoformat(Date): Text
 					for Date, Text in Content_history.items()
 				}
 			else:
 				Content_history = {}
-			if Result[8]:
+			if Result[7]:
 				Attachments = Result[7]
 				if isinstance(Attachments, str):
 					Attachments = json.loads(Attachments)
 			else:
 				Attachments = []
-			if Result[9]:
+			if Result[8]:
 				Reactions = Result[8]
 				if isinstance(Reactions, str):
 					Reactions = json.loads(Reactions)
@@ -259,12 +248,11 @@ def History_fetch_message(Table, Message_ID):
 					"Reply_to":			Result[4] if Result[4] else None,
 					"User":				Result[5],
 					"Content":			Content_history,
-					"Edited":			bool(Result[7]),
 					"Attachments":		Attachments,
 					"Reactions":		Reactions,
-					"Relayed":			bool(Result[10]),
-					"Expired":			bool(Result[11]),
-					"Deletion_date":	Result[12] if Result[12] else None,
+					"Relayed":			bool(Result[9]),
+					"Expired":			bool(Result[10]),
+					"Deletion_date":	Result[11] if Result[11] else None,
 			}
 		return Infos_message
 	except MySQLdb.Error as Error:
@@ -286,7 +274,6 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 				reply_to,
 				user,
 				content,
-				edited,
 				attachments,
 				reactions,
 				creation_date,
