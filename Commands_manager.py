@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# “Commands” is susceptible to be a keyword used elsewhere → this file is named Commands_manager.py
 
 import inspect
 import random

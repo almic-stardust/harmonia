@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# “Discord” is susceptible to be a keyword used elsewhere → this file is named Discord_manager.py
 
 import discord
 from discord.ext import commands
@@ -17,7 +18,6 @@ import DB_manager
 import Gears
 import History
 import IRC_manager
-import Attachments_manager
 
 intents = discord.Intents.default()
 # Allows to receive member join/leave events
@@ -144,11 +144,11 @@ async def Delete_expired_messages():
 
 # Handling files whose names have been changed by Discord: check once a day if there are files in
 # the folder other_sources, and if so, overwrite the Discord version with the original file.
-#	The files whose names aren’t modified by Discord will be managed in Attachments_manager.py, but
-#	others will remain in the folder other_sources. Original filenames can’t be known from
-#	Attachments_manager.py, it’s called by on_message() via History.Message_added(). And handling
-#	files with modified names here in Discord_manager.py, either inside on_message() or at the end
-#	of Relay_IRC_message(), that comes across a race condition.
+#	The files whose names aren’t modified by Discord will be managed in History.py, but others will
+#	remain in the folder other_sources. Original filenames can’t be known from History.py, it’s
+#	called by on_message() via History.Message_added(). And handling files with modified names here
+#	in Discord_manager.py, either inside on_message() or at the end of Relay_IRC_message(), that
+#	comes across a race condition.
 @tasks.loop(hours=24)
 async def Reconcile_downloaded_files():
 	try:
@@ -169,10 +169,10 @@ async def Reconcile_downloaded_files():
 			Original_path = os.path.join(Other_sources, Filenames_map["Original_filename"])
 			Destination_path = os.path.join(Storage_folder, Filenames_map["Destination_filename"])
 			# Address the rare cases where the task runs precisely when a file with a name modified
-			# by Discord is being processed in Attachments_manager.py. If the file has already been
-			# downloaded in other_sources, but hasn’t yet passed through Discord, then the task
-			# could move the original from other_sources to Storage_folder, just before the version
-			# from Discord arrives in Storage_folder.
+			# by Discord is being processed in History.py. If the file has already been downloaded
+			# in other_sources, but hasn’t yet passed through Discord, then the task could move the
+			# original from other_sources to Storage_folder, just before the version from Discord
+			# arrives in Storage_folder.
 			# If this confluence of circumstances occurs, don’t deal with this file this time. It’ll
 			# be processed during the next execution of the task.
 			if not os.path.exists(Destination_path):
@@ -182,8 +182,7 @@ async def Reconcile_downloaded_files():
 				os.replace(Original_path, Destination_path)
 			# If the file was in other_sources: once processed, its key is no longer needed.
 			# If the file wasn’t there: that means its name wasn’t changed by Discord, and it had
-			# already been moved in Storage_folder by Attachments_manager.py. So we can also delete
-			# its key.
+			# already been moved in Storage_folder by History.py. So we can also delete its key.
 			del Map_pending_downloads[Discord_filename]
 	except Exception as Error:
 		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
@@ -398,7 +397,9 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 				"Destination_filename": Filename
 			})
 		if len(Files_to_download) > 0:
-			Downloaded_filenames = await Attachments_manager.Download(
+			# Download the files so that they’ll be already present in the other_sources folder, to
+			# avoid keeping a version potentially degraded by Discord
+			Downloaded_filenames = await History.Download_files(
 					History_table, Storage_folder, Date, Files_to_download, Max_size
 			)
 			for Filename in Downloaded_filenames:

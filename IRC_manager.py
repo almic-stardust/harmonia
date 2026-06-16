@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# “IRC” is susceptible to be a keyword used elsewhere → this file is named IRC_manager.py
 
 import pydle
 import asyncio

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# “DB” is susceptible to be a keyword used elsewhere → this file is named DB_manager.py
 
 import sys
 # This actually uses the package mysqlclient, a fork of MySQLdb adding Python 3 support
