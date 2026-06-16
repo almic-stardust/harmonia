@@ -135,10 +135,28 @@ async def Delete_expired_messages():
 				if not Chan:
 					Chan = await bot.fetch_channel(Row["chan_id"])
 				Message_ID = Row["message_id"]
-				Message = await Chan.fetch_message(Message_ID)
+
+				#Message = await Chan.fetch_message(Message_ID)
+				#await Message.delete()
+				#DB_manager.Mark_message_expired(History_table, Message_ID)
+				#print(f"Deleted expired message {Message_ID}")
+
+				try:
+					Message = await Chan.fetch_message(Message_ID)
+				# If the DB is restored from a backup, it then contains messages that had already
+				# been deleted from Discord
+				except discord.NotFound:
+					print(f"[Discord_m] Delete_expired_messages(): Message {Message_ID} was already deleted.")
+					DB_manager.Mark_message_expired(History_table, Message_ID)
+					continue
+				# Chans can be deleted or become inaccessible
+				except discord.Forbidden:
+					print(f"[Discord_m] Delete_expired_messages(): Message {Message_ID} has become inaccessible.")
+					DB_manager.Mark_message_expired(History_table, Message_ID)
+					continue
 				await Message.delete()
 				DB_manager.Mark_message_expired(History_table, Message_ID)
-				print(f"Deleted expired message {Message_ID}")
+				print(f"[Discord_m] Deleted expired message {Message_ID}")
 	except Exception as Error:
 		print(f"[Discord_m] Delete_expired_messages(): {Error}")
 
