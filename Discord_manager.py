@@ -29,6 +29,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 History_table = Config["history"]["db_table"]
+Users_table = Config["users"]["db_table"]
 # TODO I’ll deal with that later
 History_keep_all = True
 HTTP_session = None
@@ -373,7 +374,7 @@ def Register_destination_in_MPD(Discord_filename, Destination_filename):
 	Entry = Map_pending_downloads.setdefault(Discord_filename, {})
 	Entry["Destination_filename"] = Destination_filename
 
-async def Get_replacement_avatar(Author_name, Discord_ID=None):
+async def Get_avatar_filename(Author_name, Discord_ID=None):
 	Avatars_folder = os.path.join(Config["history"].get("storage_folder"), "avatars")
 	if not os.path.exists(Avatars_folder):
 		os.makedirs(Avatars_folder)
@@ -394,6 +395,7 @@ async def Get_replacement_avatar(Author_name, Discord_ID=None):
 async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
 	global Map_pending_downloads
+	Users = DB_manager.Users_fetch_users(Users_table)
 	Files_for_Discord = []
 
 	Bridge = Get_bridge_by_IRC_chan(IRC_chan)
@@ -433,21 +435,26 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		Webhook = discord.Webhook.from_url(Webhook_URL, session=HTTP_session)
 		Author_name = IRC_nick
 		Avatar_URL = None
-		User = Config["users"]["irc_to_discord"].get(IRC_nick)
+		for User_ID in Users:
+			if Users[User_ID].get("IRC_pseudo") == IRC_nick:
+				User = Users[User_ID]
 		if User:
-			Author_name = User.get("discord_display_name")
-			Discord_username = User.get("discord_username", "")
-			Avatar_URL = User.get("avatar")
+			Author_name = User.get("Discord_display_name", IRC_nick)
+			Discord_username = User.get("Discord_username", None)
+			Avatar_URL = User.get("Avatar_URL")
 			if not Avatar_URL:
 				Server = bot.get_guild(Config["discord"]["server"])
+				Discord_user = None
 				if Discord_username:
 					Discord_user = discord.utils.get(Server.members, name=Discord_username)
 				if Discord_user:
 					Avatar_URL = Discord_user.display_avatar.url
 		if not Avatar_URL:
-			Avatar_filename = await Get_replacement_avatar(IRC_nick)
-			Avatar_URL = Config["history"].get("storage_url").rstrip("/") + "/avatars/" \
-					+ quote(Avatar_filename)
+			Avatar_filename = await Get_avatar_filename(IRC_nick)
+			URL_base = Config["history"].get("storage_url")
+			# Ensure base ends with exactly one "/"
+			URL_base = URL_base.rstrip("/") + "/"
+			Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
 		Sent_message = await Webhook.send(
 				Message, username=Author_name, avatar_url=Avatar_URL, files=Files_for_Discord,
 				# Doesn’t affect images explicitly uploaded

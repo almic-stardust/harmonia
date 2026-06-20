@@ -15,6 +15,8 @@ import Discord_manager
 from Discord_manager import bot
 import IRC_manager
 
+Users_table = Config["users"]["db_table"]
+Polls_table = Config["polls"]["db_table"]
 Straws_bag = {}
 Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
@@ -491,7 +493,6 @@ def Polls_voting_rights(Infos_user):
 	return Infos_user
 
 async def Polls_members(Bridge, List_of_users, Author=None):
-	Users_table = Config["users"]["db_table"]
 	Users = DB_manager.Users_fetch_users(Users_table)
 	Unregistered = []
 	Output = ""
@@ -565,7 +566,6 @@ async def Discord_polls_members(Context, *, Members=None):
 		await Polls_members(Bridge, Members, Context.author.display_name)
 
 async def Polls_create(Bridge, User, Arguments, From_Discord=False):
-	Polls_table = Config["polls"]["db_table"]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
@@ -623,7 +623,6 @@ async def Discord_polls_create(Context, *, Arguments):
 
 async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False):
 
-	Polls_table = Config["polls"]["db_table"]
 	Polls_IDs = []
 	Output = ""
 	Output_IRC = ""
@@ -693,7 +692,6 @@ async def IRC_polls_close(Bridge, User, Arguments=None):
 
 async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False):
 
-	Polls_table = Config["polls"]["db_table"]
 	Polls_IDs = []
 	Output = ""
 	Output_IRC = ""
@@ -761,8 +759,6 @@ async def IRC_polls_delete(Bridge, User, Arguments=None):
 async def Polls_vote(Bridge, User, Arguments, Context=None):
 
 	global Proxies
-	Users_table = Config["users"]["db_table"]
-	Polls_table = Config["polls"]["db_table"]
 	IRC_instance = IRC_manager.GCI()
 	# If the command was sent on Discord, relay it on IRC
 	# No usage of Output_IRC for this function, because user related errors are sent privately
@@ -902,7 +898,6 @@ async def Discord_polls_vote(Context, *, Arguments):
 		await Polls_vote(Bridge, Context.author.display_name, Arguments, Context)
 
 async def Polls_unvote(Bridge, User, Poll_ID=None, Context=None):
-	Polls_table = Config["polls"]["db_table"]
 	IRC_instance = IRC_manager.GCI()
 	# If the command was sent on Discord, relay it on IRC
 	# No usage of Output_IRC for this function, because user related errors are sent privately
@@ -959,8 +954,6 @@ async def Discord_polls_unvote(Context, *, Arguments):
 async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 
 	global Proxies
-	Users_table = Config["users"]["db_table"]
-	Polls_table = Config["polls"]["db_table"]
 	Change_of_holder = False
 	# No self-proxy (“not Proxy_giver” in case User is a moderator)
 	if User == Proxy_holder and not Proxy_giver:
@@ -1174,7 +1167,6 @@ async def IRC_polls_proxy(Bridge, User, Arguments):
 	await Polls_proxy(Bridge, User, Is_user_op, Arguments)
 
 async def Polls_list(Bridge, Arguments=None, Author=None):
-	Polls_table = Config["polls"]["db_table"]
 	Status = None
 	Number = None
 	Output = ""
@@ -1240,7 +1232,6 @@ async def Discord_polls_list(Context, *, Arguments=None):
 
 async def Polls_info(Bridge, Poll_ID=None, Author=None):
 
-	Polls_table = Config["polls"]["db_table"]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC

@@ -68,7 +68,7 @@ prevents the SQL requests of some functions from requiring a JSON extraction.
 	);
 
 	CREATE TABLE project_users (
-	    pseudonym           VARCHAR(255) NULL,
+	    pseudo              VARCHAR(255) NULL,
 	    id                  INT AUTO_INCREMENT PRIMARY KEY,
 	    mail                VARCHAR(255) NOT NULL,
 	    first_name          VARCHAR(255) NULL,
@@ -77,9 +77,10 @@ prevents the SQL requests of some functions from requiring a JSON extraction.
 	    wiki_pseudo         VARCHAR(255) NULL,
 	    irc_pseudo          VARCHAR(255) NULL,
 	    forum_pseudo        VARCHAR(255) NULL,
-	    discord_pseudo      VARCHAR(255) NULL,
-	    discord_expiration  INT NULL,
-	    avatar              VARCHAR(255) NULL,
+	    discord_username    VARCHAR(255) NULL,
+	    discord_display_name VARCHAR(255) NULL,
+	    discord_expiration  INT NOT NULL DEFAULT 365,
+	    avatar_url          VARCHAR(1024) NULL,
 	    renewals            JSON NULL,
 	    contributions       JSON NULL,
 	    last_medium         VARCHAR(255) NULL

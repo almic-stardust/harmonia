@@ -147,7 +147,8 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			Infos_user["Wiki_pseudo"] = None
 			Infos_user["IRC_pseudo"] = None
 			Infos_user["Forum_pseudo"] = None
-			Infos_user["Discord_pseudo"] = None
+			Infos_user["Discord_username"] = None
+			Infos_user["Discord_display_name"] = None
 			Infos_user["Discord_expiration"] = None
 			Infos_user["Avatar"] = None
 			Infos_user["Renewals"] = {File_year: [Date]}

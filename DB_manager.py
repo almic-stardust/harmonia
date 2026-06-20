@@ -65,7 +65,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		# Check if the message is in the DB
+		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
 				SELECT message_id FROM {Table}
 				WHERE message_id = %s""",
@@ -114,7 +114,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames, 
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		# Check if the message is in the DB
+		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
 				SELECT user, content_history FROM {Table}
 				WHERE message_id = %s""",
@@ -159,7 +159,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		# Check if the message is in the DB
+		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
 				SELECT user FROM {Table}
 				WHERE message_id = %s""",
@@ -386,7 +386,7 @@ def Users_check_presence(Table, Infos_user):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	Fields = {
-			"pseudonym": "",
+			"pseudo": "",
 			"mail": "",
 			"first_name": "",
 			"last_name": "",
@@ -394,10 +394,11 @@ def Users_check_presence(Table, Infos_user):
 			"wiki_pseudo": "",
 			"irc_pseudo": "",
 			"forum_pseudo": "",
-			"discord_pseudo": "",
+			"discord_username": "",
+			"discord_display_name": "",
 	}
 	if "Pseudo" in Infos_user.keys():
-		Fields["pseudonym"] = Infos_user["Pseudo"]
+		Fields["pseudo"] = Infos_user["Pseudo"]
 	if "Mail" in Infos_user.keys():
 		Fields["mail"] = Infos_user["Mail"]
 	if "First_name" in Infos_user.keys():
@@ -412,8 +413,10 @@ def Users_check_presence(Table, Infos_user):
 		Fields["irc_pseudo"] = Infos_user["IRC_pseudo"]
 	if "Forum_pseudo" in Infos_user.keys():
 		Fields["forum_pseudo"] = Infos_user["Forum_pseudo"]
-	if "Discord_pseudo" in Infos_user.keys():
-		Fields["discord_pseudo"] = Infos_user["Discord_pseudo"]
+	if "Discord_username" in Infos_user.keys():
+		Fields["discord_username"] = Infos_user["Discord_username"]
+	if "Discord_display_name" in Infos_user.keys():
+		Fields["discord_display_name"] = Infos_user["Discord_display_name"]
 
 	try:
 		if not Table.isidentifier():
@@ -469,7 +472,7 @@ def Users_check_presence(Table, Infos_user):
 					if Value:
 						Candidate_values.add(Value.strip().lower())
 				User_values = set()
-				for Key in ["Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_pseudo"]:
+				for Key in ["Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_username", "Discord_display_name"]:
 					Value = Infos_user.get(Key)
 					if Value:
 						User_values.add(Value.strip().lower())
@@ -500,7 +503,7 @@ def Users_fetch_users(Table):
 		Results = Cursor.fetchall()
 		for Result in Results:
 			User_ID = Result[1]
-			Dates = json.loads(Result[12]) if Result[12] else {}
+			Dates = json.loads(Result[13]) if Result[13] else {}
 			Renewals = {}
 			for Year, Dates_for_year in Dates.items():
 				Year = int(Year)
@@ -508,7 +511,7 @@ def Users_fetch_users(Table):
 				for Date in Dates_for_year:
 					Renewals[Year].append(datetime.datetime.fromisoformat(Date))
 				Renewals[Year].sort()
-			Amounts = json.loads(Result[13]) if Result[13] else {}
+			Amounts = json.loads(Result[14]) if Result[14] else {}
 			Contributions = {}
 			if len(Amounts) > 0:
 				for Year, Amount in Amounts.items():
@@ -523,12 +526,13 @@ def Users_fetch_users(Table):
 					"Wiki_pseudo":			Result[6],
 					"IRC_pseudo":			Result[7],
 					"Forum_pseudo":			Result[8],
-					"Discord_pseudo":		Result[9],
-					"Discord_expiration":	Result[10],
-					"Avatar":				Result[11],
+					"Discord_username":		Result[9],
+					"Discord_display_name":	Result[10],
+					"Discord_expiration":	Result[11],
+					"Avatar_URL":			Result[12],
 					"Renewals":				Renewals,
 					"Contributions":		Contributions,
-					"Last_medium":			Result[14],
+					"Last_medium":			Result[15],
 			}
 			Users[User_ID] = Infos_user
 		return Users
@@ -554,7 +558,7 @@ def Users_manage_user(Table, Action, Infos_user):
 	if Action == "Add":
 		Query = f"""
 				INSERT INTO {Table} (
-					pseudonym,
+					pseudo,
 					mail,
 					first_name,
 					last_name,
@@ -562,17 +566,19 @@ def Users_manage_user(Table, Action, Infos_user):
 					wiki_pseudo,
 					irc_pseudo,
 					forum_pseudo,
-					discord_pseudo,
+					discord_username,
+					discord_display_name,
 					discord_expiration,
-					avatar,
+					avatar_url,
 					renewals,
 					contributions,
 					last_medium)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	if Action == "Update":
+		User_ID = Infos_user["ID"]
 		Query = f"""
 				UPDATE {Table} SET
-					pseudonym = %s,
+					pseudo = %s,
 					mail = %s,
 					first_name = %s,
 					last_name = %s,
@@ -580,13 +586,14 @@ def Users_manage_user(Table, Action, Infos_user):
 					wiki_pseudo = %s,
 					irc_pseudo = %s,
 					forum_pseudo = %s,
-					discord_pseudo = %s,
+					discord_username = %s,
+					discord_display_name = %s,
 					discord_expiration = %s,
-					avatar = %s,
+					avatar_url = %s,
 					renewals = %s,
 					contributions = %s,
 					last_medium = %s
-				WHERE id = {Infos_user['ID']}"""
+				WHERE id = {User_ID}"""
 	# Avoid directly inserting JSON into a SQL query, since it could break if the JSON contains
 	# quotes. Using %s instead, in combination with this Values list, allows mysqlclient to escape
 	# JSON strings, thus avoiding the risk of SQL syntax errors
@@ -599,9 +606,10 @@ def Users_manage_user(Table, Action, Infos_user):
 			Infos_user["Wiki_pseudo"],
 			Infos_user["IRC_pseudo"],
 			Infos_user["Forum_pseudo"],
-			Infos_user["Discord_pseudo"],
+			Infos_user["Discord_username"],
+			Infos_user["Discord_display_name"],
 			Infos_user["Discord_expiration"],
-			Infos_user["Avatar"],
+			Infos_user["Avatar_URL"],
 			Renewals,
 			Contributions,
 			Infos_user["Last_medium"]
