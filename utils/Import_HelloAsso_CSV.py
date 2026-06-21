@@ -148,9 +148,9 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			Infos_user["IRC_pseudo"] = None
 			Infos_user["Forum_pseudo"] = None
 			Infos_user["Discord_username"] = None
-			Infos_user["Discord_display_name"] = None
-			Infos_user["Discord_expiration"] = None
-			Infos_user["Avatar"] = None
+			Infos_user["Pseudo_displayed_on_Discord"] = None
+			Infos_user["Discord_expiration_for_IRC"] = None
+			Infos_user["Avatar_URL"] = None
 			Infos_user["Renewals"] = {File_year: [Date]}
 			Infos_user["Contributions"] = {File_year: Contribution} if Contribution > 0 else None
 			Infos_user["Last_medium"] = "HelloAsso"

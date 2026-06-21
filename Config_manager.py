@@ -27,25 +27,3 @@ if Config.get("irc_bridges"):
 		Config["irc_bridges"][IRC_chan]["irc_chan"] = f"#{IRC_chan}"
 else:
 	Config["irc_bridges"] = {}
-
-if Config.get("users"):
-	Config["users"]["irc_to_discord"] = {}
-	Config["users"]["discord_to_irc"] = {}
-else:
-	Config["users"] = {
-		"irc_to_discord": {},
-		"discord_to_irc": {}
-	}
-if Config.get("irc_users"):
-	for IRC_user, Infos_user in Config["irc_users"].items():
-		# Ensure Infos_user is a dict
-		if not isinstance(Infos_user, dict):
-			Infos_user = {}
-		# Fetch optional Discord username and avatar
-		Config["users"]["irc_to_discord"][IRC_user] = Infos_user
-		# Use IRC nick for users who have not requested a different display name on Discord
-		Discord_display_name = Infos_user.get("discord_display_name") or IRC_user
-		Config["users"]["irc_to_discord"][IRC_user]["discord_display_name"] = Discord_display_name
-		# Reverse map Discord to IRC
-		Config["users"]["discord_to_irc"][Discord_display_name] = IRC_user
-	del Config["irc_users"]

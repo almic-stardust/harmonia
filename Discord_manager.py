@@ -102,64 +102,58 @@ def Get_bridge_by_IRC_chan(IRC_chan):
 # Handling users
 ###############################################################################
 
-def Expiration_for_user(User):
-	# Default is one year
-	Days = 365
-	Config_user = Config["users"]["irc_to_discord"].get(User)
-	if Config_user:
-		Expiration = Config_user.get("discord_expiration")
-		if Expiration == "1m":
-			Days = 31
-		if Expiration == "never":
-			Days = None
-	return Days
+def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
+	# For unregistered users, default period is one year
+	Expiration_period = 365
+	for User_ID in Users:
+		Infos_user = Users[User_ID]
+		if Infos_user["IRC_pseudo"] == IRC_pseudo:
+			Expiration_period = Infos_user["Discord_expiration_for_IRC"]
+			break
+	return Expiration_period
 
 ###############################################################################
 # Handling messages
 ###############################################################################
 
 # Automatically delete messages relayed from IRC to Discord by the bot. Depending on the user’s
-# request : either after one month, one year, or not at all
+# request : either after one month, one year (default), or not at all
 @tasks.loop(hours=24)
-async def Delete_expired_messages():
+async def Delete_expired_IRC_messages_from_Discord():
+	Users = DB_manager.Users_fetch_users(Users_table)
 	try:
 		Rows = DB_manager.Messages_potentially_expired(History_table)
 		for Row in Rows:
-			Expiration = Expiration_for_user(Row["user"])
-			if Expiration is None:
+			Expiration_period = Discord_expiration_for_IRC_user(Row["user"], Users)
+			# An expiration period of 0 means no expiration
+			if Expiration_period == 0:
 				continue
 			Now = datetime.datetime.now(datetime.timezone.utc)
 			Date_creation = Row["creation_date"].replace(tzinfo=datetime.timezone.utc)
 			Message_duration = Now - Date_creation
-			if Message_duration > datetime.timedelta(days=Expiration):
+			if Message_duration > datetime.timedelta(days=Expiration_period):
 				Chan = bot.get_channel(Row["chan_id"])
 				if not Chan:
 					Chan = await bot.fetch_channel(Row["chan_id"])
 				Message_ID = Row["message_id"]
-
-				#Message = await Chan.fetch_message(Message_ID)
-				#await Message.delete()
-				#DB_manager.Mark_message_expired(History_table, Message_ID)
-				#print(f"Deleted expired message {Message_ID}")
-
 				try:
 					Message = await Chan.fetch_message(Message_ID)
 				# If the DB is restored from a backup, it then contains messages that had already
 				# been deleted from Discord
 				except discord.NotFound:
-					print(f"[Discord_m] Delete_expired_messages(): Message {Message_ID} was already deleted.")
+					print(f"[Discord_m] Expired messages: Message {Message_ID} was already deleted.")
 					DB_manager.Mark_message_expired(History_table, Message_ID)
 					continue
 				# Chans can be deleted or become inaccessible
 				except discord.Forbidden:
-					print(f"[Discord_m] Delete_expired_messages(): Message {Message_ID} has become inaccessible.")
+					print(f"[Discord_m] Expired messages: Message {Message_ID} has become inaccessible.")
 					DB_manager.Mark_message_expired(History_table, Message_ID)
 					continue
 				await Message.delete()
 				DB_manager.Mark_message_expired(History_table, Message_ID)
-				print(f"[Discord_m] Deleted expired message {Message_ID}")
+				print(f"[Discord_m] Deleted expired message {Message_ID}.")
 	except Exception as Error:
-		print(f"[Discord_m] Delete_expired_messages(): {Error}")
+		print(f"[Discord_m] Error for expired messages: {Error}")
 
 # Handling files whose names have been changed by Discord: check once a day if there are files in
 # the folder other_sources, and if so, overwrite the Discord version with the original file.
@@ -278,9 +272,9 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 @bot.event
 async def on_message(Message):
 
+	Users = DB_manager.Users_fetch_users(Users_table)
 	Author = Message.author
 	Text = Message.content
-
 	Bridge = Get_bridge_by_Discord_chan(Message.channel.id)
 	if not Bridge:
 		return
@@ -289,9 +283,13 @@ async def on_message(Message):
 	# Author.display_name = the server nickname if set, otherwise the global display name if set,
 	# otherwise the Discord username
 	Author_name = Author.display_name
-	# If a user has requested that the bot assign them a specific name on Discord, use it on Discord
-	# but use their IRC nick in the history and their messages transferred to IRC
-	Author_name = Config["users"]["discord_to_irc"].get(Author_name, Author_name)
+	# If a user has requested that the bot assign them a specific name on Discord, then this name
+	# will be used on Discord, but use the IRC nick for the history and messages transferred to IRC
+	for User_ID in Users:
+		Infos_user = Users[User_ID]
+		if Infos_user["Pseudo_displayed_on_Discord"] == Author_name:
+			Author_name = Infos_user.get("IRC_pseudo", Author_name)
+			break
 
 	Relayed_message = False
 	# If the message comes from IRC through a webhook
@@ -336,9 +334,8 @@ async def on_message(Message):
 		# If there’s no message, no need to put a | before the URLs
 		if Text:
 			Text += " | "
-		URL_base = Config["history"].get("storage_url")
 		# Ensure base ends with exactly one "/"
-		URL_base = URL_base.rstrip("/") + "/"
+		URL_base = Config["history"].get("storage_url").rstrip("/") + "/"
 		Urls = []
 		for Attachment in Message.attachments:
 			Filenames_map = Map_pending_downloads.get(Attachment.filename)
@@ -436,30 +433,30 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		Author_name = IRC_nick
 		Avatar_URL = None
 		for User_ID in Users:
-			if Users[User_ID].get("IRC_pseudo") == IRC_nick:
+			if Users[User_ID]["IRC_pseudo"] == IRC_nick:
 				User = Users[User_ID]
+				break
 		if User:
-			Author_name = User.get("Discord_display_name", IRC_nick)
-			Discord_username = User.get("Discord_username", None)
+			if User["Pseudo_displayed_on_Discord"]:
+				Author_name = User["Pseudo_displayed_on_Discord"]
 			Avatar_URL = User.get("Avatar_URL")
 			if not Avatar_URL:
 				Server = bot.get_guild(Config["discord"]["server"])
 				Discord_user = None
-				if Discord_username:
-					Discord_user = discord.utils.get(Server.members, name=Discord_username)
+				if User["Discord_username"]:
+					Discord_user = discord.utils.get(Server.members, name=User["Discord_username"])
 				if Discord_user:
 					Avatar_URL = Discord_user.display_avatar.url
 		if not Avatar_URL:
 			Avatar_filename = await Get_avatar_filename(IRC_nick)
-			URL_base = Config["history"].get("storage_url")
 			# Ensure base ends with exactly one "/"
-			URL_base = URL_base.rstrip("/") + "/"
+			URL_base = Config["history"].get("storage_url").rstrip("/") + "/"
 			Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
 		Sent_message = await Webhook.send(
 				Message, username=Author_name, avatar_url=Avatar_URL, files=Files_for_Discord,
 				# Doesn’t affect images explicitly uploaded
 				suppress_embeds=True,
-				# Otherwise Discord doesn’t return the created message
+				# Without that, Discord doesn’t return the created message
 				wait=True
 		)
 	else:

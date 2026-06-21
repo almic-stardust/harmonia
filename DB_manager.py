@@ -395,7 +395,7 @@ def Users_check_presence(Table, Infos_user):
 			"irc_pseudo": "",
 			"forum_pseudo": "",
 			"discord_username": "",
-			"discord_display_name": "",
+			"pseudo_displayed_on_discord": "",
 	}
 	if "Pseudo" in Infos_user.keys():
 		Fields["pseudo"] = Infos_user["Pseudo"]
@@ -415,8 +415,8 @@ def Users_check_presence(Table, Infos_user):
 		Fields["forum_pseudo"] = Infos_user["Forum_pseudo"]
 	if "Discord_username" in Infos_user.keys():
 		Fields["discord_username"] = Infos_user["Discord_username"]
-	if "Discord_display_name" in Infos_user.keys():
-		Fields["discord_display_name"] = Infos_user["Discord_display_name"]
+	if "Pseudo_displayed_on_Discord" in Infos_user.keys():
+		Fields["pseudo_displayed_on_discord"] = Infos_user["Pseudo_displayed_on_Discord"]
 
 	try:
 		if not Table.isidentifier():
@@ -472,7 +472,7 @@ def Users_check_presence(Table, Infos_user):
 					if Value:
 						Candidate_values.add(Value.strip().lower())
 				User_values = set()
-				for Key in ["Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_username", "Discord_display_name"]:
+				for Key in ["Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_username", "Pseudo_displayed_on_Discord"]:
 					Value = Infos_user.get(Key)
 					if Value:
 						User_values.add(Value.strip().lower())
@@ -527,8 +527,9 @@ def Users_fetch_users(Table):
 					"IRC_pseudo":			Result[7],
 					"Forum_pseudo":			Result[8],
 					"Discord_username":		Result[9],
-					"Discord_display_name":	Result[10],
-					"Discord_expiration":	Result[11],
+					"Pseudo_displayed_on_Discord":	Result[10],
+					# 365 if the user didn’t choose a period different from the default of one year
+					"Discord_expiration_for_IRC":	Result[11] if Result[11] else 365,
 					"Avatar_URL":			Result[12],
 					"Renewals":				Renewals,
 					"Contributions":		Contributions,
@@ -567,8 +568,8 @@ def Users_manage_user(Table, Action, Infos_user):
 					irc_pseudo,
 					forum_pseudo,
 					discord_username,
-					discord_display_name,
-					discord_expiration,
+					pseudo_displayed_on_discord,
+					discord_expiration_for_irc,
 					avatar_url,
 					renewals,
 					contributions,
@@ -587,8 +588,8 @@ def Users_manage_user(Table, Action, Infos_user):
 					irc_pseudo = %s,
 					forum_pseudo = %s,
 					discord_username = %s,
-					discord_display_name = %s,
-					discord_expiration = %s,
+					pseudo_displayed_on_discord = %s,
+					discord_expiration_for_irc = %s,
 					avatar_url = %s,
 					renewals = %s,
 					contributions = %s,
@@ -607,8 +608,8 @@ def Users_manage_user(Table, Action, Infos_user):
 			Infos_user["IRC_pseudo"],
 			Infos_user["Forum_pseudo"],
 			Infos_user["Discord_username"],
-			Infos_user["Discord_display_name"],
-			Infos_user["Discord_expiration"],
+			Infos_user["Pseudo_displayed_on_Discord"],
+			Infos_user["Discord_expiration_for_IRC"],
 			Infos_user["Avatar_URL"],
 			Renewals,
 			Contributions,

@@ -7,7 +7,7 @@ from Config_manager import Config
 import Discord_manager
 from Discord_manager import bot
 from Discord_manager import Reconcile_downloaded_files
-from Discord_manager import Delete_expired_messages
+from Discord_manager import Delete_expired_IRC_messages_from_Discord
 import IRC_manager
 import Commands_manager
 
@@ -33,8 +33,8 @@ async def on_ready():
 	if IRC_task is None or IRC_task.done():
 		IRC_task = asyncio.create_task(IRC_manager.Run_IRC_loop())
 	# Start background tasks
-	if not Delete_expired_messages.is_running():
-		Delete_expired_messages.start()
+	if not Delete_expired_IRC_messages_from_Discord.is_running():
+		Delete_expired_IRC_messages_from_Discord.start()
 	if not Reconcile_downloaded_files.is_running():
 		Reconcile_downloaded_files.start()
 
