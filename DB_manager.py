@@ -517,23 +517,23 @@ def Users_fetch_users(Table):
 				for Year, Amount in Amounts.items():
 					Contributions[int(Year)] = Amount
 			Infos_user = {
-					"Pseudo":				Result[0],
-					"ID":					User_ID,
-					"Mail":					Result[2],
-					"First_name":			Result[3],
-					"Last_name":			Result[4],
-					"ML_pseudo":			Result[5],
-					"Wiki_pseudo":			Result[6],
-					"IRC_pseudo":			Result[7],
-					"Forum_pseudo":			Result[8],
-					"Discord_username":		Result[9],
+					"Pseudo":						Result[0],
+					"ID":							User_ID,
+					"Mail":							Result[2],
+					"First_name":					Result[3],
+					"Last_name":					Result[4],
+					"ML_pseudo":					Result[5],
+					"Wiki_pseudo":					Result[6],
+					"IRC_pseudo":					Result[7],
+					"Forum_pseudo":					Result[8],
+					"Discord_username":				Result[9],
 					"Pseudo_displayed_on_Discord":	Result[10],
 					# 365 if the user didn’t choose a period different from the default of one year
 					"Discord_expiration_for_IRC":	Result[11] if Result[11] else 365,
-					"Avatar_URL":			Result[12],
-					"Renewals":				Renewals,
-					"Contributions":		Contributions,
-					"Last_medium":			Result[15],
+					"Avatar_URL":					Result[12],
+					"Renewals":						Renewals,
+					"Contributions":				Contributions,
+					"Last_medium":					Result[15],
 			}
 			Users[User_ID] = Infos_user
 		return Users

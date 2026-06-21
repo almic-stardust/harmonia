@@ -53,48 +53,48 @@ Create a base according to your Config.yaml, then create these tables. The creat
 prevents the SQL requests of some functions from requiring a JSON extraction.
 
 	CREATE TABLE project_history (
-	    creation_date        TIMESTAMP NOT NULL,
-	    server_id            BIGINT NOT NULL,
-	    chan_id              BIGINT NOT NULL,
-	    message_id           BIGINT NOT NULL PRIMARY KEY,
-	    reply_to             BIGINT NULL,
-	    user                 VARCHAR(255) NOT NULL,
-	    content_history      TEXT NOT NULL,
-	    attachments          JSON NULL,
-	    reactions            JSON NULL,
-	    relayed              BOOLEAN NOT NULL DEFAULT FALSE,
-	    expired              BOOLEAN NOT NULL DEFAULT FALSE,
-	    deletion_date        TIMESTAMP NULL
+	    creation_date               TIMESTAMP NOT NULL,
+	    server_id                   BIGINT NOT NULL,
+	    chan_id                     BIGINT NOT NULL,
+	    message_id                  BIGINT NOT NULL PRIMARY KEY,
+	    reply_to                    BIGINT NULL,
+	    user                        VARCHAR(255) NOT NULL,
+	    content_history             TEXT NOT NULL,
+	    attachments                 JSON NULL,
+	    reactions                   JSON NULL,
+	    relayed                     BOOLEAN NOT NULL DEFAULT FALSE,
+	    expired                     BOOLEAN NOT NULL DEFAULT FALSE,
+	    deletion_date               TIMESTAMP NULL
 	);
 
 	CREATE TABLE project_users (
-	    pseudo               VARCHAR(255) NULL,
-	    id                   INT AUTO_INCREMENT PRIMARY KEY,
-	    mail                 VARCHAR(255) NOT NULL,
-	    first_name           VARCHAR(255) NULL,
-	    last_name            VARCHAR(255) NULL,
-	    ml_pseudo            VARCHAR(255) NULL,
-	    wiki_pseudo          VARCHAR(255) NULL,
-	    irc_pseudo           VARCHAR(255) NULL,
-	    forum_pseudo         VARCHAR(255) NULL,
-	    discord_username     VARCHAR(255) NULL,
+	    pseudo                      VARCHAR(255) NULL,
+	    id                          INT AUTO_INCREMENT PRIMARY KEY,
+	    mail                        VARCHAR(255) NOT NULL,
+	    first_name                  VARCHAR(255) NULL,
+	    last_name                   VARCHAR(255) NULL,
+	    ml_pseudo                   VARCHAR(255) NULL,
+	    wiki_pseudo                 VARCHAR(255) NULL,
+	    irc_pseudo                  VARCHAR(255) NULL,
+	    forum_pseudo                VARCHAR(255) NULL,
+	    discord_username            VARCHAR(255) NULL,
 	    pseudo_displayed_on_discord VARCHAR(255) NULL,
-	    discord_expiration_for_irc INT NOT NULL DEFAULT 365,
-	    avatar_url           VARCHAR(1024) NULL,
-	    renewals             JSON NULL,
-	    contributions        JSON NULL,
-	    last_medium          VARCHAR(255) NULL
+	    discord_expiration_for_irc  INT NOT NULL DEFAULT 365,
+	    avatar_url                  VARCHAR(1024) NULL,
+	    renewals                    JSON NULL,
+	    contributions               JSON NULL,
+	    last_medium                 VARCHAR(255) NULL
 	);
 
 	CREATE TABLE project_polls (
-	    id                   INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	    creation_date        TIMESTAMP NOT NULL DEFAULT current_timestamp(),
-	    user                 VARCHAR(255) NOT NULL,
-	    question             TEXT NOT NULL,
-	    choices              JSON NOT NULL,
-	    votes                JSON NULL,
-	    proxies              JSON NULL,
-	    active               BOOLEAN NOT NULL DEFAULT TRUE
+	    id                          INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	    creation_date               TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+	    user                        VARCHAR(255) NOT NULL,
+	    question                    TEXT NOT NULL,
+	    choices                     JSON NOT NULL,
+	    votes                       JSON NULL,
+	    proxies                     JSON NULL,
+	    active                      BOOLEAN NOT NULL DEFAULT TRUE
 	);
 
 #### Last steps
