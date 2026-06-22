@@ -214,10 +214,14 @@ def History_fetch_message(Table, Message_ID):
 		if Result:
 			if Result[6]:
 				Content_history = Result[6]
-				# Decode only if the returned object is a string: depending on the driver version,
-				# MariaDB may return JSON columns as already-decoded Python objects
+				# Decode the JSON only if the returned object is a string: depending on the driver
+				# version, MariaDB may return JSON columns as already-decoded Python objects
 				if isinstance(Content_history, str):
-					Content_history = json.loads(Content_history)
+					try:
+						Content_history = json.loads(Content_history)
+					except json.JSONDecodeError:
+						print("[DB] Invalid JSON in content_history:", repr(Content_history))
+						Content_history = {}
 				Content_history = {
 					datetime.datetime.fromisoformat(Date): Text
 					for Date, Text in Content_history.items()
@@ -397,35 +401,35 @@ def Users_check_presence(Table, Infos_user):
 			"discord_username": "",
 			"pseudo_displayed_on_discord": "",
 	}
-	if "Pseudo" in Infos_user.keys():
+	if "Pseudo" in Infos_user:
 		Fields["pseudo"] = Infos_user["Pseudo"]
-	if "Mail" in Infos_user.keys():
+	if "Mail" in Infos_user:
 		Fields["mail"] = Infos_user["Mail"]
-	if "First_name" in Infos_user.keys():
+	if "First_name" in Infos_user:
 		Fields["first_name"] = Infos_user["First_name"]
-	if "Last_name" in Infos_user.keys():
+	if "Last_name" in Infos_user:
 		Fields["last_name"] = Infos_user["Last_name"]
-	if "ML_pseudo" in Infos_user.keys():
+	if "ML_pseudo" in Infos_user:
 		Fields["ml_pseudo"] = Infos_user["ML_pseudo"]
-	if "Wiki_pseudo" in Infos_user.keys():
+	if "Wiki_pseudo" in Infos_user:
 		Fields["wiki_pseudo"] = Infos_user["Wiki_pseudo"]
-	if "IRC_pseudo" in Infos_user.keys():
+	if "IRC_pseudo" in Infos_user:
 		Fields["irc_pseudo"] = Infos_user["IRC_pseudo"]
-	if "Forum_pseudo" in Infos_user.keys():
+	if "Forum_pseudo" in Infos_user:
 		Fields["forum_pseudo"] = Infos_user["Forum_pseudo"]
-	if "Discord_username" in Infos_user.keys():
+	if "Discord_username" in Infos_user:
 		Fields["discord_username"] = Infos_user["Discord_username"]
-	if "Pseudo_displayed_on_Discord" in Infos_user.keys():
+	if "Pseudo_displayed_on_Discord" in Infos_user:
 		Fields["pseudo_displayed_on_discord"] = Infos_user["Pseudo_displayed_on_Discord"]
 
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
 		Other_identifiers = {}
-		for Column in Fields.keys():
+		for Column in Fields:
 			if not Fields[Column]:
 				continue
-			for Other_column in Fields.keys():
+			for Other_column in Fields:
 				Cursor.execute(f"""
 						SELECT * FROM {Table}
 						WHERE {Other_column} = %s""",

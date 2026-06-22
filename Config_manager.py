@@ -23,7 +23,7 @@ if Config.get("history") and Config["history"].get("active"):
 if Config.get("irc_bridges"):
 	# Modify from: irc_chan = {discord_chan: X, webhook: Y}
 	# 		   to: irc_chan = {discord_chan: X, webhook: Y, irc_chan: "irc_chan"}
-	for IRC_chan in Config["irc_bridges"].keys():
+	for IRC_chan in Config["irc_bridges"]:
 		Config["irc_bridges"][IRC_chan]["irc_chan"] = f"#{IRC_chan}"
 else:
 	Config["irc_bridges"] = {}

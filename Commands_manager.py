@@ -195,8 +195,8 @@ async def Straws_current_state(Bridge, Author=None):
 	if len(Straws_bag["Common_key"]) > 0:
 		Presence_straws = True
 		Output += "The following users gave the following words:\n"
-		for User in Straws_bag["Common_key"].keys():
-			Output += f"<{User}> {Straws_bag['Common_key'][User]}\n"
+		for User, Straw in Straws_bag["Common_key"].items():
+			Output += f"<{User}> {Straw}\n"
 
 	if not Presence_participants:
 		Display_help = True
