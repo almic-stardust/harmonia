@@ -10,16 +10,16 @@ mysqlclient:
   # Guarantee UTC regardless of server configuration
   init_command:           "SET time_zone = '+00:00'"
 
-mail:
-  server:                 ""
-  bot_address:            ""
-
 discord:
   bot_owner:              ""
   # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
   token:                  ""
   bot_name:               "name for the bot to display in the history"
   server:                 id_server
+
+mail:
+  server:                 ""
+  bot_address:            ""
 
 users:
   db_table:               "project_users"
@@ -33,14 +33,14 @@ history:
 polls:
   db_table:               "project_polls"
 
-irc_info:
+irc:
   bot_owner:              ""
+  server:                 "irc.libera.chat"
   nick:                   "MyBot"
   username:               "my_bot"
   real_name:              "My Bot"
   password:               ""
   quit_message:           "That’s the end of the beans"
-  server:                 "irc.libera.chat"
 
 irc_bridges:
   chan1:

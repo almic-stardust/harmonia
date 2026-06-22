@@ -476,7 +476,7 @@ def Users_check_presence(Table, Infos_user):
 					if Value:
 						Candidate_values.add(Value.strip().lower())
 				User_values = set()
-				for Key in ["Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_username", "Pseudo_displayed_on_Discord"]:
+				for Key in ("Pseudo", "ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo", "Discord_username", "Pseudo_displayed_on_Discord"):
 					Value = Infos_user.get(Key)
 					if Value:
 						User_values.add(Value.strip().lower())

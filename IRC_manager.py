@@ -143,13 +143,13 @@ async def Run_IRC_loop():
 	while not IRC_shutting_down.is_set():
 
 		New_instance = Connection_handler(
-			nickname=Config["irc_info"]["nick"],
-			username=Config["irc_info"]["username"],
-			realname=Config["irc_info"]["real_name"]
+			nickname=Config["irc"]["nick"],
+			username=Config["irc"]["username"],
+			realname=Config["irc"]["real_name"]
 		)
 		try:
 			await New_instance.connect(
-				hostname=Config["irc_info"]["server"],
+				hostname=Config["irc"]["server"],
 				tls=True, tls_verify=False
 			)
 			# Assign the global variable only after the connection has succeeded, to avoid the
@@ -254,9 +254,9 @@ class Connection_handler(pydle.Client):
 		await super().on_connect()
 		for Bridge in Config["irc_bridges"]:
 			await self.join(Config["irc_bridges"][Bridge]["irc_chan"])
-		if Config["irc_info"].get("password"):
+		if Config["irc"].get("password"):
 			await self.Safe_message("NickServ",
-					f"identify {Config['irc_info']['nick']} {Config['irc_info']['password']}"
+					f"identify {Config['irc']['nick']} {Config['irc']['password']}"
 			)
 			print("[IRC] Identified with nickserv")
 		asyncio.create_task(self.Ensure_chans())
@@ -271,7 +271,7 @@ class Connection_handler(pydle.Client):
 	async def Shutdown_IRC(self):
 		print("[IRC] Disconnecting…")
 		IRC_shutting_down.set()
-		await self.quit(Config["irc_info"].get("quit_message", "Something clever"))
+		await self.quit(Config["irc"].get("quit_message", "Something clever"))
 
 	async def Ensure_chans(self):
 		global Expected_chans
@@ -308,7 +308,7 @@ class Connection_handler(pydle.Client):
 		# The bot ignores its own messages
 		if Author == self.nickname:
 			return
-		if Message.startswith("!quit") and Author == Config["irc_info"]["bot_owner"]:
+		if Message.startswith("!quit") and Author == Config["irc"]["bot_owner"]:
 			import Harmonia
 			await Harmonia.Stop_bot()
 			return
