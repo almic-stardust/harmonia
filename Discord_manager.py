@@ -28,10 +28,11 @@ intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-History_table = Config["history"]["db_table"]
+History_enabled = Config["enabled_sections"]["history"]
+if History_enabled:
+	History_table = Config["history"]["db_table"]
+	History_keep_all = True
 Users_table = Config["users"]["db_table"]
-# TODO I’ll deal with that later
-History_keep_all = True
 HTTP_session = None
 Users_buffers = {}
 Map_pending_downloads = {}
@@ -307,9 +308,10 @@ async def on_message(Message):
 		else:
 			Author_name = Config["discord"].get("bot_name", "Bot")
 
-	await History.Message_added(History_table,
-			Author_name, Bridge["discord_chan"], Message, Text, Relayed_message
-	)
+	if History_enabled:
+		await History.Message_added(History_table,
+				Author_name, Bridge["discord_chan"], Message, Text, Relayed_message
+		)
 
 	if Relayed_message:
 		# Ensure the command starts with a letter (don’t react to “!!!” or “!?”)
@@ -339,6 +341,7 @@ async def on_message(Message):
 		Urls = []
 		for Attachment in Message.attachments:
 			Filenames_map = Map_pending_downloads.get(Attachment.filename)
+			# If the history isn’t enabled, the files won't be in Map_pending_downloads anyway
 			if Filenames_map:
 				# URL-encode safely
 				URL = URL_base + quote(Filenames_map["Destination_filename"])
@@ -391,7 +394,6 @@ async def Get_avatar_filename(Author_name, Discord_ID=None):
 
 async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
-	global Map_pending_downloads
 	Users = DB_manager.Users_fetch_users(Users_table)
 	Files_for_Discord = []
 
@@ -413,7 +415,8 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 				"URL": URL,
 				"Destination_filename": Filename
 			})
-		if len(Files_to_download) > 0:
+		# If history isn’t enabled, send the links as-is on Discord
+		if len(Files_to_download) > 0 and History_enabled:
 			# Download the files so that they’ll be already present in the other_sources folder, to
 			# avoid keeping a version potentially degraded by Discord
 			Downloaded_filenames = await History.Download_files(
@@ -447,7 +450,8 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 					Discord_user = discord.utils.get(Server.members, name=User["Discord_username"])
 				if Discord_user:
 					Avatar_URL = Discord_user.display_avatar.url
-		if not Avatar_URL:
+		# There might be an avatar stored on the server, but only if the history was enabled
+		if not Avatar_URL and History_enabled:
 			Avatar_filename = await Get_avatar_filename(IRC_nick)
 			# Ensure base ends with exactly one "/"
 			URL_base = Config["history"].get("storage_url").rstrip("/") + "/"
@@ -476,20 +480,22 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
 @bot.event
 async def on_message_edit(Old_message, New_message):
-	# Check if the text or the attachments have changed
-	Text_changed = (Old_message.content or "") != (New_message.content or "")
-	Old_files = [File.filename for File in Old_message.attachments]
-	New_files = [File.filename for File in New_message.attachments]
-	# Compare the filenames, not the attachments objects
-	Attachments_changed = set(Old_files) != set(New_files)
-	# Don’t record Discord automatic edits (resolving links, webhook normalization, etc)
-	if not Text_changed and not Attachments_changed:
-		return
-	History.Message_edited(History_table, History_keep_all, New_message)
+	if History_enabled:
+		# Check if the text or the attachments have changed
+		Text_changed = (Old_message.content or "") != (New_message.content or "")
+		Old_files = [File.filename for File in Old_message.attachments]
+		New_files = [File.filename for File in New_message.attachments]
+		# Compare the filenames, not the attachments objects
+		Attachments_changed = set(Old_files) != set(New_files)
+		# Don’t record Discord automatic edits (resolving links, webhook normalization, etc)
+		if not Text_changed and not Attachments_changed:
+			return
+		History.Message_edited(History_table, History_keep_all, New_message)
 
 @bot.event
 async def on_raw_message_delete(Payload):
-	History.Message_deleted(History_table, History_keep_all, Payload.message_id)
+	if History_enabled:
+		History.Message_deleted(History_table, History_keep_all, Payload.message_id)
 
 ###############################################################################
 # Other stuff

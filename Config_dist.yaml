@@ -21,14 +21,14 @@ mail:
   server:                 ""
   bot_address:            ""
 
-users:
-  db_table:               "project_users"
-
 history:
-  active:                 True/False
+  enable:                 True/False
   db_table:               "project_history"
   storage_folder:         "/path/to/bot_files"
   storage_url:            "https://domain.tld/bot_files"
+
+users:
+  db_table:               "project_users"
 
 polls:
   db_table:               "project_polls"
