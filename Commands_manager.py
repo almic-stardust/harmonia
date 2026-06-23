@@ -15,7 +15,9 @@ import Discord_manager
 from Discord_manager import bot
 import IRC_manager
 
-Users_table = Config["users"]["db_table"]
+Users_enabled = Config["enabled_sections"]["users"]
+if Users_enabled:
+	Users_table = Config["users"]["db_table"]
 Polls_table = Config["polls"]["db_table"]
 Straws_bag = {}
 Straws_bag["Common_key"] = {}
@@ -493,7 +495,6 @@ def Polls_voting_rights(Infos_user):
 	return Infos_user
 
 async def Polls_members(Bridge, List_of_users, Author=None):
-	Users = DB_manager.Users_fetch_users(Users_table)
 	Unregistered = []
 	Output = ""
 	Output_IRC = ""
@@ -503,6 +504,12 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 			Output_IRC = f"<\x02{Author}\x02> !polls members {List_of_users}\n"
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls members\n"
+	if not Users_enabled:
+		Output = "Error: This command requires the users section to be enabled in the config file."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
+	Users = DB_manager.Users_fetch_users(Users_table)
 	# “!polls members” lists all members with voting rights
 	if not List_of_users:
 		List_of_users_from_argument = False
@@ -771,6 +778,11 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if not Arguments:
 		await Gears.Send(Bridge, Help_usage)
 		return
+	if not Users_enabled:
+		await Gears.Send(Bridge,
+				"Error: This command requires the users section to be enabled in the config file."
+		)
+		return
 
 	Parts = Arguments.split()
 	Proxy_giver = None
@@ -958,6 +970,11 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 	# No self-proxy (“not Proxy_giver” in case User is a moderator)
 	if User == Proxy_holder and not Proxy_giver:
 		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
+		return
+	if not Users_enabled:
+		await Gears.Send(Bridge,
+				"Error: This command requires the users section to be enabled in the config file."
+		)
 		return
 
 	# Only members with voting rights can delegate a proxy

@@ -32,7 +32,9 @@ History_enabled = Config["enabled_sections"]["history"]
 if History_enabled:
 	History_table = Config["history"]["db_table"]
 	History_keep_all = True
-Users_table = Config["users"]["db_table"]
+Users_enabled = Config["enabled_sections"]["users"]
+if Users_enabled:
+	Users_table = Config["users"]["db_table"]
 HTTP_session = None
 Users_buffers = {}
 Map_pending_downloads = {}
@@ -273,7 +275,6 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 @bot.event
 async def on_message(Message):
 
-	Users = DB_manager.Users_fetch_users(Users_table)
 	Author = Message.author
 	Text = Message.content
 	Bridge = Get_bridge_by_Discord_chan(Message.channel.id)
@@ -286,11 +287,13 @@ async def on_message(Message):
 	Author_name = Author.display_name
 	# If a user has requested that the bot assign them a specific name on Discord, then this name
 	# will be used on Discord, but use the IRC nick for the history and messages transferred to IRC
-	for User_ID in Users:
-		Infos_user = Users[User_ID]
-		if Infos_user["Pseudo_displayed_on_Discord"] == Author_name:
-			Author_name = Infos_user.get("IRC_pseudo", Author_name)
-			break
+	if Users_enabled:
+		Users = DB_manager.Users_fetch_users(Users_table)
+		for User_ID in Users:
+			Infos_user = Users[User_ID]
+			if Infos_user["Pseudo_displayed_on_Discord"] == Author_name:
+				Author_name = Infos_user.get("IRC_pseudo", Author_name)
+				break
 
 	Relayed_message = False
 	# If the message comes from IRC through a webhook
@@ -394,7 +397,6 @@ async def Get_avatar_filename(Author_name, Discord_ID=None):
 
 async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
-	Users = DB_manager.Users_fetch_users(Users_table)
 	Files_for_Discord = []
 
 	Bridge = Get_bridge_by_IRC_chan(IRC_chan)
@@ -435,21 +437,25 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		Webhook = discord.Webhook.from_url(Webhook_URL, session=HTTP_session)
 		Author_name = IRC_nick
 		Avatar_URL = None
-		for User_ID in Users:
-			if Users[User_ID]["IRC_pseudo"] == IRC_nick:
-				User = Users[User_ID]
-				break
-		if User:
-			if User["Pseudo_displayed_on_Discord"]:
-				Author_name = User["Pseudo_displayed_on_Discord"]
-			Avatar_URL = User.get("Avatar_URL")
-			if not Avatar_URL:
-				Server = bot.get_guild(Config["discord"]["server"])
-				Discord_user = None
-				if User["Discord_username"]:
-					Discord_user = discord.utils.get(Server.members, name=User["Discord_username"])
-				if Discord_user:
-					Avatar_URL = Discord_user.display_avatar.url
+		if Users_enabled:
+			Users = DB_manager.Users_fetch_users(Users_table)
+			for User_ID in Users:
+				if Users[User_ID]["IRC_pseudo"] == IRC_nick:
+					User = Users[User_ID]
+					break
+			if User:
+				if User["Pseudo_displayed_on_Discord"]:
+					Author_name = User["Pseudo_displayed_on_Discord"]
+				Avatar_URL = User.get("Avatar_URL")
+				if not Avatar_URL:
+					Server = bot.get_guild(Config["discord"]["server"])
+					Discord_user = None
+					if User["Discord_username"]:
+						Discord_user = discord.utils.get(
+								Server.members, name=User["Discord_username"]
+						)
+					if Discord_user:
+						Avatar_URL = Discord_user.display_avatar.url
 		# There might be an avatar stored on the server, but only if the history was enabled
 		if not Avatar_URL and History_enabled:
 			Avatar_filename = await Get_avatar_filename(IRC_nick)

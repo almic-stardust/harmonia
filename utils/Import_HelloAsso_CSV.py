@@ -10,6 +10,9 @@ import datetime
 from Config_manager import Config
 import DB_manager
 
+if not Config["enabled_sections"]["users"]:
+	print("Error: For this script to be of any use, the \"users\" section must be enabled in the config file.")
+	sys.exit(1)
 if len(sys.argv) == 1 or not fnmatch.fnmatch(sys.argv[1], "*csv"):
 	print("Error: Missing CSV file.\nUsage: Import_HelloAsso_CSV.py File.csv")
 	sys.exit(1)
