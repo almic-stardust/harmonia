@@ -18,7 +18,9 @@ import IRC_manager
 Users_enabled = Config["enabled_sections"]["users"]
 if Users_enabled:
 	Users_table = Config["users"]["db_table"]
-Polls_table = Config["polls"]["db_table"]
+Polls_enabled = Config["enabled_sections"]["polls"]
+if Polls_enabled:
+	Polls_table = Config["polls"]["db_table"]
 Straws_bag = {}
 Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
@@ -578,6 +580,11 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 	# If the command was sent on Discord, relay it on IRC
 	if From_Discord:
 		Output_IRC = f"<\x02{User}\x02> !polls create {Arguments}\n"
+	if not Polls_enabled:
+		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
 	if not Arguments:
 		Output += "Usage: !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
 		Output_IRC += Output
@@ -639,6 +646,11 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 			Output_IRC = f"<\x02{User}\x02> !polls close {Arguments}\n"
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls close\n"
+	if not Polls_enabled:
+		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
 
 	# Select latest poll if none specified
 	if not Arguments:
@@ -708,6 +720,11 @@ async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False
 			Output_IRC = f"<\x02{User}\x02> !polls delete {Arguments}\n"
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls delete\n"
+	if not Polls_enabled:
+		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
 
 	# Select latest poll if none specified
 	if not Arguments:
@@ -774,14 +791,19 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 			await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User,
 					f"<\x02{User}\x02> !polls vote {Arguments}"
 			)
-	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
-	if not Arguments:
-		await Gears.Send(Bridge, Help_usage)
+	if not Polls_enabled:
+		await Gears.Send(Bridge,
+				"Error: This command requires the polls section to be enabled in the config file."
+		)
 		return
 	if not Users_enabled:
 		await Gears.Send(Bridge,
 				"Error: This command requires the users section to be enabled in the config file."
 		)
+		return
+	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
+	if not Arguments:
+		await Gears.Send(Bridge, Help_usage)
 		return
 
 	Parts = Arguments.split()
@@ -901,7 +923,9 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 async def Discord_polls_vote(Context, *, Arguments):
 	"""Vote in a poll.\n
 	 \n
-	!polls vote <Choice_number> [Poll_ID]
+	!polls vote <Choice_number> [Poll_ID]\n
+	 \n
+	“!polls vote [Poll_ID] <Choice_number>” would be more intuitive, but less consistent than having Choice_number always the first argument after vote.
 	Parameters
 	----------
 	Arguments : str"""
@@ -920,6 +944,11 @@ async def Polls_unvote(Bridge, User, Poll_ID=None, Context=None):
 			else:
 				Output = f"<\x02{User}\x02> !polls unvote\n"
 			await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User, Output)
+	if not Polls_enabled:
+		await Gears.Send(Bridge,
+				"Error: This command requires the polls section to be enabled in the config file."
+		)
+		return
 	if Poll_ID:
 		try:
 			Poll_ID = int(Poll_ID)
@@ -1194,6 +1223,11 @@ async def Polls_list(Bridge, Arguments=None, Author=None):
 			Output_IRC = f"<\x02{Author}\x02> !polls list {Arguments}\n"
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls list\n"
+	if not Polls_enabled:
+		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
 	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
 	if Arguments:
 		Parts = Arguments.split()
@@ -1257,6 +1291,11 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			Output_IRC = f"<\x02{Author}\x02> !polls info {Poll_ID}\n"
 		else:
 			Output_IRC = f"<\x02{Author}\x02> !polls info\n"
+	if not Polls_enabled:
+		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output_IRC += Output
+		await Gears.Send(Bridge, Output, Output_IRC)
+		return
 
 	if Poll_ID:
 		try:
