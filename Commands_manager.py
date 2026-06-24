@@ -1325,21 +1325,27 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 	Choices_with_votes.sort(key=lambda Choice: Choice[0], reverse=True)
 
 	Result = "tied"
+	# After “if Number_of_voters == 0:” Choices_with_votes[0] is always valid
 	First_choice_count = Choices_with_votes[0][0]
-	Second_choice_count = Choices_with_votes[1][0]
+	# In case only one choice was voted
+	if len(Choices_with_votes) > 1:
+		Second_choice_count = Choices_with_votes[1][0]
+	else:
+		Second_choice_count = 0
 	# No tie: only one choice voted, or the first choice has more votes than the second choice
 	if len(Choices_with_votes) == 1 or First_choice_count > Second_choice_count:
+		# The blanks account for the majority
 		if Choices_with_votes[0][1]["ID"] == 0:
 			Result = "blanks"
 		else:
 			Result = "decided"
-	# A choice tied only with blanks → this choice won the vote
 	else:
 		Choices_with_same_votes = 0
 		for Choice_count, Choice in Choices_with_votes:
 			# A not blank choice, with the same number of votes as the first choice
 			if Choice["ID"] > 0 and Choice_count == First_choice_count:
 				Choices_with_same_votes += 1
+		# If a choice is tied, but only with the blanks → this choice won the vote
 		if Choices_with_same_votes == 1:
 			Result = "decided"
 	if Result == "decided":
