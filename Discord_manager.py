@@ -17,7 +17,6 @@ from Config_manager import Config
 import DB_manager
 import Gears
 import History
-import IRC_manager
 
 intents = discord.Intents.default()
 # Allows to receive member join/leave events
@@ -28,6 +27,9 @@ intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+IRC_enabled = Config["enabled_sections"]["irc"]
+if IRC_enabled:
+	import IRC_manager
 History_enabled = Config["enabled_sections"]["history"]
 if History_enabled:
 	History_table = Config["history"]["db_table"]
@@ -62,7 +64,7 @@ async def on_error(event, *args, **kwargs):
 async def on_command_error(Context, Error):
 	await Context.send(f"Command error: {Error}")
 	IRC_chan = Get_bridge_by_Discord_chan(Context.channel.id)["irc_chan"]
-	if not IRC_chan:
+	if not IRC_enabled or not IRC_chan:
 		return
 	Author = Context.author.display_name
 	# Relay on IRC the command that caused the error
@@ -301,7 +303,7 @@ async def on_message(Message):
 		Relayed_message = True
 	if Author == bot.user:
 		# If the message comes from IRC without a webhook
-		if Text.startswith("<**"):
+		if IRC_enabled and Text.startswith("<**"):
 			Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
 			if Match:
 				Relayed_message = True
@@ -333,6 +335,8 @@ async def on_message(Message):
 		return
 
 	# Prepare the message and send it to IRC
+	if not IRC_enabled:
+		return
 	Text = Message.clean_content.strip()
 	# If the Discord message has attachments, add their URLs at the end
 	if Message.attachments:
@@ -439,9 +443,10 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		Avatar_URL = None
 		if Users_enabled:
 			Users = DB_manager.Users_fetch_users(Users_table)
-			for User_ID in Users:
-				if Users[User_ID]["IRC_pseudo"] == IRC_nick:
-					User = Users[User_ID]
+			User = None
+			for Infos_user in Users.values():
+				if Infos_user["IRC_pseudo"] == IRC_nick:
+					User = Infos_user
 					break
 			if User:
 				if User["Pseudo_displayed_on_Discord"]:

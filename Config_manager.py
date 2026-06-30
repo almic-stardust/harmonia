@@ -83,21 +83,22 @@ if "history" in Config and Config["history"].get("enable"):
 Config["enabled_sections"]["irc"] = False
 if "irc" in Config:
 	Config["enabled_sections"]["irc"] = True
-	# The keys password and quit_message are optional
+	# The keys "password" and "quit_message" are optional
 	for Key in ("bot_owner", "server", "nick", "username", "real_name"):
 		if Key not in Config["irc"] or Config["irc"][Key] in (None, ""):
 			print(f"[Config] Error: the section \"irc\" is present, but its key \"{Key}\" is missing or empty.")
 			sys.exit(1)
 
 Config["enabled_sections"]["irc_bridges"] = False
-if "irc_bridges" in Config:
-	Config["enabled_sections"]["irc_bridges"] = True
-	for IRC_chan, Infos_chan in Config["irc_bridges"].items():
-		if "discord_chan" not in Infos_chan or Infos_chan["discord_chan"] in (None, ""):
-			print(f"[Config] Error: key \"discord_chan\" is missing or empty for \"{IRC_chan}\".")
-			sys.exit(1)
-		# Modify from: irc_chan = {discord_chan: X, webhook: Y}
-		# 		   to: irc_chan = {discord_chan: X, webhook: Y, irc_chan: "irc_chan"}
-		Config["irc_bridges"][IRC_chan]["irc_chan"] = f"#{IRC_chan}"
-else:
-	Config["irc_bridges"] = {}
+if Config["enabled_sections"]["irc"]:
+	if "irc_bridges" in Config:
+		Config["enabled_sections"]["irc_bridges"] = True
+		for IRC_chan, Infos_chan in Config["irc_bridges"].items():
+			if "discord_chan" not in Infos_chan or Infos_chan["discord_chan"] in (None, ""):
+				print(f"[Config] Error: key \"discord_chan\" is missing or empty for \"{IRC_chan}\".")
+				sys.exit(1)
+			# Modify from: irc_chan = {discord_chan: X, webhook: Y}
+			# 		   to: irc_chan = {discord_chan: X, webhook: Y, irc_chan: "irc_chan"}
+			Config["irc_bridges"][IRC_chan]["irc_chan"] = f"#{IRC_chan}"
+	else:
+		Config["irc_bridges"] = {}

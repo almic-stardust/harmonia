@@ -2,8 +2,12 @@
 
 import asyncio
 
+from Config_manager import Config
 import Discord_manager
-import IRC_manager
+
+IRC_enabled = Config["enabled_sections"]["irc"]
+if IRC_enabled:
+	import IRC_manager
 
 async def Wait_for_events(*Events):
 	Tasks = [asyncio.create_task(Event) for Event in Events]
