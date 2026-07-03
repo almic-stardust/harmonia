@@ -17,26 +17,26 @@ async def Wait_for_events(*Events):
 	await asyncio.gather(*Pending, return_exceptions=True)
 	return Done
 
-async def Get_chans(Bridge):
-	from Discord_manager import bot
-	Discord_chan = bot.get_channel(Bridge["discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Bridge["discord_chan"])
-	return Discord_chan, Bridge["irc_chan"]
+async def Send(Targets, Message, Message_IRC=None):
+	"""Send a message both on Discord and IRC (if enabled)"""
 
-async def Send(Bridge, Message, Message_IRC=None):
-	"""Send a message both on Discord and IRC"""
-	Discord_chan, IRC_chan = await Get_chans(Bridge)
+	if not Targets["discord_chan"]:
+		print(f"[Gears] Error for Send(): no Discord chan to send to.")
+	from Discord_manager import bot
+	Discord_chan = bot.get_channel(Targets["discord_chan"])
+	if not Discord_chan:
+		Discord_chan = await bot.fetch_channel(Targets["discord_chan"])
 	for Fragment in Discord_manager.Split_message(Message):
 		await Discord_chan.send(Fragment)
-	if IRC_chan:
+
+	if IRC_enabled and Targets["irc_chan"]:
 		IRC_instance = IRC_manager.GCI()
 		if IRC_instance:
 			# If the message to be sent on IRC is different from the message for Discord
 			if Message_IRC:
-				await IRC_instance.Safe_message(IRC_chan, Message_IRC)
+				await IRC_instance.Safe_message(Targets["irc_chan"], Message_IRC)
 			else:
-				await IRC_instance.Safe_message(IRC_chan, Message)
+				await IRC_instance.Safe_message(Targets["irc_chan"], Message)
 
 async def Send_DM(User, Context, Message, Message_IRC=None):
 	"""Send a DM, either on Discord or IRC"""

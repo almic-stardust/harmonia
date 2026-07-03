@@ -63,8 +63,10 @@ async def on_error(event, *args, **kwargs):
 @bot.event
 async def on_command_error(Context, Error):
 	await Context.send(f"Command error: {Error}")
+	if not IRC_enabled:
+		return
 	IRC_chan = Get_bridge_by_Discord_chan(Context.channel.id)["irc_chan"]
-	if not IRC_enabled or not IRC_chan:
+	if not IRC_chan:
 		return
 	Author = Context.author.display_name
 	# Relay on IRC the command that caused the error
@@ -101,6 +103,7 @@ def Get_bridge_by_Discord_chan(Discord_chan_ID):
 	return None
 
 def Get_bridge_by_IRC_chan(IRC_chan):
+	# If IRC_chan doesn’t exist in Config["irc_bridges"] → returns None
 	return Config["irc_bridges"].get(IRC_chan.lstrip("#"))
 
 ###############################################################################
@@ -279,10 +282,9 @@ async def on_message(Message):
 
 	Author = Message.author
 	Text = Message.content
-	Bridge = Get_bridge_by_Discord_chan(Message.channel.id)
-	if not Bridge:
-		return
-	Discord_chan, IRC_chan = await Gears.Get_chans(Bridge)
+	Discord_chan = Message.channel.id
+	if IRC_enabled:
+		Bridge = Get_bridge_by_Discord_chan(Discord_chan)
 
 	# Author.display_name = the server nickname if set, otherwise the global display name if set,
 	# otherwise the Discord username
@@ -303,7 +305,7 @@ async def on_message(Message):
 		Relayed_message = True
 	if Author == bot.user:
 		# If the message comes from IRC without a webhook
-		if IRC_enabled and Text.startswith("<**"):
+		if Bridge and Text.startswith("<**"):
 			Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
 			if Match:
 				Relayed_message = True
@@ -315,7 +317,7 @@ async def on_message(Message):
 
 	if History_enabled:
 		await History.Message_added(History_table,
-				Author_name, Bridge["discord_chan"], Message, Text, Relayed_message
+				Author_name, Discord_chan, Message, Text, Relayed_message
 		)
 
 	if Relayed_message:
@@ -325,7 +327,7 @@ async def on_message(Message):
 			await IRC_dispatcher(Bridge, Author_name, Text)
 		return
 
-	# The bot ignores its own messages
+	# After this point, the bot ignores its own messages
 	if Author == bot.user:
 		return
 
@@ -334,9 +336,9 @@ async def on_message(Message):
 		await bot.process_commands(Message)
 		return
 
-	# Prepare the message and send it to IRC
-	if not IRC_enabled:
+	if not Bridge:
 		return
+	# Prepare the message and send it to IRC
 	Text = Message.clean_content.strip()
 	# If the Discord message has attachments, add their URLs at the end
 	if Message.attachments:
@@ -359,7 +361,7 @@ async def on_message(Message):
 	print(f"[D] <{Author_name}> {Text}")
 	# To prevent (or rather limit) flood towards IRC
 	Now = time.monotonic()
-	Buffer_key = (Author.id, Bridge["discord_chan"])
+	Buffer_key = (Author.id, Discord_chan)
 	Buffer = Users_buffers.setdefault(Buffer_key, {"messages": [], "task": None})
 	Buffer["messages"].append((Now, Text))
 	# Start the rate limiter only once

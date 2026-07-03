@@ -29,6 +29,18 @@ Straws_bag["Users"] = []
 Proxies = {}
 
 ###############################################################################
+# General
+###############################################################################
+
+def Get_target_chans(Discord_chan):
+	Targets = {}
+	Targets["discord_chan"] = Discord_chan
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Discord_chan)
+	if Bridge:
+		Targets["irc_chan"] = Bridge["irc_chan"]
+	return Targets
+
+###############################################################################
 # Dispatch IRC commands
 ###############################################################################
 
@@ -114,8 +126,8 @@ async def IRC_dispatcher(Bridge, User, Text):
 # Misc
 ###############################################################################
 
-async def No_help_for_IRC(Bridge):
-	await Gears.Send(Bridge, "The !help command is only available on Discord.")
+async def No_help_for_IRC(Targets):
+	await Gears.Send(Targets, "The !help command is only available on Discord.")
 
 ###############################################################################
 # !roll
@@ -123,7 +135,7 @@ async def No_help_for_IRC(Bridge):
 
 # In this module, the Author variable will be used to indicate whether the message was sent from
 # Discord, and if so, by which user.
-async def Roll_Dice(Bridge, Dice, Author=None):
+async def Roll_Dice(Targets, Dice, Author=None):
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC. Otherwise, IRC users will see a
@@ -135,7 +147,7 @@ async def Roll_Dice(Bridge, Dice, Author=None):
 		Dice = Dice.lower()
 		Number_rolls, Faces = map(int, Dice.split("d"))
 		if Faces > 100:
-			await Gears.Send(Bridge, "Error: dice faces are limited to 100.")
+			await Gears.Send(Targets, "Error: dice faces are limited to 100.")
 			return
 		Rolls = []
 		for _ in range(Number_rolls):
@@ -157,11 +169,11 @@ async def Roll_Dice(Bridge, Dice, Author=None):
 		Output = "Format has to be NdN."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @bot.command()
 async def roll(Context, Dice):
@@ -171,21 +183,20 @@ async def roll(Context, Dice):
 	Parameters
 	----------
 	Dice : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Roll_Dice(Bridge, Dice, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Roll_Dice(Targets, Dice, Context.author.display_name)
 
-async def IRC_roll(Bridge, Dice):
+async def IRC_roll(Targets, Dice):
 	if not Dice:
-		await Gears.Send(Bridge, "Usage: !roll NdN")
+		await Gears.Send(Targets, "Usage: !roll NdN")
 		return
-	await Roll_Dice(Bridge, Dice)
+	await Roll_Dice(Targets, Dice)
 
 ###############################################################################
 # !straws
 ###############################################################################
 
-async def Straws_current_state(Bridge, Author=None):
+async def Straws_current_state(Targets, Author=None):
 
 	global Straws_bag
 	Presence_participants = False
@@ -223,7 +234,7 @@ async def Straws_current_state(Bridge, Author=None):
 		Output += Help_usage
 		if IRC_enabled:
 			Output_IRC += Help_usage + " (on Discord)"
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @bot.group()
 async def straws(Context):
@@ -234,11 +245,10 @@ async def straws(Context):
 			await Context.send("Invalid subcommand. See !help straws")
 			return
 		# If no subcommand is invoked, show what’s currently in the bag
-		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-		if Bridge:
-			await Straws_current_state(Bridge, Context.author.display_name)
+		Targets = Get_target_chans(Context.channel.id)
+		await Straws_current_state(Targets, Context.author.display_name)
 
-async def Straws_help(Bridge, Author=None):
+async def Straws_help(Targets, Author=None):
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
@@ -247,16 +257,15 @@ async def Straws_help(Bridge, Author=None):
 	Output = "See !help straws"
 	if IRC_enabled:
 		Output_IRC += Output + " (on Discord)"
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @straws.command(name="help")
 async def Discord_straws_help(Context):
 	"""Placeholder redirecting towards !help straws"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Straws_help(Bridge, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Straws_help(Targets, Context.author.display_name)
 
-async def Straws_add(Bridge, User, Action, Straw, Context=None):
+async def Straws_add(Targets, User, Action, Straw, Context=None):
 	global Straws_bag
 	if IRC_enabled:
 		IRC_instance = IRC_manager.GCI()
@@ -265,7 +274,7 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 		if Context:
 			if IRC_instance:
 				await IRC_instance.Relay_Discord_message(
-						Bridge["irc_chan"], User, f"!straws {Action} {Straw}"
+						Targets["irc_chan"], User, f"!straws {Action} {Straw}"
 				)
 	try:
 		# Remove dots, commas and underscores
@@ -286,7 +295,7 @@ async def Straws_add(Bridge, User, Action, Straw, Context=None):
 			Straws_bag["Common_key"].update({User: Straw})
 	except Exception as Error:
 		print(f"[Commands] Straws_add(): {Error}")
-		await Gears.Send(Bridge, "Your straw couldn’t be added in the bag!")
+		await Gears.Send(Targets, "Your straw couldn’t be added in the bag!")
 		return
 	Output = f"Your straw “{Straw}” has been added in the bag."
 	# The command comes from Discord, confirmation via DM
@@ -306,15 +315,14 @@ async def Discord_straws_participate(Context, *, Word):
 	----------
 	Word : str"""
 	# A straw is a word, or several that will be concatenated, in both cases up to 30 letters
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Straws_add(Bridge, Context.author.display_name, "participate", Word, Context)
+	Targets = Get_target_chans(Context.channel.id)
+	await Straws_add(Targets, Context.author.display_name, "participate", Word, Context)
 
-async def IRC_straws_participate(Bridge, User, Word):
+async def IRC_straws_participate(Targets, User, Word):
 	if not Word:
-		await Gears.Send(Bridge, "Usage: !straws participate Word")
+		await Gears.Send(Targets, "Usage: !straws participate Word")
 		return
-	await Straws_add(Bridge, User, "participate", Word)
+	await Straws_add(Targets, User, "participate", Word)
 
 @straws.command(name="contribute")
 async def Discord_straws_contribute(Context, *, Word):
@@ -324,17 +332,16 @@ async def Discord_straws_contribute(Context, *, Word):
 	Parameters
 	----------
 	Word : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Straws_add(Bridge, Context.author.display_name, "contribute", Word, Context)
+	Targets = Get_target_chans(Context.channel.id)
+	await Straws_add(Targets, Context.author.display_name, "contribute", Word, Context)
 
-async def IRC_straws_contribute(Bridge, User, Word):
+async def IRC_straws_contribute(Targets, User, Word):
 	if not Word:
-		await Gears.Send(Bridge, "Usage: !straws contribute Word")
+		await Gears.Send(Targets, "Usage: !straws contribute Word")
 		return
-	await Straws_add(Bridge, User, "contribute", Word)
+	await Straws_add(Targets, User, "contribute", Word)
 
-async def Straws_users(Bridge, Users, Author=None):
+async def Straws_users(Targets, Users, Author=None):
 	global Straws_bag
 	Output_IRC = ""
 	if IRC_enabled:
@@ -345,7 +352,7 @@ async def Straws_users(Bridge, Users, Author=None):
 		Output = "The draw is limited to 50 users."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	Straws_bag["Users"] = []
 	for User in Users.split():
@@ -353,7 +360,7 @@ async def Straws_users(Bridge, Users, Author=None):
 	Output = "The list of users has been set (usernames are limited to 30 characters)."
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @straws.command(name="users")
 async def Discord_straws_users(Context, *, Users):
@@ -363,17 +370,16 @@ async def Discord_straws_users(Context, *, Users):
 	Parameters
 	----------
 	Users : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Straws_users(Bridge, Users, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Straws_users(Targets, Users, Context.author.display_name)
 
-async def IRC_straws_users(Bridge, Users):
+async def IRC_straws_users(Targets, Users):
 	if not Users:
-		await Gears.Send(Bridge, "Usage: !straws users User1 User2 …")
+		await Gears.Send(Targets, "Usage: !straws users User1 User2 …")
 		return
-	await Straws_users(Bridge, Users)
+	await Straws_users(Targets, Users)
 
-async def Straws_draw(Bridge, Author=None):
+async def Straws_draw(Targets, Author=None):
 
 	global Straws_bag
 	Output_IRC = ""
@@ -385,13 +391,13 @@ async def Straws_draw(Bridge, Author=None):
 		Output = "No participants between whom to draw. See !help straws"
 		if IRC_enabled:
 			Output_IRC += Output + " (on Discord)"
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	if len(Straws_bag["Common_key"]) == 0:
 		Output = "No straws to draw from. See !help straws"
 		if IRC_enabled:
 			Output_IRC += Output + " (on Discord)"
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 
 	Common_key = " ".join(Straws_bag["Common_key"].values())
@@ -416,16 +422,15 @@ async def Straws_draw(Bridge, Author=None):
 	Output += f"\nAnd {Users[0]} is the lucky (?) participant who pulls the shortest straw."
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @straws.command(name="draw")
 async def Discord_straws_draw(Context):
 	"""Pull a straw from the bag."""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Straws_draw(Bridge, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Straws_draw(Targets, Context.author.display_name)
 
-async def Straws_reset(Bridge, Author=None):
+async def Straws_reset(Targets, Author=None):
 	global Straws_bag
 	Output_IRC = ""
 	if IRC_enabled:
@@ -437,14 +442,13 @@ async def Straws_reset(Bridge, Author=None):
 	Output = "The list of participants has been deleted, and the bag is now empty."
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @straws.command(name="reset")
 async def Discord_straws_reset(Context):
 	"""Reset the draw (delete participants and straws)."""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Straws_reset(Bridge, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Straws_reset(Targets, Context.author.display_name)
 
 ###############################################################################
 # !polls
@@ -459,14 +463,13 @@ async def polls(Context):
 			await Context.send("Invalid subcommand. See !help polls")
 			return
 		# If no subcommand is invoked: “!polls” = “!polls list”
-		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-		if Bridge:
-			await Polls_list(Bridge, None, Context.author.display_name)
+		Targets = Get_target_chans(Context.channel.id)
+		await Polls_list(Targets, None, Context.author.display_name)
 
-async def IRC_polls(Bridge):
-	await Polls_list(Bridge)
+async def IRC_polls(Targets):
+	await Polls_list(Targets)
 
-async def Polls_help(Bridge, Author=None):
+async def Polls_help(Targets, Author=None):
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
@@ -475,14 +478,13 @@ async def Polls_help(Bridge, Author=None):
 	Output = "See !help polls"
 	if IRC_enabled:
 		Output_IRC += Output + " (on Discord)"
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="help")
 async def Discord_polls_help(Context):
 	"""Placeholder redirecting towards !help polls"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_help(Bridge, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_help(Targets, Context.author.display_name)
 
 def Polls_voting_rights(Infos_user):
 	Infos_user["Can_vote"] = False
@@ -516,7 +518,7 @@ def Polls_voting_rights(Infos_user):
 			Infos_user["Can_vote"] = True
 	return Infos_user
 
-async def Polls_members(Bridge, List_of_users, Author=None):
+async def Polls_members(Targets, List_of_users, Author=None):
 	Unregistered = []
 	Output = ""
 	Output_IRC = ""
@@ -531,7 +533,7 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 		Output = "Error: This command requires the users section to be enabled in the config file."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	Users = DB_manager.Users_fetch_users(Users_table)
 	# “!polls members” lists all members with voting rights
@@ -560,7 +562,7 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 		if not Users_to_display:
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
+			await Gears.Send(Targets, Output, Output_IRC)
 			return
 	for User_ID in Users_to_display:
 		Infos_user = Users_to_display[User_ID]
@@ -583,7 +585,7 @@ async def Polls_members(Bridge, List_of_users, Author=None):
 			Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="members")
 async def Discord_polls_members(Context, *, Members=None):
@@ -593,12 +595,11 @@ async def Discord_polls_members(Context, *, Members=None):
 	Parameters
 	----------
 	Members : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		# In the !help for this subcommand, it’s better to display Members instead of List_of_users
-		await Polls_members(Bridge, Members, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	# In the !help for this subcommand, it’s better to display Members instead of List_of_users
+	await Polls_members(Targets, Members, Context.author.display_name)
 
-async def Polls_create(Bridge, User, Arguments, From_Discord=False):
+async def Polls_create(Targets, User, Arguments, From_Discord=False):
 	Output = ""
 	Output_IRC = ""
 	if IRC_enabled:
@@ -609,13 +610,13 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 		Output = "Error: This command requires the polls section to be enabled in the config file."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	if not Arguments:
 		Output += "Usage: !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	if "§" in Arguments:
 		Question, Choices = Arguments.split("§", 1)
@@ -635,7 +636,7 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 			Output += "If there’s only one choice, what’s the point of having a vote?"
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
+			await Gears.Send(Targets, Output, Output_IRC)
 			return
 	else:
 		Choices = ["Yes", "No"]
@@ -650,7 +651,7 @@ async def Polls_create(Bridge, User, Arguments, From_Discord=False):
 	Output += f"Vote with: !polls vote <Choice_number> [{Poll_ID}]"
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="create")
 async def Discord_polls_create(Context, *, Arguments):
@@ -660,11 +661,10 @@ async def Discord_polls_create(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_create(Bridge, Context.author.display_name, Arguments, True)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_create(Targets, Context.author.display_name, Arguments, True)
 
-async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False):
+async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False):
 
 	Polls_IDs = []
 	Output = ""
@@ -680,7 +680,7 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 		Output = "Error: This command requires the polls section to be enabled in the config file."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 
 	# Select latest poll if none specified
@@ -690,7 +690,7 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 			Output += "Error: no polls in the DB."
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
+			await Gears.Send(Targets, Output, Output_IRC)
 			return
 		Polls_IDs.append(Infos_poll["ID"])
 	else:
@@ -723,7 +723,7 @@ async def Polls_close(Bridge, User, Is_moderator, Arguments, From_Discord=False)
 			Output += f"Error: poll {Poll_ID}: only the author or a moderator can close a poll.\n"
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="close")
 async def Discord_polls_close(Context, *, Arguments=None):
@@ -734,16 +734,15 @@ async def Discord_polls_close(Context, *, Arguments=None):
 	----------
 	Arguments : int"""
 	Is_moderator = Context.author.guild_permissions.manage_messages
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_close(Bridge, Context.author.display_name, Is_moderator, Arguments, True)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_close(Targets, Context.author.display_name, Is_moderator, Arguments, True)
 
-async def IRC_polls_close(Bridge, User, Arguments=None):
+async def IRC_polls_close(Targets, User, Arguments=None):
 	# If this function is called, IRC_manager will have been imported 
-	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
-	await Polls_close(Bridge, User, Is_user_op, Arguments)
+	Is_user_op = IRC_manager.Is_op(Targets["irc_chan"], User)
+	await Polls_close(Targets, User, Is_user_op, Arguments)
 
-async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False):
+async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=False):
 
 	Polls_IDs = []
 	Output = ""
@@ -759,7 +758,7 @@ async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False
 		Output = "Error: This command requires the polls section to be enabled in the config file."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 
 	# Select latest poll if none specified
@@ -769,7 +768,7 @@ async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False
 			Output += "Error: no polls in the DB."
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
+			await Gears.Send(Targets, Output, Output_IRC)
 			return
 		Polls_IDs.append(Infos_poll["ID"])
 	else:
@@ -799,7 +798,7 @@ async def Polls_delete(Bridge, User, Is_moderator, Arguments, From_Discord=False
 			Output += f"Error: poll {Poll_ID}: only the author or a moderator can delete a poll.\n"
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="delete")
 async def Discord_polls_delete(Context, *, Arguments=None):
@@ -810,15 +809,14 @@ async def Discord_polls_delete(Context, *, Arguments=None):
 	----------
 	Arguments : int"""
 	Is_moderator = Context.author.guild_permissions.manage_messages
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_delete(Bridge, Context.author.display_name, Is_moderator, Arguments, True)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_delete(Targets, Context.author.display_name, Is_moderator, Arguments, True)
 
-async def IRC_polls_delete(Bridge, User, Arguments=None):
-	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
-	await Polls_delete(Bridge, User, Is_user_op, Arguments)
+async def IRC_polls_delete(Targets, User, Arguments=None):
+	Is_user_op = IRC_manager.Is_op(Targets["irc_chan"], User)
+	await Polls_delete(Targets, User, Is_user_op, Arguments)
 
-async def Polls_vote(Bridge, User, Arguments, Context=None):
+async def Polls_vote(Targets, User, Arguments, Context=None):
 
 	global Proxies
 	if IRC_enabled:
@@ -827,22 +825,22 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		# No usage of Output_IRC for this function, because user related errors are sent privately
 		if Context:
 			if IRC_instance:
-				await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User,
+				await IRC_instance.Relay_Discord_message(Targets["irc_chan"], User,
 						f"<\x02{User}\x02> !polls vote {Arguments}"
 				)
 	if not Polls_enabled:
-		await Gears.Send(Bridge,
+		await Gears.Send(Targets,
 				"Error: This command requires the polls section to be enabled in the config file."
 		)
 		return
 	if not Users_enabled:
-		await Gears.Send(Bridge,
+		await Gears.Send(Targets,
 				"Error: This command requires the users section to be enabled in the config file."
 		)
 		return
 	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
 	if not Arguments:
-		await Gears.Send(Bridge, Help_usage)
+		await Gears.Send(Targets, Help_usage)
 		return
 
 	Parts = Arguments.split()
@@ -855,7 +853,7 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 		if User in Proxies and Claimed_proxy_giver in Proxies[User]:
 			Proxy_giver = Claimed_proxy_giver
 		else:
-			await Gears.Send(Bridge,
+			await Gears.Send(Targets,
 					f"Error: {Claimed_proxy_giver} didn’t delegate a proxy to {User}."
 			)
 	if len(Parts) == 2 or (len(Parts) == 3 and Proxy_giver):
@@ -866,22 +864,22 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except ValueError:
-			await Gears.Send(Bridge, f"Error: invalid poll ID or choice number.\n" + Help_usage)
+			await Gears.Send(Targets, f"Error: invalid poll ID or choice number.\n" + Help_usage)
 			return
 	# Select latest poll if none specified
 	elif len(Parts) == 1:
 		try:
 			Choice = int(Parts[0])
 		except ValueError:
-			await Gears.Send(Bridge, f"Error: invalid choice number.\n" + Help_usage)
+			await Gears.Send(Targets, f"Error: invalid choice number.\n" + Help_usage)
 			return
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			await Gears.Send(Bridge, "Error: no polls in the DB.")
+			await Gears.Send(Targets, "Error: no polls in the DB.")
 			return
 		Poll_ID = Infos_poll["ID"]
 	else:
-		await Gears.Send(Bridge, Help_usage)
+		await Gears.Send(Targets, Help_usage)
 		return
 
 	Infos_user = {"Pseudo": User}
@@ -899,14 +897,14 @@ async def Polls_vote(Bridge, User, Arguments, Context=None):
 	if not Infos_poll:
 		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 	if not Infos_poll:
-		await Gears.Send(Bridge, "Error: poll not found. See !polls list")
+		await Gears.Send(Targets, "Error: poll not found. See !polls list")
 		return
 	if not Infos_poll["Active"]:
-		await Gears.Send(Bridge, f"Error: poll {Poll_ID} is closed. See !polls list active")
+		await Gears.Send(Targets, f"Error: poll {Poll_ID} is closed. See !polls list active")
 		return
 	Choices = Infos_poll["Choices"]
 	if Choice < 0 or Choice > len(Choices):
-		await Gears.Send(Bridge, f"Error: invalid choice number. See !polls info {Poll_ID}")
+		await Gears.Send(Targets, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
 
 	# If a member votes in a poll, it automatically revokes any proxy they may have given
@@ -968,11 +966,10 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_vote(Bridge, Context.author.display_name, Arguments, Context)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_vote(Targets, Context.author.display_name, Arguments, Context)
 
-async def Polls_unvote(Bridge, User, Poll_ID=None, Context=None):
+async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
 	if IRC_enabled:
 		IRC_instance = IRC_manager.GCI()
 		# If the command was sent on Discord, relay it on IRC
@@ -983,9 +980,9 @@ async def Polls_unvote(Bridge, User, Poll_ID=None, Context=None):
 					Output = f"<\x02{User}\x02> !polls unvote {Poll_ID}\n"
 				else:
 					Output = f"<\x02{User}\x02> !polls unvote\n"
-				await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], User, Output)
+				await IRC_instance.Relay_Discord_message(Targets["irc_chan"], User, Output)
 	if not Polls_enabled:
-		await Gears.Send(Bridge,
+		await Gears.Send(Targets,
 				"Error: This command requires the polls section to be enabled in the config file."
 		)
 		return
@@ -995,20 +992,20 @@ async def Polls_unvote(Bridge, User, Poll_ID=None, Context=None):
 			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except (TypeError, ValueError):
-			await Gears.Send(Bridge, "Error: invalid poll ID.\nUsage: !polls unvote [Poll_ID]")
+			await Gears.Send(Targets, "Error: invalid poll ID.\nUsage: !polls unvote [Poll_ID]")
 			return
 	# Select latest poll if none specified
 	else:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			await Gears.Send(Bridge, "Error: no polls in the DB.")
+			await Gears.Send(Targets, "Error: no polls in the DB.")
 			return
 		Poll_ID = Infos_poll["ID"]
 	# Avoid a DB query, in case the lastest poll was automatically selected
 	if not Infos_poll:
 		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 	if not Infos_poll:
-		await Gears.Send(Bridge, "Error: poll not found. See !polls list")
+		await Gears.Send(Targets, "Error: poll not found. See !polls list")
 		return
 	Votes = Infos_poll["Votes"]
 	if User not in Votes:
@@ -1018,7 +1015,7 @@ async def Polls_unvote(Bridge, User, Poll_ID=None, Context=None):
 	Recorded_in_DB = False
 	Recorded_in_DB = DB_manager.Polls_unvote(Polls_table, Poll_ID, Votes)
 	if Recorded_in_DB:
-		await Gears.Send(Bridge, f"{User}’s vote has been removed from poll {Poll_ID}.")
+		await Gears.Send(Targets, f"{User}’s vote has been removed from poll {Poll_ID}.")
 
 @polls.command(name="unvote")
 async def Discord_polls_unvote(Context, *, Arguments):
@@ -1028,11 +1025,10 @@ async def Discord_polls_unvote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_unvote(Bridge, Context.author.display_name, Arguments, Context)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_unvote(Targets, Context.author.display_name, Arguments, Context)
 
-async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
+async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 
 	global Proxies
 	Change_of_holder = False
@@ -1041,7 +1037,7 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
 		return
 	if not Users_enabled:
-		await Gears.Send(Bridge,
+		await Gears.Send(Targets,
 				"Error: This command requires the users section to be enabled in the config file."
 		)
 		return
@@ -1077,7 +1073,7 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		if Is_moderator:
 			User = Proxy_giver
 		else:
-			await Gears.Send(Bridge,
+			await Gears.Send(Targets,
 					"Error: only moderators can delegate the proxy of someone else."
 			)
 			return
@@ -1100,7 +1096,7 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		Proxies[Proxy_holder] = {}
 	# Each member can receive a proxy from a maximum of 3 members
 	if len(Proxies[Proxy_holder]) >= 3:
-		await Gears.Send(Bridge, f"{Proxy_holder} already holds 3 proxies.")
+		await Gears.Send(Targets, f"{Proxy_holder} already holds 3 proxies.")
 		return
 	Proxies[Proxy_holder][User] = Now
 	Output = f"{User} delegated their proxy to {Proxy_holder}"
@@ -1111,7 +1107,7 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 	# Therefore by adding the proxy of User, Proxy_holder don’t exceed the limit of 3
 	if not User in Proxies:
 		Output += "."
-		await Gears.Send(Bridge, Output)
+		await Gears.Send(Targets, Output)
 		return
 	# When User holds proxies, but Proxy_holder can’t receive any of them
 	if len(Proxies[Proxy_holder]) == 3:
@@ -1119,7 +1115,7 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		Output += ", ".join(Proxy for Proxy in Proxies[User])
 		Output += f")."
 		del Proxies[User]
-		await Gears.Send(Bridge, Output)
+		await Gears.Send(Targets, Output)
 		return
 	# When User holds proxies, and Proxy_holder can receive at least some of them
 	Output += f", and the following proxies were subdelegated ("
@@ -1139,9 +1135,9 @@ async def Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder
 		Output += ", ".join(Not_subdelegated)
 	Output += ")."
 	del Proxies[User]
-	await Gears.Send(Bridge, Output)
+	await Gears.Send(Targets, Output)
 
-async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
+async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 
 	global Proxies
 	Output = ""
@@ -1152,29 +1148,29 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 		if Context:
 			if IRC_instance:
 				await IRC_instance.Relay_Discord_message(
-						Bridge["irc_chan"], User, f"!polls proxy {Arguments}"
+						Targets["irc_chan"], User, f"!polls proxy {Arguments}"
 				)
 	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"""
 	if not Arguments:
-		await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+		await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
 		return
 	Parts = Arguments.split()
 	Action = Parts[0]
 
 	if Action == "delegate":
 		if len(Parts) < 2 or len(Parts) > 3:
-			await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+			await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
 			return
 		Proxy_holder = Parts[1]
 		Proxy_giver = None
 		if len(Parts) == 3:
 			# Consistency over intuition: the first argument is always Proxy_holder
 			Proxy_giver = Parts[2]
-		await Polls_proxy_delegate(Bridge, Context, User, Is_moderator, Proxy_holder, Proxy_giver)
+		await Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holder, Proxy_giver)
 
 	elif Action == "info":
 		if len(Parts) != 2:
-			await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+			await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
 			return
 		Member = Parts[1]
 		if Member == "all":
@@ -1190,7 +1186,7 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			Output += ", ".join(Proxy for Proxy in Proxies[Member])
 		else:
 			Output += f"{Member} doesn’t hold any proxies."
-		await Gears.Send(Bridge, Output)
+		await Gears.Send(Targets, Output)
 
 	elif Action == "revoke":
 		Member_revoking = None
@@ -1205,14 +1201,14 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			if Member_revoking in Proxies[Proxy_holder]:
 				Handler_to_revoke = Proxy_holder
 		if not Handler_to_revoke:
-			await Gears.Send(Bridge, "{Member_revoking} didn’t delegate a proxy to anyone.")
+			await Gears.Send(Targets, "{Member_revoking} didn’t delegate a proxy to anyone.")
 			return
 		Proceed_with_revocation = False
 		if (Member_revoking == User or Handler_to_revoke == User):
 			Proceed_with_revocation = True
 		else:
 			if not Is_moderator:
-				await Gears.Send(Bridge,
+				await Gears.Send(Targets,
 						"Error: only moderators can revoke the proxy of someone else."
 				)
 				return
@@ -1226,11 +1222,11 @@ async def Polls_proxy(Bridge, User, Is_moderator, Arguments, Context=None):
 			if len(Proxies[Proxy_holder]) == 0:
 				del Proxies[Proxy_holder]
 			Output += f"{Member_revoking} no longer delegate a proxy to {Handler_to_revoke}."
-		await Gears.Send(Bridge, Output)
+		await Gears.Send(Targets, Output)
 
 	# Action isn’t delegate, info or revoke
 	else:
-		await Gears.Send(Bridge, "Error: invalid syntax.\n" + Help_usage)
+		await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
 		return
 
 @polls.command(name="proxy")
@@ -1245,15 +1241,14 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	Arguments : str"""
 
 	Is_moderator = Context.author.guild_permissions.manage_messages
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_proxy(Bridge, Context.author.display_name, Is_moderator, Arguments, Context)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_proxy(Targets, Context.author.display_name, Is_moderator, Arguments, Context)
 
-async def IRC_polls_proxy(Bridge, User, Arguments):
-	Is_user_op = IRC_manager.Is_op(Bridge["irc_chan"], User)
-	await Polls_proxy(Bridge, User, Is_user_op, Arguments)
+async def IRC_polls_proxy(Targets, User, Arguments):
+	Is_user_op = IRC_manager.Is_op(Targets["irc_chan"], User)
+	await Polls_proxy(Targets, User, Is_user_op, Arguments)
 
-async def Polls_list(Bridge, Arguments=None, Author=None):
+async def Polls_list(Targets, Arguments=None, Author=None):
 	Status = None
 	Number = None
 	Output = ""
@@ -1269,7 +1264,7 @@ async def Polls_list(Bridge, Arguments=None, Author=None):
 		Output = "Error: This command requires the polls section to be enabled in the config file."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
 	if Arguments:
@@ -1278,7 +1273,7 @@ async def Polls_list(Bridge, Arguments=None, Author=None):
 			Output = "Error: invalid syntax.\n" + Help_usage
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Help_usage, Output_IRC)
+			await Gears.Send(Targets, Help_usage, Output_IRC)
 			return
 		if Parts[0] in ("active", "closed"):
 			Status = Parts[0]
@@ -1294,7 +1289,7 @@ async def Polls_list(Bridge, Arguments=None, Author=None):
 			Output += "Error: invalid poll ID. " + Help_usage
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
+			await Gears.Send(Targets, Output, Output_IRC)
 			return
 	# If the number of polls is not specified, display the last 3
 	if not Number:
@@ -1306,14 +1301,14 @@ async def Polls_list(Bridge, Arguments=None, Author=None):
 		Output += "Error: no polls in the DB."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	for Infos_poll in Polls:
 		Status = "active" if Infos_poll["Active"] else "closed"
 		Output += f"#{Infos_poll['ID']} ({Status}) {Infos_poll['Question']}\n"
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="list")
 async def Discord_polls_list(Context, *, Arguments=None):
@@ -1324,11 +1319,10 @@ async def Discord_polls_list(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : str"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_list(Bridge, Arguments, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_list(Targets, Arguments, Context.author.display_name)
 
-async def Polls_info(Bridge, Poll_ID=None, Author=None):
+async def Polls_info(Targets, Poll_ID=None, Author=None):
 
 	Output = ""
 	Output_IRC = ""
@@ -1342,7 +1336,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 	if not Polls_enabled:
 		Output = "Error: This command requires the polls section to be enabled in the config file."
 		Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 
 	if Poll_ID:
@@ -1354,7 +1348,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			Output += "Error: invalid poll ID.\nUsage: !polls info [Poll_ID]"
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
+			await Gears.Send(Targets, Output, Output_IRC)
 			return
 	# Select latest poll if none specified
 	else:
@@ -1363,7 +1357,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 			Output += "Error: no polls in the DB."
 			if IRC_enabled:
 				Output_IRC += Output
-			await Gears.Send(Bridge, Output, Output_IRC)
+			await Gears.Send(Targets, Output, Output_IRC)
 			return
 		Poll_ID = Infos_poll["ID"]
 	# Avoid a DB query, in case the lastest poll was automatically selected
@@ -1373,7 +1367,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 		Output += f"Error: poll {Poll_ID} doesn’t exist."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 
 	Creation_date = datetime.datetime.strftime(Infos_poll["Creation_date"], "%d/%m/%Y")
@@ -1395,7 +1389,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 		Output += f"No one has voted in this poll yet."
 		if IRC_enabled:
 			Output_IRC += Output
-		await Gears.Send(Bridge, Output, Output_IRC)
+		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	Choices_with_votes = []
 	Choices_without_votes = []
@@ -1462,7 +1456,7 @@ async def Polls_info(Bridge, Poll_ID=None, Author=None):
 		Output += ", ".join(Choice["Voters"]) + ")\n"
 	if IRC_enabled:
 		Output_IRC += Output
-	await Gears.Send(Bridge, Output, Output_IRC)
+	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="info")
 async def Discord_polls_info(Context, Poll_ID=None):
@@ -1472,6 +1466,5 @@ async def Discord_polls_info(Context, Poll_ID=None):
 	Parameters
 	----------
 	Poll_ID : int"""
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Context.channel.id)
-	if Bridge:
-		await Polls_info(Bridge, Poll_ID, Context.author.display_name)
+	Targets = Get_target_chans(Context.channel.id)
+	await Polls_info(Targets, Poll_ID, Context.author.display_name)
