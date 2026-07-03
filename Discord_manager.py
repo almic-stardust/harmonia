@@ -97,9 +97,11 @@ async def quit(Context):
 ###############################################################################
 
 def Get_bridge_by_Discord_chan(Discord_chan_ID):
-	for Bridge in Config["irc_bridges"]:
-		if Config["irc_bridges"][Bridge]["discord_chan"] == Discord_chan_ID:
-			return Config["irc_bridges"][Bridge]
+	IRC_bridges = Config.get("irc_bridges")
+	if IRC_bridges:
+		for Bridge in IRC_bridges:
+			if IRC_bridges[Bridge]["discord_chan"] == Discord_chan_ID:
+				return IRC_bridges[Bridge]
 	return None
 
 def Get_bridge_by_IRC_chan(IRC_chan):
@@ -283,6 +285,7 @@ async def on_message(Message):
 	Author = Message.author
 	Text = Message.content
 	Discord_chan = Message.channel.id
+	Bridge = None
 	if IRC_enabled:
 		Bridge = Get_bridge_by_Discord_chan(Discord_chan)
 

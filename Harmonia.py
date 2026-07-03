@@ -38,9 +38,10 @@ async def on_ready():
 		if IRC_task is None or IRC_task.done():
 			IRC_task = asyncio.create_task(IRC_manager.Run_IRC_loop())
 	# Start background tasks
-	if not Delete_expired_IRC_messages_from_Discord.is_running():
-		if IRC_enabled and History_enabled and Users_enabled:
-			Delete_expired_IRC_messages_from_Discord.start()
+	if IRC_enabled:
+		if not Delete_expired_IRC_messages_from_Discord.is_running():
+			if History_enabled and Users_enabled:
+				Delete_expired_IRC_messages_from_Discord.start()
 	if not Reconcile_downloaded_files.is_running():
 		if History_enabled:
 			Reconcile_downloaded_files.start()
