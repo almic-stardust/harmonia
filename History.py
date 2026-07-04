@@ -206,11 +206,11 @@ def Message_edited(Table, Keep, Message):
 	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 	New_text = Message.content
 	Updated_filenames = []
+	Deleted = []
 	Old_attachments = Infos_message["Attachments"]
 	if Old_attachments:
 		New_attachments = []
 		Updated_filenames = []
-		Deleted = []
 		for Attachment in Message.attachments:
 			New_attachments.append(Attachment.filename)
 		for Attachment in Old_attachments:
@@ -229,9 +229,9 @@ def Message_edited(Table, Keep, Message):
 			if Normalized_old_name in New_attachments:
 				Updated_filenames.append(Attachment)
 			else:
-				New_filename = Delete_attachment(Table, Keep, Attachment)
-				Updated_filenames.append(New_filename)
-				Deleted.append(New_filename)
+				Deleted_files = Delete_attachment(Table, Keep, Attachment)
+				Updated_filenames.extend(Deleted_files)
+				Deleted.extend(Deleted_files)
 	DB_manager.History_edition(Table, Keep, Message.id, Date, New_text, Updated_filenames, Deleted)
 
 def Message_deleted(Table, Keep, Message_ID):
