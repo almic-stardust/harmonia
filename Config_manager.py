@@ -6,7 +6,7 @@ import yaml
 with open("Config.yaml", "r") as File:
 	# Config is a variable, so this file is named Config_manager.py
 	Config = yaml.safe_load(File) or {}
-Config["enabled_sections"] = {}
+Config["Enabled_sections"] = {}
 
 ###############################################################################
 # Required sections
@@ -19,11 +19,11 @@ Required = {
 		"password",
 		"database",
 	),
-	"discord": (
-		"bot_owner",
-		"token",
-		"bot_name",
-		"server",
+	"Discord": (
+		"Bot_owner",
+		"Token",
+		"Bot_name",
+		"Server",
 	),
 }
 
@@ -34,7 +34,7 @@ for Section, Keys in Required.items():
 	for Key in Keys:
 		if Key not in Config[Section] or Config[Section][Key] in (None, ""):
 			print(f"[Config] Error: the section \"{Section}\" is present, but its key \"{Key}\" is missing or empty.")
-			if Section == "discord" and Key == "token":
+			if Section == "Discord" and Key == "Token":
 				print("See https://discordpy.readthedocs.io/en/stable/discord.html")
 			sys.exit(1)
 
@@ -43,26 +43,26 @@ for Section, Keys in Required.items():
 ###############################################################################
 
 Optional = {
-	"mail": (
-		"server",
-		"bot_address",
+	"Mail": (
+		"Server",
+		"Bot_address",
 	),
-	"users": (
-		"db_table",
+	"Users": (
+		"DB_table",
 	),
-	"polls": (
-		"db_table",
+	"Polls": (
+		"DB_table",
 	),
 }
 
 for Section, Keys in Optional.items():
-	Config["enabled_sections"][Section] = False
+	Config["Enabled_sections"][Section] = False
 	if Section not in Config:
 		continue
 	if Config[Section] is None:
 		print(f"[Config] Error: section \"{Section}\" is present but empty.")
 		sys.exit(1)
-	Config["enabled_sections"][Section] = True
+	Config["Enabled_sections"][Section] = True
 	for Key in Keys:
 		if Key not in Config[Section] or Config[Section][Key] in (None, ""):
 			print(f"[Config] Error: the section \"{Section}\" is present, but its key \"{Key}\" is missing or empty.")
@@ -72,33 +72,33 @@ for Section, Keys in Optional.items():
 # Special cases
 ###############################################################################
 
-Config["enabled_sections"]["history"] = False
-if "history" in Config and Config["history"].get("enable"):
-	Config["enabled_sections"]["history"] = True
-	for Key in ("db_table", "storage_folder", "storage_url"):
-		if Key not in Config["history"] or Config["history"][Key] in (None, ""):
+Config["Enabled_sections"]["History"] = False
+if "History" in Config and Config["History"].get("Enable"):
+	Config["Enabled_sections"]["History"] = True
+	for Key in ("DB_table", "Storage_folder", "Storage_url"):
+		if Key not in Config["History"] or Config["History"][Key] in (None, ""):
 			print(f"[Config] Error: the history is enabled, but key \"{Key}\" is missing or empty.")
 			sys.exit(1)
 
-Config["enabled_sections"]["irc"] = False
-if "irc" in Config:
-	Config["enabled_sections"]["irc"] = True
+Config["Enabled_sections"]["IRC"] = False
+if "IRC" in Config:
+	Config["Enabled_sections"]["IRC"] = True
 	# The keys "password" and "quit_message" are optional
-	for Key in ("bot_owner", "server", "nick", "username", "real_name"):
-		if Key not in Config["irc"] or Config["irc"][Key] in (None, ""):
-			print(f"[Config] Error: the section \"irc\" is present, but its key \"{Key}\" is missing or empty.")
+	for Key in ("Bot_owner", "Server", "Nick", "Username", "Real_name"):
+		if Key not in Config["IRC"] or Config["IRC"][Key] in (None, ""):
+			print(f"[Config] Error: the section \"IRC\" is present, but its key \"{Key}\" is missing or empty.")
 			sys.exit(1)
 
-Config["enabled_sections"]["irc_bridges"] = False
-if Config["enabled_sections"]["irc"]:
-	if "irc_bridges" in Config:
-		Config["enabled_sections"]["irc_bridges"] = True
-		for IRC_chan, Infos_chan in Config["irc_bridges"].items():
-			if "discord_chan" not in Infos_chan or Infos_chan["discord_chan"] in (None, ""):
-				print(f"[Config] Error: key \"discord_chan\" is missing or empty for \"{IRC_chan}\".")
+Config["Enabled_sections"]["IRC_bridges"] = False
+if Config["Enabled_sections"]["IRC"]:
+	if "IRC_bridges" in Config:
+		Config["Enabled_sections"]["IRC_bridges"] = True
+		for IRC_chan, Infos_chan in Config["IRC_bridges"].items():
+			if "Discord_chan" not in Infos_chan or Infos_chan["Discord_chan"] in (None, ""):
+				print(f"[Config] Error: key \"Discord_chan\" is missing or empty for \"{IRC_chan}\".")
 				sys.exit(1)
-			# Modify from: irc_chan = {discord_chan: X, webhook: Y}
-			# 		   to: irc_chan = {discord_chan: X, webhook: Y, irc_chan: "irc_chan"}
-			Config["irc_bridges"][IRC_chan]["irc_chan"] = f"#{IRC_chan}"
+			# Modify from: IRC_chan = {Discord_chan: X, Webhook: Y}
+			# 		   to: IRC_chan = {Discord_chan: X, Webhook: Y, IRC_chan: "IRC_chan"}
+			Config["IRC_bridges"][IRC_chan]["IRC_chan"] = f"#{IRC_chan}"
 	else:
-		Config["irc_bridges"] = {}
+		Config["IRC_bridges"] = {}

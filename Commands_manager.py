@@ -14,15 +14,15 @@ import Gears
 import Discord_manager
 from Discord_manager import bot
 
-IRC_enabled = Config["enabled_sections"]["irc"]
+IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
-Users_enabled = Config["enabled_sections"]["users"]
+Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
-	Users_table = Config["users"]["db_table"]
-Polls_enabled = Config["enabled_sections"]["polls"]
+	Users_table = Config["Users"]["DB_table"]
+Polls_enabled = Config["Enabled_sections"]["Polls"]
 if Polls_enabled:
-	Polls_table = Config["polls"]["db_table"]
+	Polls_table = Config["Polls"]["DB_table"]
 Straws_bag = {}
 Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
@@ -34,10 +34,10 @@ Proxies = {}
 
 def Get_target_chans(Discord_chan):
 	Targets = {}
-	Targets["discord_chan"] = Discord_chan
+	Targets["Discord_chan"] = Discord_chan
 	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Discord_chan)
 	if Bridge:
-		Targets["irc_chan"] = Bridge["irc_chan"]
+		Targets["IRC_chan"] = Bridge["IRC_chan"]
 	return Targets
 
 ###############################################################################
@@ -274,7 +274,7 @@ async def Straws_add(Targets, User, Action, Straw, Context=None):
 		if Context:
 			if IRC_instance:
 				await IRC_instance.Relay_Discord_message(
-						Targets["irc_chan"], User, f"!straws {Action} {Straw}"
+						Targets["IRC_chan"], User, f"!straws {Action} {Straw}"
 				)
 	try:
 		# Remove dots, commas and underscores
@@ -739,7 +739,7 @@ async def Discord_polls_close(Context, *, Arguments=None):
 
 async def IRC_polls_close(Targets, User, Arguments=None):
 	# If this function is called, IRC_manager will have been imported 
-	Is_user_op = IRC_manager.Is_op(Targets["irc_chan"], User)
+	Is_user_op = IRC_manager.Is_op(Targets["IRC_chan"], User)
 	await Polls_close(Targets, User, Is_user_op, Arguments)
 
 async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=False):
@@ -813,7 +813,7 @@ async def Discord_polls_delete(Context, *, Arguments=None):
 	await Polls_delete(Targets, Context.author.display_name, Is_moderator, Arguments, True)
 
 async def IRC_polls_delete(Targets, User, Arguments=None):
-	Is_user_op = IRC_manager.Is_op(Targets["irc_chan"], User)
+	Is_user_op = IRC_manager.Is_op(Targets["IRC_chan"], User)
 	await Polls_delete(Targets, User, Is_user_op, Arguments)
 
 async def Polls_vote(Targets, User, Arguments, Context=None):
@@ -825,7 +825,7 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 		# No usage of Output_IRC for this function, because user related errors are sent privately
 		if Context:
 			if IRC_instance:
-				await IRC_instance.Relay_Discord_message(Targets["irc_chan"], User,
+				await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User,
 						f"<\x02{User}\x02> !polls vote {Arguments}"
 				)
 	if not Polls_enabled:
@@ -980,7 +980,7 @@ async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
 					Output = f"<\x02{User}\x02> !polls unvote {Poll_ID}\n"
 				else:
 					Output = f"<\x02{User}\x02> !polls unvote\n"
-				await IRC_instance.Relay_Discord_message(Targets["irc_chan"], User, Output)
+				await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User, Output)
 	if not Polls_enabled:
 		await Gears.Send(Targets,
 				"Error: This command requires the polls section to be enabled in the config file."
@@ -1148,7 +1148,7 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 		if Context:
 			if IRC_instance:
 				await IRC_instance.Relay_Discord_message(
-						Targets["irc_chan"], User, f"!polls proxy {Arguments}"
+						Targets["IRC_chan"], User, f"!polls proxy {Arguments}"
 				)
 	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"""
 	if not Arguments:
@@ -1245,7 +1245,7 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	await Polls_proxy(Targets, Context.author.display_name, Is_moderator, Arguments, Context)
 
 async def IRC_polls_proxy(Targets, User, Arguments):
-	Is_user_op = IRC_manager.Is_op(Targets["irc_chan"], User)
+	Is_user_op = IRC_manager.Is_op(Targets["IRC_chan"], User)
 	await Polls_proxy(Targets, User, Is_user_op, Arguments)
 
 async def Polls_list(Targets, Arguments=None, Author=None):

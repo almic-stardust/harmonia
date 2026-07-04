@@ -9,13 +9,13 @@ from Discord_manager import bot
 from Discord_manager import Reconcile_downloaded_files
 import Commands_manager
 
-IRC_enabled = Config["enabled_sections"]["irc"]
+IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
 	from Discord_manager import Delete_expired_IRC_messages_from_Discord
 	IRC_task = None
-History_enabled = Config["enabled_sections"]["history"]
-Users_enabled = Config["enabled_sections"]["users"]
+History_enabled = Config["Enabled_sections"]["History"]
+Users_enabled = Config["Enabled_sections"]["Users"]
 
 ###############################################################################
 # Discord events
@@ -79,7 +79,7 @@ async def Stop_bot():
 
 async def main():
 	await Discord_manager.Init_webhooks()
-	await bot.start(Config["discord"]["token"])
+	await bot.start(Config["Discord"]["Token"])
 
 if __name__ == "__main__":
 	asyncio.run(main())

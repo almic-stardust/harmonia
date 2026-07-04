@@ -7,8 +7,6 @@ import glob
 import os
 import re
 import smtplib
-import email.utils
-from email.mime.text import MIMEText
 
 from Config_manager import Config
 import DB_manager
@@ -51,7 +49,7 @@ async def Download_files(Table, Storage_folder, Date, Files_to_download, Max_siz
 
 async def Download_from_Discord(Table, Message):
 
-	Storage_folder = Config["history"].get("storage_folder")
+	Storage_folder = Config["History"].get("Storage_folder")
 	Other_source_folder = os.path.join(Storage_folder, "other_sources")
 	Date = Message.created_at.astimezone(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
 	Downloaded_filenames = []
@@ -138,7 +136,7 @@ async def Download_from_Discord(Table, Message):
 
 def Delete_attachment(Table, Keep, Attachments):
 	Updated_filenames = []
-	Storage_folder = Config["history"].get("storage_folder")
+	Storage_folder = Config["History"].get("Storage_folder")
 	if not os.path.exists(Storage_folder):
 		print(f"[History] Warning: The folder for the attachments isn’t accessible.")
 		return

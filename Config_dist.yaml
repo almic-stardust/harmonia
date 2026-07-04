@@ -1,6 +1,14 @@
 # You must restart the bot if you modify this file. If you use the web display of the history, don’t
 # forget Hypercorn and/or Uvicorn.
 
+Discord:
+  Bot_owner:              ""
+  # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
+  Token:                  ""
+  Bot_name:               "name for the bot to display in the history"
+  Server:                 id_server
+
+# In lowercase, so that it can be used as-is by the package mysqlclient
 mysqlclient:
   host:                   ""
   user:                   ""
@@ -10,44 +18,37 @@ mysqlclient:
   # Guarantee UTC regardless of server configuration
   init_command:           "SET time_zone = '+00:00'"
 
-discord:
-  bot_owner:              ""
-  # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
-  token:                  ""
-  bot_name:               "name for the bot to display in the history"
-  server:                 id_server
+Mail:
+  Server:                 ""
+  Bot_address:            ""
 
-mail:
-  server:                 ""
-  bot_address:            ""
+History:
+  Enable:                 True/False
+  DB_table:               "project_history"
+  Storage_folder:         "/path/to/bot_files"
+  Storage_url:            "https://domain.tld/bot_files"
 
-history:
-  enable:                 True/False
-  db_table:               "project_history"
-  storage_folder:         "/path/to/bot_files"
-  storage_url:            "https://domain.tld/bot_files"
+Users:
+  DB_table:               "project_users"
 
-users:
-  db_table:               "project_users"
+Polls:
+  DB_table:               "project_polls"
 
-polls:
-  db_table:               "project_polls"
+IRC:
+  Bot_owner:              ""
+  Server:                 "irc.libera.chat"
+  Nick:                   "MyBot"
+  Username:               "my_bot"
+  Real_name:              "My Bot"
+  Password:               ""
+  Quit_message:           "That’s the end of the beans"
 
-irc:
-  bot_owner:              ""
-  server:                 "irc.libera.chat"
-  nick:                   "MyBot"
-  username:               "my_bot"
-  real_name:              "My Bot"
-  password:               ""
-  quit_message:           "That’s the end of the beans"
-
-irc_bridges:
+IRC_bridges:
   chan1:
-    discord_chan:         id_chan
+    Discord_chan:         id_chan
     # If you want messages on Discord displayed as coming from the users instead of the bot.
     # See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
-    webhook: ""
+    Webhook: ""
   chan2:
-    discord_chan:         id_chan
-    webhook: ""
+    Discord_chan:         id_chan
+    Webhook: ""

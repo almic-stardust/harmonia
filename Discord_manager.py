@@ -27,16 +27,16 @@ intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-IRC_enabled = Config["enabled_sections"]["irc"]
+IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
-History_enabled = Config["enabled_sections"]["history"]
+History_enabled = Config["Enabled_sections"]["History"]
 if History_enabled:
-	History_table = Config["history"]["db_table"]
+	History_table = Config["History"]["DB_table"]
 	History_keep_all = True
-Users_enabled = Config["enabled_sections"]["users"]
+Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
-	Users_table = Config["users"]["db_table"]
+	Users_table = Config["Users"]["DB_table"]
 HTTP_session = None
 Users_buffers = {}
 Map_pending_downloads = {}
@@ -88,7 +88,7 @@ async def Shutdown_Discord():
 
 @bot.command()
 async def quit(Context):
-	if Context.author.name == Config["discord"]["bot_owner"]:
+	if Context.author.name == Config["Discord"]["Bot_owner"]:
 		import Harmonia
 		await Harmonia.Stop_bot()
 
@@ -97,16 +97,16 @@ async def quit(Context):
 ###############################################################################
 
 def Get_bridge_by_Discord_chan(Discord_chan_ID):
-	IRC_bridges = Config.get("irc_bridges")
+	IRC_bridges = Config.get("IRC_bridges")
 	if IRC_bridges:
 		for Bridge in IRC_bridges:
-			if IRC_bridges[Bridge]["discord_chan"] == Discord_chan_ID:
+			if IRC_bridges[Bridge]["Discord_chan"] == Discord_chan_ID:
 				return IRC_bridges[Bridge]
 	return None
 
 def Get_bridge_by_IRC_chan(IRC_chan):
-	# If IRC_chan doesn’t exist in Config["irc_bridges"] → returns None
-	return Config["irc_bridges"].get(IRC_chan.lstrip("#"))
+	# If IRC_chan doesn’t exist in Config["IRC_bridges"] → returns None
+	return Config["IRC_bridges"].get(IRC_chan.lstrip("#"))
 
 ###############################################################################
 # Handling users
@@ -176,7 +176,7 @@ async def Delete_expired_IRC_messages_from_Discord():
 async def Reconcile_downloaded_files():
 	try:
 		global Map_pending_downloads
-		Storage_folder = Config["history"].get("storage_folder")
+		Storage_folder = Config["History"].get("Storage_folder")
 		Other_sources = os.path.join(Storage_folder, "other_sources")
 		if not os.path.exists(Storage_folder):
 			print(f"[Discord_m] Warning: The folder for the attachments isn’t accessible.")
@@ -265,13 +265,13 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 		IRC_instance = IRC_manager.GCI()
 		for Message in Messages_to_relay:
 			if IRC_instance:
-				await IRC_instance.Relay_Discord_message(Bridge["irc_chan"], Author_name, Message)
+				await IRC_instance.Relay_Discord_message(Bridge["IRC_chan"], Author_name, Message)
 	else:
 		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
 		# Discord, meaning a network request
-		Chan = bot.get_channel(Bridge["discord_chan"])
+		Chan = bot.get_channel(Bridge["Discord_chan"])
 		if not Chan:
-			Chan = await bot.fetch_channel(Bridge["discord_chan"])
+			Chan = await bot.fetch_channel(Bridge["Discord_chan"])
 		await Chan.send(
 				f"{Author.mention} What you typed resulted in too many messages to send on IRC in a short time. Therefore nothing was forwarded."
 		)
@@ -316,7 +316,7 @@ async def on_message(Message):
 				Text = Match.group(2)
 		# It’s the bot, responding to someone or saying something by itself
 		else:
-			Author_name = Config["discord"].get("bot_name", "Bot")
+			Author_name = Config["Discord"].get("Bot_name", "Bot")
 
 	if History_enabled:
 		await History.Message_added(History_table,
@@ -349,7 +349,7 @@ async def on_message(Message):
 		if Text:
 			Text += " | "
 		# Ensure base ends with exactly one "/"
-		URL_base = Config["history"].get("storage_url").rstrip("/") + "/"
+		URL_base = Config["History"].get("Storage_url").rstrip("/") + "/"
 		Urls = []
 		for Attachment in Message.attachments:
 			Filenames_map = Map_pending_downloads.get(Attachment.filename)
@@ -387,7 +387,7 @@ def Register_destination_in_MPD(Discord_filename, Destination_filename):
 	Entry["Destination_filename"] = Destination_filename
 
 async def Get_avatar_filename(Author_name, Discord_ID=None):
-	Avatars_folder = os.path.join(Config["history"].get("storage_folder"), "avatars")
+	Avatars_folder = os.path.join(Config["History"].get("Storage_folder"), "avatars")
 	if not os.path.exists(Avatars_folder):
 		os.makedirs(Avatars_folder)
 	Filename = f"{Author_name}.png"
@@ -415,7 +415,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
 	Images_URLs = re.findall(Pattern_image_URL, Message)
 	if Images_URLs:
-		Storage_folder = os.path.join(Config["history"].get("storage_folder"), "other_sources")
+		Storage_folder = os.path.join(Config["History"].get("Storage_folder"), "other_sources")
 		Date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
 		Max_size = 52428800 # 50 MB
 		Files_to_download = []
@@ -441,7 +441,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 
-	Webhook_URL = Bridge.get("webhook")
+	Webhook_URL = Bridge.get("Webhook")
 	if Webhook_URL:
 		Webhook = discord.Webhook.from_url(Webhook_URL, session=HTTP_session)
 		Author_name = IRC_nick
@@ -458,7 +458,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 					Author_name = User["Pseudo_displayed_on_Discord"]
 				Avatar_URL = User.get("Avatar_URL")
 				if not Avatar_URL:
-					Server = bot.get_guild(Config["discord"]["server"])
+					Server = bot.get_guild(Config["Discord"]["Server"])
 					Discord_user = None
 					if User["Discord_username"]:
 						Discord_user = discord.utils.get(
@@ -470,7 +470,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		if not Avatar_URL and History_enabled:
 			Avatar_filename = await Get_avatar_filename(IRC_nick)
 			# Ensure base ends with exactly one "/"
-			URL_base = Config["history"].get("storage_url").rstrip("/") + "/"
+			URL_base = Config["History"].get("Storage_url").rstrip("/") + "/"
 			Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
 		Sent_message = await Webhook.send(
 				Message, username=Author_name, avatar_url=Avatar_URL, files=Files_for_Discord,
@@ -480,9 +480,9 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 				wait=True
 		)
 	else:
-		Chan = bot.get_channel(Bridge["discord_chan"])
+		Chan = bot.get_channel(Bridge["Discord_chan"])
 		if not Chan:
-			Chan = await bot.fetch_channel(Bridge["discord_chan"])
+			Chan = await bot.fetch_channel(Bridge["Discord_chan"])
 		Message = f"<**{IRC_nick}**> {Message}"
 		Sent_message = await Chan.send(Message, files=Files_for_Discord, suppress_embeds=True)
 
@@ -512,15 +512,3 @@ async def on_message_edit(Old_message, New_message):
 async def on_raw_message_delete(Payload):
 	if History_enabled:
 		History.Message_deleted(History_table, History_keep_all, Payload.message_id)
-
-###############################################################################
-# Other stuff
-###############################################################################
-
-#@bot.event
-#async def on_member_remove(Leaver: discord.Member):
-#	"""When an user leaves a server"""
-#	if Config["discord"].get("log_chan"):
-#		Chan = await Get_chan(bot.get_guild(Config["discord"]["server"]), Config["discord"]["log_chan"])
-#		if Chan:
-#			await Chan.send(f"{Leaver.name} has left the server.")

@@ -14,8 +14,8 @@ import Discord_manager
 
 IRC_shutting_down = asyncio.Event()
 Expected_chans = set()
-for Bridge in Config["irc_bridges"]:
-	IRC_chan = Config["irc_bridges"][Bridge]["irc_chan"]
+for Bridge in Config["IRC_bridges"]:
+	IRC_chan = Config["IRC_bridges"][Bridge]["IRC_chan"]
 	Expected_chans.add(IRC_chan)
 Instance = None
 
@@ -143,13 +143,13 @@ async def Run_IRC_loop():
 	while not IRC_shutting_down.is_set():
 
 		New_instance = Connection_handler(
-			nickname=Config["irc"]["nick"],
-			username=Config["irc"]["username"],
-			realname=Config["irc"]["real_name"]
+			nickname=Config["IRC"]["Nick"],
+			username=Config["IRC"]["Username"],
+			realname=Config["IRC"]["Real_name"]
 		)
 		try:
 			await New_instance.connect(
-				hostname=Config["irc"]["server"],
+				hostname=Config["IRC"]["Server"],
 				tls=True, tls_verify=False
 			)
 			# Assign the global variable only after the connection has succeeded, to avoid the
@@ -252,11 +252,11 @@ class Connection_handler(pydle.Client):
 
 	async def on_connect(self):
 		await super().on_connect()
-		for Bridge in Config["irc_bridges"]:
-			await self.join(Config["irc_bridges"][Bridge]["irc_chan"])
-		if Config["irc"].get("password"):
+		for Bridge in Config["IRC_bridges"]:
+			await self.join(Config["IRC_bridges"][Bridge]["IRC_chan"])
+		if Config["IRC"].get("Password"):
 			await self.Safe_message("NickServ",
-					f"identify {Config['irc']['nick']} {Config['irc']['password']}"
+					f"identify {Config['IRC']['Nick']} {Config['IRC']['Password']}"
 			)
 			print("[IRC] Identified with nickserv")
 		asyncio.create_task(self.Ensure_chans())
@@ -271,7 +271,7 @@ class Connection_handler(pydle.Client):
 	async def Shutdown_IRC(self):
 		print("[IRC] Disconnecting…")
 		IRC_shutting_down.set()
-		await self.quit(Config["irc"].get("quit_message", "Something clever"))
+		await self.quit(Config["IRC"].get("Quit_message", "Something clever"))
 
 	async def Ensure_chans(self):
 		global Expected_chans
@@ -308,7 +308,7 @@ class Connection_handler(pydle.Client):
 		# The bot ignores its own messages
 		if Author == self.nickname:
 			return
-		if Message.startswith("!quit") and Author == Config["irc"]["bot_owner"]:
+		if Message.startswith("!quit") and Author == Config["IRC"]["Bot_owner"]:
 			import Harmonia
 			await Harmonia.Stop_bot()
 			return
