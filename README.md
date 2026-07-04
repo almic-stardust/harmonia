@@ -44,8 +44,9 @@ To build the package mysqlclient:
 
 Create the virtual environment:
 
-	% python3 -m venv ~/.local/pydle-python3.13
-	% ~/.local/pydle-python3.13/bin/pip install discord.py pydle PyYAML mysqlclient
+	% python3.13 -m venv ~/.local/pydle-python3.13
+	% source ~/.local/pydle-python3.13/bin/activate
+	% ~/.local/pydle-python3.13/bin/python -m pip install discord.py pydle PyYAML mysqlclient python-dateutil
 
 #### Database
 
@@ -58,7 +59,7 @@ prevents the SQL requests of some functions from requiring a JSON extraction.
 	    chan_id                     BIGINT NOT NULL,
 	    message_id                  BIGINT NOT NULL PRIMARY KEY,
 	    reply_to                    BIGINT NULL,
-	    user                        VARCHAR(255) NOT NULL,
+	    user                        VARCHAR(32) NOT NULL,
 	    content_history             TEXT NOT NULL,
 	    attachments                 JSON NULL,
 	    reactions                   JSON NULL,
