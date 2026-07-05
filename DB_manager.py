@@ -532,8 +532,7 @@ def Users_fetch_users(Table):
 					"Forum_pseudo":					Result[8],
 					"Discord_username":				Result[9],
 					"Pseudo_displayed_on_Discord":	Result[10],
-					# 365 if the user didn’t choose a period different from the default of one year
-					"Discord_expiration_for_IRC":	Result[11] if Result[11] else 365,
+					"Discord_expiration_for_IRC":	Result[11],
 					"Avatar_URL":					Result[12],
 					"Renewals":						Renewals,
 					"Contributions":				Contributions,
