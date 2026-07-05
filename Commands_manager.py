@@ -14,6 +14,7 @@ import Gears
 import Discord_manager
 from Discord_manager import bot
 
+Shutdown_callback = None
 IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
@@ -75,6 +76,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 	}}
 
 	Commands = { #		 Destination (funct or dict)	Arguments?		User variable?
+			"quit":		(IRC_quit,						False,			True),
 			"help":		(No_help_for_IRC,				False,			False),
 			"roll":		(IRC_roll,						True,			False),
 			"straws":	(Infos_straws,					True,			True),
@@ -128,6 +130,21 @@ async def IRC_dispatcher(Bridge, User, Text):
 
 async def No_help_for_IRC(Targets):
 	await Gears.Send(Targets, "The !help command is only available on Discord.")
+
+###############################################################################
+# !quit
+###############################################################################
+
+async def Quit_command(Bot_owner, User):
+	if User == Bot_owner:
+		await Shutdown_callback()
+
+@bot.command()
+async def quit(Context):
+	await Quit_command(Config["Discord"]["Bot_owner"], Context.author.name)
+
+async def IRC_quit(Targets, User):
+	await Quit_command(Config["IRC"]["Bot_owner"], User)
 
 ###############################################################################
 # !roll

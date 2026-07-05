@@ -78,6 +78,7 @@ async def Stop_bot():
 ###############################################################################
 
 async def main():
+	Commands_manager.Shutdown_callback = Stop_bot
 	await Discord_manager.Init_webhooks()
 	await bot.start(Config["Discord"]["Token"])
 

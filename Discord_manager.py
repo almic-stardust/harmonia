@@ -65,7 +65,7 @@ async def on_command_error(Context, Error):
 	await Context.send(f"Command error: {Error}")
 	if not IRC_enabled:
 		return
-	IRC_chan = Get_bridge_by_Discord_chan(Context.channel.id)["irc_chan"]
+	IRC_chan = Get_bridge_by_Discord_chan(Context.channel.id)["IRC_chan"]
 	if not IRC_chan:
 		return
 	Author = Context.author.display_name
@@ -85,12 +85,6 @@ async def Shutdown_Discord():
 		# Prevent reuse after closing
 		HTTP_session = None
 	await bot.close()
-
-@bot.command()
-async def quit(Context):
-	if Context.author.name == Config["Discord"]["Bot_owner"]:
-		import Harmonia
-		await Harmonia.Stop_bot()
 
 ###############################################################################
 # Handling chans

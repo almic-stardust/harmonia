@@ -308,10 +308,6 @@ class Connection_handler(pydle.Client):
 		# The bot ignores its own messages
 		if Author == self.nickname:
 			return
-		if Message.startswith("!quit") and Author == Config["IRC"]["Bot_owner"]:
-			import Harmonia
-			await Harmonia.Stop_bot()
-			return
 		print(f"[I] <{Author}> {Message}")
 		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
 
