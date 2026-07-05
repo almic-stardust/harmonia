@@ -401,26 +401,14 @@ def Users_check_presence(Table, Infos_user):
 			"discord_username": "",
 			"pseudo_displayed_on_discord": "",
 	}
-	if "Pseudo" in Infos_user:
-		Fields["pseudo"] = Infos_user["Pseudo"]
-	if "Mail" in Infos_user:
-		Fields["mail"] = Infos_user["Mail"]
-	if "First_name" in Infos_user:
-		Fields["first_name"] = Infos_user["First_name"]
-	if "Last_name" in Infos_user:
-		Fields["last_name"] = Infos_user["Last_name"]
-	if "ML_pseudo" in Infos_user:
-		Fields["ml_pseudo"] = Infos_user["ML_pseudo"]
-	if "Wiki_pseudo" in Infos_user:
-		Fields["wiki_pseudo"] = Infos_user["Wiki_pseudo"]
-	if "IRC_pseudo" in Infos_user:
-		Fields["irc_pseudo"] = Infos_user["IRC_pseudo"]
-	if "Forum_pseudo" in Infos_user:
-		Fields["forum_pseudo"] = Infos_user["Forum_pseudo"]
-	if "Discord_username" in Infos_user:
-		Fields["discord_username"] = Infos_user["Discord_username"]
-	if "Pseudo_displayed_on_Discord" in Infos_user:
-		Fields["pseudo_displayed_on_discord"] = Infos_user["Pseudo_displayed_on_Discord"]
+	Dict_keys = {
+		"Pseudo", "Mail", "First_name", "Last_name",
+		"ML_pseudo", "Wiki_pseudo", "IRC_pseudo", "Forum_pseudo",
+		"Discord_username", "Discord_display_name"
+	}
+	for Dict_key in Dict_keys:
+		if Dict_key in Infos_user:
+			Fields[Dict_key.lower()] = Infos_user[Dict_key]
 
 	try:
 		if not Table.isidentifier():
