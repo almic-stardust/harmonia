@@ -5,9 +5,73 @@ import asyncio
 from Config_manager import Config
 import Discord_manager
 
+Shutting_down = asyncio.Event()
 IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
+	IRC_task = None
+History_enabled = Config["Enabled_sections"]["History"]
+Users_enabled = Config["Enabled_sections"]["Users"]
+
+###############################################################################
+# Startup
+###############################################################################
+
+async def Start_bot():
+	# Ensure async errors are visible (by default, discord.py silently drop task errors)
+	Loop = asyncio.get_running_loop()
+	Loop.set_exception_handler(lambda loop, context: print("ASYNC ERROR:", context))
+	if len(Discord_manager.bot.guilds) == 0:
+		print("[Discord] Bot is not yet in any server.")
+		await Stop_bot()
+		return
+	print(f"[Discord] Logged in as {Discord_manager.bot.user}")
+	if IRC_enabled:
+		global IRC_task
+		# Start IRC loop only once
+		if IRC_task is None or IRC_task.done():
+			IRC_task = asyncio.create_task(IRC_manager.Run_IRC_loop())
+	# Start background tasks
+	if IRC_enabled:
+		if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
+			if History_enabled and Users_enabled:
+				Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
+	if not Discord_manager.Reconcile_downloaded_files.is_running():
+		if History_enabled:
+			Discord_manager.Reconcile_downloaded_files.start()
+
+###############################################################################
+# Shutdown
+###############################################################################
+
+async def Stop_bot():
+	print("Shutdown initiated…")
+	if Shutting_down.is_set():
+		return
+	Shutting_down.set()
+	# Stop IRC loop
+	if IRC_enabled:
+		global IRC_task
+		# Disconnect from IRC
+		IRC_instance = IRC_manager.Get_instance()
+		if IRC_instance:
+			try:
+				await IRC_instance.Shutdown_IRC()
+			except Exception as Error:
+				print(f"[IRC] Error during shutdown: {Error}")
+		# Wait for the IRC loop to exit cleanly
+		if IRC_task:
+			try:
+				await IRC_task
+			except Exception as Error:
+				print(f"[IRC] Error during task loop exit: {Error}")
+	# Stop Discord
+	await Discord_manager.Shutdown_Discord()
+	print("Shutdown complete.")
+
+###############################################################################
+# Events
+###############################################################################
 
 async def Wait_for_events(*Events):
 	Tasks = [asyncio.create_task(Event) for Event in Events]
@@ -17,15 +81,30 @@ async def Wait_for_events(*Events):
 	await asyncio.gather(*Pending, return_exceptions=True)
 	return Done
 
+###############################################################################
+# Chans
+###############################################################################
+
+def Get_target_chans(Discord_chan):
+	Targets = {}
+	Targets["Discord_chan"] = Discord_chan
+	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Discord_chan)
+	if Bridge:
+		Targets["IRC_chan"] = Bridge["IRC_chan"]
+	return Targets
+
+###############################################################################
+# Messages
+###############################################################################
+
 async def Send(Targets, Message, Message_IRC=None):
 	"""Send a message both on Discord and IRC (if enabled)"""
 
 	if not Targets["Discord_chan"]:
 		print(f"[Gears] Error for Send(): no Discord chan to send to.")
-	from Discord_manager import bot
-	Discord_chan = bot.get_channel(Targets["Discord_chan"])
+	Discord_chan = Discord_manager.bot.get_channel(Targets["Discord_chan"])
 	if not Discord_chan:
-		Discord_chan = await bot.fetch_channel(Targets["Discord_chan"])
+		Discord_chan = await Discord_manager.bot.fetch_channel(Targets["Discord_chan"])
 	for Fragment in Discord_manager.Split_message(Message):
 		await Discord_chan.send(Fragment)
 

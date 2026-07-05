@@ -49,6 +49,11 @@ async def Init_webhooks():
 	global HTTP_session
 	HTTP_session = aiohttp.ClientSession()
 
+# Event triggered when the bot has connected to Discord
+@bot.event
+async def on_ready():
+	await Gears.Start_bot()
+
 # Exceptions in the event handlers of discord.py are swallowed, unless explicitly logged.
 # As Discord bots are long-running services, it wouldn’t be acceptable for one exception in one
 # event to crash or disconnect the bot, or require it to be restarted. That’s why discord.py
@@ -58,6 +63,10 @@ async def Init_webhooks():
 async def on_error(event, *args, **kwargs):
 	import traceback
 	traceback.print_exc()
+
+@bot.event
+async def on_command(Context):
+	print(f"Running command: {Context.command}")
 
 # Global command error handler, so that errors are visible instead of being silently ignored
 @bot.event
@@ -400,12 +409,13 @@ async def Get_avatar_filename(Author_name, Discord_ID=None):
 
 async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
-	Files_for_Discord = []
-
+	if Gears.Shutting_down.is_set():
+		return
 	Bridge = Get_bridge_by_IRC_chan(IRC_chan)
 	if not Bridge:
 		return
 
+	Files_for_Discord = []
 	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
 	Images_URLs = re.findall(Pattern_image_URL, Message)
 	if Images_URLs:
@@ -466,13 +476,17 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			# Ensure base ends with exactly one "/"
 			URL_base = Config["History"].get("Storage_url").rstrip("/") + "/"
 			Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
-		Sent_message = await Webhook.send(
-				Message, username=Author_name, avatar_url=Avatar_URL, files=Files_for_Discord,
-				# Doesn’t affect images explicitly uploaded
-				suppress_embeds=True,
-				# Without that, Discord doesn’t return the created message
-				wait=True
-		)
+		try:
+			Sent_message = await Webhook.send(
+					Message, username=Author_name, avatar_url=Avatar_URL, files=Files_for_Discord,
+					# Doesn’t affect images explicitly uploaded
+					suppress_embeds=True,
+					# Without that, Discord doesn’t return the created message
+					wait=True
+			)
+		except aiohttp.client_exceptions.ServerDisconnectedError:
+			print("[Discord] Error while sending message: disconnected from server.")
+			return
 	else:
 		Chan = bot.get_channel(Bridge["Discord_chan"])
 		if not Chan:

@@ -11,10 +11,8 @@ from dateutil.relativedelta import relativedelta
 from Config_manager import Config
 import DB_manager
 import Gears
-import Discord_manager
 from Discord_manager import bot
 
-Shutdown_callback = None
 IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
@@ -28,18 +26,6 @@ Straws_bag = {}
 Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
 Proxies = {}
-
-###############################################################################
-# General
-###############################################################################
-
-def Get_target_chans(Discord_chan):
-	Targets = {}
-	Targets["Discord_chan"] = Discord_chan
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Discord_chan)
-	if Bridge:
-		Targets["IRC_chan"] = Bridge["IRC_chan"]
-	return Targets
 
 ###############################################################################
 # Dispatch IRC commands
@@ -137,10 +123,10 @@ async def No_help_for_IRC(Targets):
 
 async def Quit_command(Bot_owner, User):
 	if User == Bot_owner:
-		await Shutdown_callback()
+		await Gears.Stop_bot()
 
-@bot.command()
-async def quit(Context):
+@bot.command(name="quit")
+async def Discord_quit(Context):
 	await Quit_command(Config["Discord"]["Bot_owner"], Context.author.name)
 
 async def IRC_quit(Targets, User):
@@ -200,7 +186,7 @@ async def roll(Context, Dice):
 	Parameters
 	----------
 	Dice : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Roll_Dice(Targets, Dice, Context.author.display_name)
 
 async def IRC_roll(Targets, Dice):
@@ -262,7 +248,7 @@ async def straws(Context):
 			await Context.send("Invalid subcommand. See !help straws")
 			return
 		# If no subcommand is invoked, show what’s currently in the bag
-		Targets = Get_target_chans(Context.channel.id)
+		Targets = Gears.Get_target_chans(Context.channel.id)
 		await Straws_current_state(Targets, Context.author.display_name)
 
 async def Straws_help(Targets, Author=None):
@@ -279,7 +265,7 @@ async def Straws_help(Targets, Author=None):
 @straws.command(name="help")
 async def Discord_straws_help(Context):
 	"""Placeholder redirecting towards !help straws"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Straws_help(Targets, Context.author.display_name)
 
 async def Straws_add(Targets, User, Action, Straw, Context=None):
@@ -332,7 +318,7 @@ async def Discord_straws_participate(Context, *, Word):
 	----------
 	Word : str"""
 	# A straw is a word, or several that will be concatenated, in both cases up to 30 letters
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Straws_add(Targets, Context.author.display_name, "participate", Word, Context)
 
 async def IRC_straws_participate(Targets, User, Word):
@@ -349,7 +335,7 @@ async def Discord_straws_contribute(Context, *, Word):
 	Parameters
 	----------
 	Word : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Straws_add(Targets, Context.author.display_name, "contribute", Word, Context)
 
 async def IRC_straws_contribute(Targets, User, Word):
@@ -387,7 +373,7 @@ async def Discord_straws_users(Context, *, Users):
 	Parameters
 	----------
 	Users : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Straws_users(Targets, Users, Context.author.display_name)
 
 async def IRC_straws_users(Targets, Users):
@@ -444,7 +430,7 @@ async def Straws_draw(Targets, Author=None):
 @straws.command(name="draw")
 async def Discord_straws_draw(Context):
 	"""Pull a straw from the bag."""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Straws_draw(Targets, Context.author.display_name)
 
 async def Straws_reset(Targets, Author=None):
@@ -464,7 +450,7 @@ async def Straws_reset(Targets, Author=None):
 @straws.command(name="reset")
 async def Discord_straws_reset(Context):
 	"""Reset the draw (delete participants and straws)."""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Straws_reset(Targets, Context.author.display_name)
 
 ###############################################################################
@@ -480,7 +466,7 @@ async def polls(Context):
 			await Context.send("Invalid subcommand. See !help polls")
 			return
 		# If no subcommand is invoked: “!polls” = “!polls list”
-		Targets = Get_target_chans(Context.channel.id)
+		Targets = Gears.Get_target_chans(Context.channel.id)
 		await Polls_list(Targets, None, Context.author.display_name)
 
 async def IRC_polls(Targets):
@@ -500,7 +486,7 @@ async def Polls_help(Targets, Author=None):
 @polls.command(name="help")
 async def Discord_polls_help(Context):
 	"""Placeholder redirecting towards !help polls"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_help(Targets, Context.author.display_name)
 
 def Polls_voting_rights(Infos_user):
@@ -612,7 +598,7 @@ async def Discord_polls_members(Context, *, Members=None):
 	Parameters
 	----------
 	Members : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	# In the !help for this subcommand, it’s better to display Members instead of List_of_users
 	await Polls_members(Targets, Members, Context.author.display_name)
 
@@ -678,7 +664,7 @@ async def Discord_polls_create(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_create(Targets, Context.author.display_name, Arguments, True)
 
 async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False):
@@ -751,7 +737,7 @@ async def Discord_polls_close(Context, *, Arguments=None):
 	----------
 	Arguments : int"""
 	Is_moderator = Context.author.guild_permissions.manage_messages
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_close(Targets, Context.author.display_name, Is_moderator, Arguments, True)
 
 async def IRC_polls_close(Targets, User, Arguments=None):
@@ -826,7 +812,7 @@ async def Discord_polls_delete(Context, *, Arguments=None):
 	----------
 	Arguments : int"""
 	Is_moderator = Context.author.guild_permissions.manage_messages
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_delete(Targets, Context.author.display_name, Is_moderator, Arguments, True)
 
 async def IRC_polls_delete(Targets, User, Arguments=None):
@@ -983,7 +969,7 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_vote(Targets, Context.author.display_name, Arguments, Context)
 
 async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
@@ -1042,7 +1028,7 @@ async def Discord_polls_unvote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_unvote(Targets, Context.author.display_name, Arguments, Context)
 
 async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
@@ -1258,7 +1244,7 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	Arguments : str"""
 
 	Is_moderator = Context.author.guild_permissions.manage_messages
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_proxy(Targets, Context.author.display_name, Is_moderator, Arguments, Context)
 
 async def IRC_polls_proxy(Targets, User, Arguments):
@@ -1336,7 +1322,7 @@ async def Discord_polls_list(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_list(Targets, Arguments, Context.author.display_name)
 
 async def Polls_info(Targets, Poll_ID=None, Author=None):
@@ -1483,5 +1469,5 @@ async def Discord_polls_info(Context, Poll_ID=None):
 	Parameters
 	----------
 	Poll_ID : int"""
-	Targets = Get_target_chans(Context.channel.id)
+	Targets = Gears.Get_target_chans(Context.channel.id)
 	await Polls_info(Targets, Poll_ID, Context.author.display_name)
