@@ -122,7 +122,7 @@ async def Send_DM(User, Context, Message, Message_IRC=None):
 	# The user wrote to the bot via Discord, reply via DM
 	if Context:
 		for Fragment in Discord_manager.Split_message(Message):
-			await Discord_chan.send(Fragment)
+			await Context.author.send(Fragment)
 	# The user wrote to the bot via IRC, reply via query
 	else:
 		IRC_instance = IRC_manager.GCI()

@@ -301,13 +301,7 @@ async def Straws_add(Targets, User, Action, Straw, Context=None):
 		await Gears.Send(Targets, "Your straw couldn’t be added in the bag!")
 		return
 	Output = f"Your straw “{Straw}” has been added in the bag."
-	# The command comes from Discord, confirmation via DM
-	if Context:
-		await Context.author.send(Output)
-	# The command comes from IRC, confirmation via query
-	else:
-		if IRC_enabled and IRC_instance:
-			await IRC_instance.Safe_message(User, Output)
+	await Gears.Send_DM(User, Context, Output)
 
 @straws.command(name="participate")
 async def Discord_straws_participate(Context, *, Word):
