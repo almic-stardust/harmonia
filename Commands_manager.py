@@ -136,15 +136,15 @@ async def IRC_quit(Targets, User):
 # !roll
 ###############################################################################
 
-# In this module, the Author variable will be used to indicate whether the message was sent from
-# Discord, and if so, by which user.
-async def Roll_Dice(Targets, Dice, Author=None):
+# In this module, the Discord_author variable will be used to indicate whether the message was sent
+# from Discord, and if so, by which user.
+async def Roll_Dice(Targets, Dice, Discord_author=None):
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC. Otherwise, IRC users will see a
 		# response from the bot, without seeing the command that prompted it.
-		if Author:
-			Output_IRC = f"<\x02{Author}\x02> !roll {Dice}\n"
+		if Discord_author:
+			Output_IRC = f"<\x02{Discord_author}\x02> !roll {Dice}\n"
 	try:
 		# Accept NDN as well as NdN
 		Dice = Dice.lower()
@@ -187,7 +187,8 @@ async def roll(Context, Dice):
 	----------
 	Dice : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Roll_Dice(Targets, Dice, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Roll_Dice(Targets, Dice, Discord_author)
 
 async def IRC_roll(Targets, Dice):
 	if not Dice:
@@ -199,7 +200,7 @@ async def IRC_roll(Targets, Dice):
 # !straws
 ###############################################################################
 
-async def Straws_current_state(Targets, Author=None):
+async def Straws_current_state(Targets, Discord_author=None):
 
 	global Straws_bag
 	Presence_participants = False
@@ -209,8 +210,8 @@ async def Straws_current_state(Targets, Author=None):
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
-			Output_IRC = f"<\x02{Author}\x02> !straws\n"
+		if Discord_author:
+			Output_IRC = f"<\x02{Discord_author}\x02> !straws\n"
 	if len(Straws_bag["Users"]) > 0:
 		Presence_participants = True
 		Output += "The participants between whom to draw are: "
@@ -249,14 +250,15 @@ async def straws(Context):
 			return
 		# If no subcommand is invoked, show what’s currently in the bag
 		Targets = Gears.Get_target_chans(Context.channel.id)
-		await Straws_current_state(Targets, Context.author.display_name)
+		Discord_author = Context.author.display_name
+		await Straws_current_state(Targets, Discord_author)
 
-async def Straws_help(Targets, Author=None):
+async def Straws_help(Targets, Discord_author=None):
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
-			Output_IRC = f"<\x02{Author}\x02> !straws help\n"
+		if Discord_author:
+			Output_IRC = f"<\x02{Discord_author}\x02> !straws help\n"
 	Output = "See !help straws"
 	if IRC_enabled:
 		Output_IRC += Output + " (on Discord)"
@@ -266,7 +268,8 @@ async def Straws_help(Targets, Author=None):
 async def Discord_straws_help(Context):
 	"""Placeholder redirecting towards !help straws"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Straws_help(Targets, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Straws_help(Targets, Discord_author)
 
 async def Straws_add(Targets, User, Action, Straw, Context=None):
 	global Straws_bag
@@ -313,7 +316,8 @@ async def Discord_straws_participate(Context, *, Word):
 	Word : str"""
 	# A straw is a word, or several that will be concatenated, in both cases up to 30 letters
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Straws_add(Targets, Context.author.display_name, "participate", Word, Context)
+	Discord_author = Context.author.display_name
+	await Straws_add(Targets, Discord_author, "participate", Word, Context)
 
 async def IRC_straws_participate(Targets, User, Word):
 	if not Word:
@@ -330,7 +334,8 @@ async def Discord_straws_contribute(Context, *, Word):
 	----------
 	Word : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Straws_add(Targets, Context.author.display_name, "contribute", Word, Context)
+	Discord_author = Context.author.display_name
+	await Straws_add(Targets, Discord_author, "contribute", Word, Context)
 
 async def IRC_straws_contribute(Targets, User, Word):
 	if not Word:
@@ -338,13 +343,13 @@ async def IRC_straws_contribute(Targets, User, Word):
 		return
 	await Straws_add(Targets, User, "contribute", Word)
 
-async def Straws_users(Targets, Users, Author=None):
+async def Straws_users(Targets, Users, Discord_author=None):
 	global Straws_bag
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
-			Output_IRC = f"<\x02{Author}\x02> !straws users {Users}\n"
+		if Discord_author:
+			Output_IRC = f"<\x02{Discord_author}\x02> !straws users {Users}\n"
 	if len(Users) > 50:
 		Output = "The draw is limited to 50 users."
 		if IRC_enabled:
@@ -368,7 +373,8 @@ async def Discord_straws_users(Context, *, Users):
 	----------
 	Users : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Straws_users(Targets, Users, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Straws_users(Targets, Users, Discord_author)
 
 async def IRC_straws_users(Targets, Users):
 	if not Users:
@@ -376,14 +382,14 @@ async def IRC_straws_users(Targets, Users):
 		return
 	await Straws_users(Targets, Users)
 
-async def Straws_draw(Targets, Author=None):
+async def Straws_draw(Targets, Discord_author=None):
 
 	global Straws_bag
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
-			Output_IRC = f"<\x02{Author}\x02> !straws draw\n"
+		if Discord_author:
+			Output_IRC = f"<\x02{Discord_author}\x02> !straws draw\n"
 	if len(Straws_bag["Users"]) == 0:
 		Output = "No participants between whom to draw. See !help straws"
 		if IRC_enabled:
@@ -425,15 +431,16 @@ async def Straws_draw(Targets, Author=None):
 async def Discord_straws_draw(Context):
 	"""Pull a straw from the bag."""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Straws_draw(Targets, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Straws_draw(Targets, Discord_author)
 
-async def Straws_reset(Targets, Author=None):
+async def Straws_reset(Targets, Discord_author=None):
 	global Straws_bag
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
-			Output_IRC = f"<\x02{Author}\x02> !straws reset\n"
+		if Discord_author:
+			Output_IRC = f"<\x02{Discord_author}\x02> !straws reset\n"
 	Straws_bag["Common_key"] = {}
 	Straws_bag["Users"] = []
 	Output = "The list of participants has been deleted, and the bag is now empty."
@@ -445,7 +452,8 @@ async def Straws_reset(Targets, Author=None):
 async def Discord_straws_reset(Context):
 	"""Reset the draw (delete participants and straws)."""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Straws_reset(Targets, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Straws_reset(Targets, Discord_author)
 
 ###############################################################################
 # !polls
@@ -461,17 +469,18 @@ async def polls(Context):
 			return
 		# If no subcommand is invoked: “!polls” = “!polls list”
 		Targets = Gears.Get_target_chans(Context.channel.id)
-		await Polls_list(Targets, None, Context.author.display_name)
+		Discord_author = Context.author.display_name
+		await Polls_list(Targets, None, Discord_author)
 
 async def IRC_polls(Targets):
 	await Polls_list(Targets)
 
-async def Polls_help(Targets, Author=None):
+async def Polls_help(Targets, Discord_author=None):
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
-			Output_IRC = f"<\x02{Author}\x02> !polls help\n"
+		if Discord_author:
+			Output_IRC = f"<\x02{Discord_author}\x02> !polls help\n"
 	Output = "See !help polls"
 	if IRC_enabled:
 		Output_IRC += Output + " (on Discord)"
@@ -481,7 +490,8 @@ async def Polls_help(Targets, Author=None):
 async def Discord_polls_help(Context):
 	"""Placeholder redirecting towards !help polls"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_help(Targets, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Polls_help(Targets, Discord_author)
 
 def Polls_voting_rights(Infos_user):
 	Infos_user["Can_vote"] = False
@@ -515,17 +525,17 @@ def Polls_voting_rights(Infos_user):
 			Infos_user["Can_vote"] = True
 	return Infos_user
 
-async def Polls_members(Targets, List_of_users, Author=None):
+async def Polls_members(Targets, List_of_users, Discord_author=None):
 	Unregistered = []
 	Output = ""
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
+		if Discord_author:
 			if List_of_users:
-				Output_IRC = f"<\x02{Author}\x02> !polls members {List_of_users}\n"
+				Output_IRC = f"<\x02{Discord_author}\x02> !polls members {List_of_users}\n"
 			else:
-				Output_IRC = f"<\x02{Author}\x02> !polls members\n"
+				Output_IRC = f"<\x02{Discord_author}\x02> !polls members\n"
 	if not Users_enabled:
 		Output = "Error: This command requires the users section to be enabled in the config file."
 		if IRC_enabled:
@@ -593,8 +603,9 @@ async def Discord_polls_members(Context, *, Members=None):
 	----------
 	Members : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
+	Discord_author = Context.author.display_name
 	# In the !help for this subcommand, it’s better to display Members instead of List_of_users
-	await Polls_members(Targets, Members, Context.author.display_name)
+	await Polls_members(Targets, Members, Discord_author)
 
 async def Polls_create(Targets, User, Arguments, From_Discord=False):
 	Output = ""
@@ -659,7 +670,8 @@ async def Discord_polls_create(Context, *, Arguments):
 	----------
 	Arguments : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_create(Targets, Context.author.display_name, Arguments, True)
+	Discord_author = Context.author.display_name
+	await Polls_create(Targets, Discord_author, Arguments, True)
 
 async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False):
 
@@ -730,9 +742,10 @@ async def Discord_polls_close(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
-	Is_moderator = Context.author.guild_permissions.manage_messages
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_close(Targets, Context.author.display_name, Is_moderator, Arguments, True)
+	Discord_author = Context.author.display_name
+	Is_moderator = Context.author.guild_permissions.manage_messages
+	await Polls_close(Targets, Discord_author, Is_moderator, Arguments, True)
 
 async def IRC_polls_close(Targets, User, Arguments=None):
 	# If this function is called, IRC_manager will have been imported 
@@ -805,9 +818,10 @@ async def Discord_polls_delete(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
-	Is_moderator = Context.author.guild_permissions.manage_messages
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_delete(Targets, Context.author.display_name, Is_moderator, Arguments, True)
+	Discord_author = Context.author.display_name
+	Is_moderator = Context.author.guild_permissions.manage_messages
+	await Polls_delete(Targets, Discord_author, Is_moderator, Arguments, True)
 
 async def IRC_polls_delete(Targets, User, Arguments=None):
 	Is_user_op = IRC_manager.Is_op(Targets["IRC_chan"], User)
@@ -964,7 +978,8 @@ async def Discord_polls_vote(Context, *, Arguments):
 	----------
 	Arguments : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_vote(Targets, Context.author.display_name, Arguments, Context)
+	Discord_author = Context.author.display_name
+	await Polls_vote(Targets, Discord_author, Arguments, Context)
 
 async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
 	if IRC_enabled:
@@ -1023,7 +1038,8 @@ async def Discord_polls_unvote(Context, *, Arguments):
 	----------
 	Arguments : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_unvote(Targets, Context.author.display_name, Arguments, Context)
+	Discord_author = Context.author.display_name
+	await Polls_unvote(Targets, Discord_author, Arguments, Context)
 
 async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 
@@ -1236,27 +1252,27 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-
-	Is_moderator = Context.author.guild_permissions.manage_messages
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_proxy(Targets, Context.author.display_name, Is_moderator, Arguments, Context)
+	Discord_author = Context.author.display_name
+	Is_moderator = Context.author.guild_permissions.manage_messages
+	await Polls_proxy(Targets, Discord_author, Is_moderator, Arguments, Context)
 
 async def IRC_polls_proxy(Targets, User, Arguments):
 	Is_user_op = IRC_manager.Is_op(Targets["IRC_chan"], User)
 	await Polls_proxy(Targets, User, Is_user_op, Arguments)
 
-async def Polls_list(Targets, Arguments=None, Author=None):
+async def Polls_list(Targets, Arguments=None, Discord_author=None):
 	Status = None
 	Number = None
 	Output = ""
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
+		if Discord_author:
 			if Arguments:
-				Output_IRC = f"<\x02{Author}\x02> !polls list {Arguments}\n"
+				Output_IRC = f"<\x02{Discord_author}\x02> !polls list {Arguments}\n"
 			else:
-				Output_IRC = f"<\x02{Author}\x02> !polls list\n"
+				Output_IRC = f"<\x02{Discord_author}\x02> !polls list\n"
 	if not Polls_enabled:
 		Output = "Error: This command requires the polls section to be enabled in the config file."
 		if IRC_enabled:
@@ -1317,19 +1333,20 @@ async def Discord_polls_list(Context, *, Arguments=None):
 	----------
 	Arguments : str"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_list(Targets, Arguments, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Polls_list(Targets, Arguments, Discord_author)
 
-async def Polls_info(Targets, Poll_ID=None, Author=None):
+async def Polls_info(Targets, Poll_ID=None, Discord_author=None):
 
 	Output = ""
 	Output_IRC = ""
 	if IRC_enabled:
 		# If the command was sent on Discord, relay it on IRC
-		if Author:
+		if Discord_author:
 			if Poll_ID:
-				Output_IRC = f"<\x02{Author}\x02> !polls info {Poll_ID}\n"
+				Output_IRC = f"<\x02{Discord_author}\x02> !polls info {Poll_ID}\n"
 			else:
-				Output_IRC = f"<\x02{Author}\x02> !polls info\n"
+				Output_IRC = f"<\x02{Discord_author}\x02> !polls info\n"
 	if not Polls_enabled:
 		Output = "Error: This command requires the polls section to be enabled in the config file."
 		Output_IRC += Output
@@ -1464,4 +1481,5 @@ async def Discord_polls_info(Context, Poll_ID=None):
 	----------
 	Poll_ID : int"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
-	await Polls_info(Targets, Poll_ID, Context.author.display_name)
+	Discord_author = Context.author.display_name
+	await Polls_info(Targets, Poll_ID, Discord_author)
