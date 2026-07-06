@@ -10,7 +10,6 @@ import uuid
 
 from Config_manager import Config
 import Gears
-import Discord_manager
 
 Expected_chans = set()
 for Bridge in Config["IRC_bridges"]:
@@ -307,7 +306,8 @@ class Connection_handler(pydle.Client):
 		if Author == self.nickname:
 			return
 		print(f"[I] <{Author}> {Message}")
-		await Discord_manager.Relay_IRC_message(Chan, Author, Message)
+		from Discord_manager import Relay_IRC_message
+		await Relay_IRC_message(Chan, Author, Message)
 
 	async def Safe_message(self, Chan, Message):
 		if not self.connected:

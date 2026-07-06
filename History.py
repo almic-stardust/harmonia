@@ -10,7 +10,6 @@ import smtplib
 
 from Config_manager import Config
 import DB_manager
-import Discord_manager
 
 ###############################################################################
 # Handling attachments
@@ -100,9 +99,10 @@ async def Download_from_Discord(Table, Message):
 				Suffix = max(Duplicates_suffixes) + 1
 				Destination_filename = f"{Base_name}—{Suffix}{File_ext}"
 
-		# When Discord changes the filename, duplicates (see comment just below) can only be handled
-		# in Discord_manager.py
-		Discord_manager.Register_destination_in_MPD(Discord_filename, Destination_filename)
+		# When Discord changes the filename, duplicates (see the comment just below) can only be
+		# handled in Discord_manager.py
+		from Discord_manager import Register_destination_in_MPD
+		Register_destination_in_MPD(Discord_filename, Destination_filename)
 
 		# Check if the filename is already present in the other_sources folder, as it may have
 		# been downloaded from another source than Discord. And if the attachments are images, the
