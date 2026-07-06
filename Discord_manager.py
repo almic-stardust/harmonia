@@ -74,7 +74,10 @@ async def on_command_error(Context, Error):
 	await Context.send(f"Command error: {Error}")
 	if not IRC_enabled:
 		return
-	IRC_chan = Get_bridge_by_Discord_chan(Context.channel.id)["IRC_chan"]
+	Bridge = Get_bridge_by_Discord_chan(Context.channel.id)
+	if not Bridge:
+		return
+	IRC_chan = Bridge["IRC_chan"]
 	if not IRC_chan:
 		return
 	Author = Context.author.display_name

@@ -372,6 +372,9 @@ async def Discord_straws_users(Context, *, Users):
 	Parameters
 	----------
 	Users : str"""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	await Straws_users(Targets, Users, Discord_author)
@@ -430,6 +433,9 @@ async def Straws_draw(Targets, Discord_author=None):
 @straws.command(name="draw")
 async def Discord_straws_draw(Context):
 	"""Pull a straw from the bag."""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	await Straws_draw(Targets, Discord_author)
@@ -451,6 +457,9 @@ async def Straws_reset(Targets, Discord_author=None):
 @straws.command(name="reset")
 async def Discord_straws_reset(Context):
 	"""Reset the draw (delete participants and straws)."""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	await Straws_reset(Targets, Discord_author)
@@ -669,13 +678,15 @@ async def Discord_polls_create(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	await Polls_create(Targets, Discord_author, Arguments, True)
 
 async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False):
 
-	Polls_IDs = []
 	Output = ""
 	Output_IRC = ""
 	if IRC_enabled:
@@ -693,6 +704,7 @@ async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False
 		return
 
 	# Select latest poll if none specified
+	Polls_IDs = []
 	if not Arguments:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
@@ -742,6 +754,9 @@ async def Discord_polls_close(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	Is_moderator = Context.author.guild_permissions.manage_messages
@@ -754,7 +769,6 @@ async def IRC_polls_close(Targets, User, Arguments=None):
 
 async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=False):
 
-	Polls_IDs = []
 	Output = ""
 	Output_IRC = ""
 	if IRC_enabled:
@@ -772,6 +786,7 @@ async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=Fals
 		return
 
 	# Select latest poll if none specified
+	Polls_IDs = []
 	if not Arguments:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
@@ -818,6 +833,9 @@ async def Discord_polls_delete(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	Is_moderator = Context.author.guild_permissions.manage_messages
@@ -977,6 +995,9 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	await Polls_vote(Targets, Discord_author, Arguments, Context)
@@ -1037,6 +1058,9 @@ async def Discord_polls_unvote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	await Polls_unvote(Targets, Discord_author, Arguments, Context)
@@ -1252,6 +1276,9 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
+	if (Context.guild is None):
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	Discord_author = Context.author.display_name
 	Is_moderator = Context.author.guild_permissions.manage_messages
