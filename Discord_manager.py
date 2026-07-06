@@ -235,9 +235,6 @@ def Split_message(Message):
 		Fragments.append(Remainder)
 	return Fragments
 
-def Is_command(Message):
-	return bool(re.match(r"^![A-Za-z]+", Message.content))
-
 async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 
 	await asyncio.sleep(5)
@@ -276,7 +273,7 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 		if not Chan:
 			Chan = await bot.fetch_channel(Bridge["Discord_chan"])
 		await Chan.send(
-				f"{Author.mention} What you typed resulted in too many messages to send on IRC in a short time. Therefore nothing was forwarded."
+				f"{Author.mention} What you typed resulted in too many messages to relay on IRC in a short time. Therefore nothing was forwarded."
 		)
 
 	# Cleanup buffer once decision is made
@@ -306,11 +303,11 @@ async def on_message(Message):
 				break
 
 	Relayed_message = False
-	# If the message comes from IRC through a webhook
+	# If the message comes from IRC to Discord, through a webhook
 	if Message.webhook_id is not None:
 		Relayed_message = True
 	if Author == bot.user:
-		# If the message comes from IRC without a webhook
+		# If the message comes from IRC to Discord, without a webhook
 		if Bridge and Text.startswith("<**"):
 			Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
 			if Match:
@@ -326,25 +323,30 @@ async def on_message(Message):
 				Author_name, Discord_chan, Message, Text, Relayed_message
 		)
 
-	if Relayed_message:
-		# Ensure the command starts with a letter (don’t react to “!!!” or “!?”)
-		if re.match(r"^![A-Za-z]+", Text):
+	# Commands must begin with a letter, don’t react to “!!!” or “!?”
+	if re.match(r"^![A-Za-z]+", Text):
+		# IRC commands
+		if Relayed_message:
 			from Commands_manager import IRC_dispatcher
 			await IRC_dispatcher(Bridge, Author_name, Text)
+		# Discord commands
+		else:
+			await bot.process_commands(Message)
 		return
 
 	# After this point, the bot ignores its own messages
 	if Author == bot.user:
 		return
 
-	# Forward Discord commands to the bot’s command handler, to prevent them from being buffered
-	if Is_command(Message):
-		await bot.process_commands(Message)
+	# Don’t relay on IRC what’s already coming from IRC
+	if Relayed_message:
 		return
 
+	# The message comes from a Discord chan that doesn’t have a bridge to an IRC chan
 	if not Bridge:
 		return
-	# Prepare the message and send it to IRC
+
+	# Prepare the message, and relay it from Discord to IRC
 	Text = Message.clean_content.strip()
 	# If the Discord message has attachments, add their URLs at the end
 	if Message.attachments:
@@ -430,7 +432,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 				"URL": URL,
 				"Destination_filename": Filename
 			})
-		# If history isn’t enabled, send the links as-is on Discord
+		# If history isn’t enabled, relay the links as-is on Discord
 		if len(Files_to_download) > 0 and History_enabled:
 			# Download the files so that they’ll be already present in the other_sources folder, to
 			# avoid keeping a version potentially degraded by Discord
@@ -485,7 +487,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 					wait=True
 			)
 		except aiohttp.client_exceptions.ServerDisconnectedError:
-			print("[Discord] Error while sending message: disconnected from server.")
+			print("[Discord] Error while relaying message: disconnected from server.")
 			return
 	else:
 		Chan = bot.get_channel(Bridge["Discord_chan"])
