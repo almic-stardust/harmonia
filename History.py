@@ -11,6 +11,10 @@ import smtplib
 from Config_manager import Config
 import DB_manager
 
+Users_enabled = Config["Enabled_sections"]["Users"]
+if Users_enabled:
+	Users_table = Config["Users"]["DB_table"]
+
 ###############################################################################
 # Handling attachments
 ###############################################################################
@@ -27,7 +31,7 @@ async def Download_files(Table, Storage_folder, Date, Files_to_download, Max_siz
 			try:
 				async with Session.get(File_to_download["URL"], headers=Headers) as Response:
 					if Response.status != 200:
-						print(f"[History] Warning: Response.status =", Response.status)
+						print(f"[History] Warning: Response.status = {Response.status}")
 						continue
 					File_size = int(Response.headers.get("Content-Length", 0))
 					# Max_size > 0 to check if a size limit is set
@@ -59,7 +63,7 @@ async def Download_from_Discord(Table, Message):
 		Base_name, File_ext = os.path.splitext(Attachment.filename)
 		# Em dashes would conflict with the handling of duplicates, but Discord already removes them
 		#Base_name = Base_name.replace("—", "_")
-		Base_name = f"{Date}—" + Base_name
+		Base_name = f"{Date}—{Base_name}"
 		Destination_filename = f"{Base_name}{File_ext}"
 		File_pattern = os.path.join(Storage_folder, f"{Base_name}*{File_ext}")
 		Matching_files = glob.glob(File_pattern)
@@ -138,7 +142,7 @@ def Delete_attachment(Table, Keep, Attachments):
 	Updated_filenames = []
 	Storage_folder = Config["History"].get("Storage_folder")
 	if not os.path.exists(Storage_folder):
-		print(f"[History] Warning: The folder for the attachments isn’t accessible.")
+		print("[History] Warning: The folder for the attachments isn’t accessible.")
 		return
 	# Deleting a single attachment → create a list with that single item
 	if not isinstance(Attachments, list):
@@ -198,11 +202,19 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 			Author_name, Text, Attachments_filenames, Relayed
 	)
 
-def Message_edited(Table, Keep, Message):
+def Message_edited(Table, Message):
 	Infos_message = DB_manager.History_fetch_message(Table, Message.id)
 	if not Infos_message:
-		print(f"[History] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
+		print("[History] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 		return
+	Keep = True
+	if Users_enabled:
+		Infos_user = {"Pseudo": Infos_message["User"]}
+		User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
+		if User_ID:
+			Users = DB_manager.Users_fetch_users(Users_table)
+			Infos_user = Users[User_ID]
+			Keep = Infos_user["History_keep_all"]
 	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 	New_text = Message.content
 	Updated_filenames = []
@@ -234,12 +246,20 @@ def Message_edited(Table, Keep, Message):
 				Deleted.extend(Deleted_files)
 	DB_manager.History_edition(Table, Keep, Message.id, Date, New_text, Updated_filenames, Deleted)
 
-def Message_deleted(Table, Keep, Message_ID):
+def Message_deleted(Table, Message_ID):
 	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
 	if not Infos_message:
-		print(f"[History] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
+		print("[History] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
 		return
+	Keep = True
+	if Users_enabled:
+		Infos_user = {"Pseudo": Infos_message["User"]}
+		User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
+		if User_ID:
+			Users = DB_manager.Users_fetch_users(Users_table)
+			Infos_user = Users[User_ID]
+			Keep = Infos_user["History_keep_all"]
 	Updated_filenames = []
 	Attachments_filenames = Infos_message["Attachments"]
 	if Attachments_filenames:

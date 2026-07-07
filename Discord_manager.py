@@ -33,7 +33,6 @@ if IRC_enabled:
 History_enabled = Config["Enabled_sections"]["History"]
 if History_enabled:
 	History_table = Config["History"]["DB_table"]
-	History_keep_all = True
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
@@ -519,9 +518,9 @@ async def on_message_edit(Old_message, New_message):
 		# Don’t record Discord automatic edits (resolving links, webhook normalization, etc)
 		if not Text_changed and not Attachments_changed:
 			return
-		History.Message_edited(History_table, History_keep_all, New_message)
+		History.Message_edited(History_table, New_message)
 
 @bot.event
 async def on_raw_message_delete(Payload):
 	if History_enabled:
-		History.Message_deleted(History_table, History_keep_all, Payload.message_id)
+		History.Message_deleted(History_table, Payload.message_id)

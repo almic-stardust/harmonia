@@ -81,6 +81,7 @@ prevents the SQL requests of some functions from requiring a JSON extraction.
 	    discord_username            VARCHAR(255) NULL,
 	    pseudo_displayed_on_discord VARCHAR(255) NULL,
 	    discord_expiration_for_irc  INT NOT NULL,
+	    history_keep_all            BOOLEAN NULL,
 	    avatar_url                  VARCHAR(1024) NULL,
 	    renewals                    JSON NULL,
 	    contributions               JSON NULL,

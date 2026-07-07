@@ -495,7 +495,12 @@ def Users_fetch_users(Table):
 		Results = Cursor.fetchall()
 		for Result in Results:
 			User_ID = Result[1]
-			Dates = json.loads(Result[13]) if Result[13] else {}
+			Keep = Result[12]
+			if Keep is None:
+				Keep = True
+			else:
+				Keep = bool(Keep)
+			Dates = json.loads(Result[14]) if Result[14] else {}
 			Renewals = {}
 			for Year, Dates_for_year in Dates.items():
 				Year = int(Year)
@@ -503,7 +508,7 @@ def Users_fetch_users(Table):
 				for Date in Dates_for_year:
 					Renewals[Year].append(datetime.datetime.fromisoformat(Date))
 				Renewals[Year].sort()
-			Amounts = json.loads(Result[14]) if Result[14] else {}
+			Amounts = json.loads(Result[15]) if Result[15] else {}
 			Contributions = {}
 			if len(Amounts) > 0:
 				for Year, Amount in Amounts.items():
@@ -521,10 +526,11 @@ def Users_fetch_users(Table):
 					"Discord_username":				Result[9],
 					"Pseudo_displayed_on_Discord":	Result[10],
 					"Discord_expiration_for_IRC":	Result[11],
-					"Avatar_URL":					Result[12],
+					"History_keep_all":				Keep,
+					"Avatar_URL":					Result[13],
 					"Renewals":						Renewals,
 					"Contributions":				Contributions,
-					"Last_medium":					Result[15],
+					"Last_medium":					Result[16],
 			}
 			Users[User_ID] = Infos_user
 		return Users
@@ -561,6 +567,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					discord_username,
 					pseudo_displayed_on_discord,
 					discord_expiration_for_irc,
+					history_keep_all,
 					avatar_url,
 					renewals,
 					contributions,
@@ -581,6 +588,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					discord_username = %s,
 					pseudo_displayed_on_discord = %s,
 					discord_expiration_for_irc = %s,
+					history_keep_all = %,
 					avatar_url = %s,
 					renewals = %s,
 					contributions = %s,
@@ -601,6 +609,7 @@ def Users_manage_user(Table, Action, Infos_user):
 			Infos_user["Discord_username"],
 			Infos_user["Pseudo_displayed_on_Discord"],
 			Infos_user["Discord_expiration_for_IRC"],
+			Infos_user["History_keep_all"],
 			Infos_user["Avatar_URL"],
 			Renewals,
 			Contributions,
