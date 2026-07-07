@@ -149,8 +149,11 @@ async def Roll_Dice(Targets, Dice, Discord_author=None):
 		# Accept NDN as well as NdN
 		Dice = Dice.lower()
 		Number_rolls, Faces = map(int, Dice.split("d"))
-		if Faces > 100:
-			await Gears.Send(Targets, "Error: dice faces are limited to 100.")
+		if Faces > 1000:
+			await Gears.Send(Targets, "Error: dice faces are limited to 1000.")
+			return
+		if Number_rolls > 10000:
+			await Gears.Send(Targets, "Error: The number of rolls is limited to 10000.")
 			return
 		Rolls = []
 		for _ in range(Number_rolls):

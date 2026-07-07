@@ -145,18 +145,21 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 				else:
 					Pseudo = None
 			Output += f"→→→→→→→→→→ New: {Infos_user['Pseudo']}\n"
+
 			# Complete the dictionary, in addition to what we got from the CSV
-			Infos_user["ML_pseudo"] = None
-			Infos_user["Wiki_pseudo"] = None
-			Infos_user["IRC_pseudo"] = None
-			Infos_user["Forum_pseudo"] = None
-			Infos_user["Discord_username"] = None
+			Infos_user["ML_pseudo"] =					None
+			Infos_user["Wiki_pseudo"] =					None
+			Infos_user["IRC_pseudo"] =					None
+			Infos_user["Forum_pseudo"] =				None
+			Infos_user["Discord_username"] =			None
 			Infos_user["Pseudo_displayed_on_Discord"] = None
-			Infos_user["Discord_expiration_for_IRC"] = 365
-			Infos_user["Avatar_URL"] = None
-			Infos_user["Renewals"] = {File_year: [Date]}
+			Infos_user["Discord_expiration_for_IRC"] =	365
+			Infos_user["History_keep_all"] =			True
+			Infos_user["Avatar_URL"] =					None
+			Infos_user["Renewals"] =					{File_year: [Date]}
 			Infos_user["Contributions"] = {File_year: Contribution} if Contribution > 0 else None
-			Infos_user["Last_medium"] = "HelloAsso"
+			Infos_user["Last_medium"] =					"HelloAsso"
+
 			DB_manager.Users_manage_user(Users_table, "Add", Infos_user)
 
 	print(Output)
