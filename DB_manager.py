@@ -143,7 +143,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames, 
 		if Updated_filenames:
 			Query += ", attachments = %s"
 			Values.append(json.dumps(Updated_filenames))
-		Query += f"WHERE message_id = {Message_ID}"
+		Query += f" WHERE message_id = {Message_ID}"
 		Cursor.execute(Query, Values)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -175,9 +175,11 @@ def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 			if Updated_filenames:
 				Query += ", attachments = %s"
 				Values.append(json.dumps(Updated_filenames))
-			Query += f"WHERE message_id = {Message_ID}"
+			Query += f" WHERE message_id = %s"
+			Values.append(Message_ID)
 		else:
-			Query = f"DELETE FROM {Table} WHERE message_id = {Message_ID}"
+			Query = f"DELETE FROM {Table} WHERE message_id = %s"
+			Values = [Message_ID]
 		Cursor.execute(Query, Values)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -588,7 +590,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					discord_username = %s,
 					pseudo_displayed_on_discord = %s,
 					discord_expiration_for_irc = %s,
-					history_keep_all = %,
+					history_keep_all = %s,
 					avatar_url = %s,
 					renewals = %s,
 					contributions = %s,
