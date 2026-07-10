@@ -284,12 +284,16 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 @bot.event
 async def on_message(Message):
 
-	Author = Message.author
-	Text = Message.content
 	Discord_chan = Message.channel.id
 	Bridge = None
 	if IRC_enabled:
 		Bridge = Get_bridge_by_Discord_chan(Discord_chan)
+	Author = Message.author
+	Text = Message.content
+	User_join = False
+	if Message.type == discord.MessageType.new_member:
+		User_join = True
+		Text = "Joined the server."
 
 	# Author.display_name = the server nickname if set, otherwise the global display name if set,
 	# otherwise the Discord username
@@ -339,13 +343,13 @@ async def on_message(Message):
 	# After this point, the bot ignores its own messages
 	if Author == bot.user:
 		return
-
 	# Don’t relay on IRC what’s already coming from IRC
 	if Relayed_message:
 		return
-
 	# The message comes from a Discord chan that doesn’t have a bridge to an IRC chan
 	if not Bridge:
+		return
+	if User_join:
 		return
 
 	# Prepare the message, and relay it from Discord to IRC
