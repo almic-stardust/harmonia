@@ -45,8 +45,14 @@ To build the package mysqlclient:
 Create the virtual environment:
 
 	% python3.13 -m venv ~/.local/pydle-python3.13
-	% source ~/.local/pydle-python3.13/bin/activate
 	% ~/.local/pydle-python3.13/bin/python -m pip install discord.py pydle PyYAML mysqlclient python-dateutil
+
+When you’ll have to upgrade the venv:
+
+	% ~/.local/pydle-python3.13/bin/python -m pip install --upgrade pip
+	% ~/.local/pydle-python3.13/bin/python -m pip install --upgrade discord.py pydle PyYAML mysqlclient python-dateutil
+
+When you’ll upgrade your Linux distribution, the Python version will change and you’ll have to recreate the venv.
 
 #### Database
 
