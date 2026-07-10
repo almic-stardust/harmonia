@@ -246,8 +246,12 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 	Messages = []
 	for _, Message in Buffer["messages"]:
 		Messages.extend(IRC_manager.Split_into_IRC_messages(Message))
-	Messages_to_relay = None
+	# Nothing to relay
+	if not Messages:
+		Users_buffers.pop(Buffer_key, None)
+		return
 
+	Messages_to_relay = None
 	# Discord allows messages of 2000 characters with line breaks, which makes difficult to
 	# distinguish between legitimate messages with several paragraphs, and careless copy-pastes. At
 	# least the damage will be limited to 10 lines
@@ -263,7 +267,7 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 		# 5 IRC messages
 		if len(Concatenated_messages) <= 5:
 			Messages_to_relay = Concatenated_messages
-	if Messages_to_relay:
+	if Messages_to_relay is not None:
 		IRC_instance = IRC_manager.GCI()
 		for Message in Messages_to_relay:
 			if IRC_instance:
