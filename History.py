@@ -50,62 +50,112 @@ async def Download_files(Table, Storage_folder, Date, Files_to_download, Max_siz
 		print(f"[History] Warning: Oversized file\n{Oversized_files}")
 	return Downloaded_filenames
 
-async def Download_from_Discord(Table, Message):
+def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 
-	Storage_folder = Config["History"].get("Storage_folder")
-	Other_source_folder = os.path.join(Storage_folder, "other_sources")
-	Date = Message.created_at.astimezone(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
-	Downloaded_filenames = []
-	Attachments = []
+	Assignments = []
+	Assigned_base_names = {}
 
-	for Attachment in Message.attachments:
-		Discord_filename = Attachment.filename
+	# Group the attachments by the final base name that will be assigned to them.
+	# This first pass is necessary because when someone sends a message by copy-pasting several
+	# different images, Discord names them all image.png. Therefore they’re duplicates, even though
+	# they haven’t been saved to the disk yet.
+	for Attachment in Attachments:
 		Base_name, File_ext = os.path.splitext(Attachment.filename)
 		# Em dashes would conflict with the handling of duplicates, but Discord already removes them
 		#Base_name = Base_name.replace("—", "_")
 		Base_name = f"{Date}—{Base_name}"
-		Destination_filename = f"{Base_name}{File_ext}"
+		Key = (Base_name, File_ext)
+		if Key not in Assigned_base_names:
+			Assigned_base_names[Key] = []
+		Assigned_base_names[Key].append(Attachment)
+
+	for (Base_name, File_ext), Attachments_list in Assigned_base_names.items():
+		Matching_files = set()
+		Unnumbered_filename = None
+		Existing_suffixes = []
+
+		# Compare the filenames in this message with those already on the disk
 		File_pattern = os.path.join(Storage_folder, f"{Base_name}*{File_ext}")
-		Matching_files = glob.glob(File_pattern)
-		if Matching_files:
-			# If there’s only one file, rename it to add “—1” at the end of its base
-			# name, and put “—2” in the base name of the current file
-			if len(Matching_files) == 1:
-				Stored_old_path = Matching_files[0]
-				Stored_old_name = os.path.basename(Stored_old_path)
-				Stored_old_base_name = os.path.splitext(Stored_old_path)[0]
-				Stored_new_name = f"{Base_name}—1{File_ext}"
-				# If the file was deleted but kept in storage
-				if Stored_old_base_name.endswith("_DELETED"):
-					Stored_new_name = f"{Base_name}—1_DELETED{File_ext}"
-				Stored_new_path = os.path.join(Storage_folder, Stored_new_name)
-				os.rename(Stored_old_path, Stored_new_path)
-				DB_manager.History_update_filename(Table,
-						Stored_old_name, Stored_new_name
+		for Path in glob.glob(File_pattern):
+			Matching_files.add(os.path.basename(Path))
+		for Filename in Matching_files:
+			Stem = os.path.splitext(Filename)[0]
+			# Stem can have the format YYYYMMDD—Name_on_Discord[—Number]_DELETED.ext
+			if Stem.endswith("_DELETED"):
+				Stem = Stem.removesuffix("_DELETED")
+			Parts = Stem.split("—")
+			Prefix_is_date = (
+					len(Parts) > 0
+					and len(Parts[0]) == 8
+					and Parts[0].isdigit()
+			)
+			# If an existing filename matches the format YYYYMMDD—Name_on_Discord.ext, it means that
+			# it has been stored without duplicate so far, and therefore wasn’t numbered. Now it
+			# must be renamed, on disk and in the DB, to add "—1" at the end.
+			if len(Parts) == 2 and Prefix_is_date:
+				Unnumbered_filename = Filename
+			# If the filename matches YYYYMMDD—Name_on_Discord—Number.ext
+			elif len(Parts) == 3 and Prefix_is_date and Parts[2].isdigit():
+				Existing_suffixes.append(int(Parts[2]))
+
+		Numbering_needed = (
+				# Duplicates in the same message
+				len(Attachments_list) > 1
+				# Duplicates present on the disk
+				or Unnumbered_filename is not None
+				or len(Existing_suffixes) > 0
+		)
+		if not Numbering_needed:
+			Assignments.append(
+				(Attachments_list[0], f"{Base_name}{File_ext}")
+			)
+			continue
+
+		if Unnumbered_filename:
+			Old_name = Unnumbered_filename
+			Old_path = os.path.join(Storage_folder, Old_name)
+			Stem = os.path.splitext(Old_name)[0]
+			New_name = f"{Base_name}—1{File_ext}"
+			# If the file was deleted but kept in storage, it still needs to be numbered
+			if Stem.endswith("_DELETED"):
+				New_name = f"{Base_name}—1_DELETED{File_ext}"
+			New_path = os.path.join(Storage_folder, New_name)
+			# Only rename if the file actually exists on disk
+			if os.path.exists(Old_path):
+				os.rename(Old_path, New_path)
+			DB_manager.History_update_filename(Table, Old_name, New_name)
+			Existing_suffixes.append(1)
+
+		# Assign a unique number at the end of the base name of the current file, by determining the
+		# biggest suffix that has already been assigned (even if one of the duplicate files has been
+		# deleted from Discord and not kept in the storage folder).
+		# The default value applies when Existing_suffixes remains empty, because there were no
+		# duplicates on disk, but two files with the same name were uploaded in the same message.
+		Next_suffix = max(Existing_suffixes, default=0) + 1
+		for Attachment in Attachments_list:
+			Assignments.append(
+				(
+					Attachment,
+					f"{Base_name}—{Next_suffix}{File_ext}",
 				)
-				Destination_filename = f"{Base_name}—2{File_ext}"
-			# If there’s several duplicates, they will already have the format
-			# AAAAMMJJ—Name_on_Discord—Number[_DELETED].ext, therefore no need to rename
-			# them.
-			# Assign a unique number at the end of the base name of the current file, by
-			# determining the biggest suffix that has already been assigned (even if one
-			# of the duplicate files has been deleted from Discord and not kept in the
-			# storage folder).
-			else:
-				Duplicates_suffixes = []
-				for File in Matching_files:
-					Parts = os.path.splitext(os.path.basename(File))[0].split("—")
-					# Destination_filename could be AAAAMMJJ—Name_on_Discord—Number_DELETED.ext
-					Parts[-1] = Parts[-1].replace("_DELETED", "")
-					# If the filename matches AAAAMMJJ—Name_on_Discord—Number.ext
-					if len(Parts) == 3 and Parts[-1].isdigit():
-						Duplicates_suffixes.append(int(Parts[-1]))
-				Suffix = max(Duplicates_suffixes) + 1
-				Destination_filename = f"{Base_name}—{Suffix}{File_ext}"
+			)
+			Next_suffix += 1
+
+	return Assignments
+
+async def Download_from_Discord(Table, Message):
+	from Discord_manager import Register_destination_in_MPD
+	Storage_folder = Config["History"].get("Storage_folder")
+	Other_source_folder = os.path.join(Storage_folder, "other_sources")
+	Date = Message.created_at.astimezone(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
+	Attachments = []
+	Downloaded_filenames = []
+	Assignments = Handle_duplicate_filenames(Table, Storage_folder, Date, Message.attachments)
+	for Attachment, Destination_filename in Assignments:
+		Discord_filename = Attachment.filename
 
 		# When Discord changes the filename, duplicates (see the comment just below) can only be
 		# handled in Discord_manager.py
-		from Discord_manager import Register_destination_in_MPD
 		Register_destination_in_MPD(Discord_filename, Destination_filename)
 
 		# Check if the filename is already present in the other_sources folder, as it may have
@@ -118,21 +168,23 @@ async def Download_from_Discord(Table, Message):
 		# time when we have yet no trace of the original filename, that means the following check
 		# will miss some files. Nevertheless, checking here will work for the majority of files, and
 		# avoids writing them twice on the disk.
+
 		Other_source_file_path = os.path.join(Other_source_folder, Discord_filename)
+		# The file already exists → move it
 		if os.path.exists(Other_source_file_path):
 			Destination_path = os.path.join(Storage_folder, Destination_filename)
 			os.replace(Other_source_file_path, Destination_path)
 			Downloaded_filenames.append(Destination_filename)
-			continue
+		# Otherwise → queue it for download
 		else:
 			Attachments.append({
-				"URL": Attachment.url,
-				"Destination_filename": Destination_filename
+					"URL": Attachment.url,
+					"Destination_filename": Destination_filename
 			})
 
 	if len(Attachments) > 0:
-		# The same message may contain files with names changed or not by Discord, and
-		# Downloaded_filenames can already contain filenames not changed. Therefore a temporary list
+		# A temporary list, because the same message may contain files with names changed or not by
+		# Discord, and Downloaded_filenames can already contain filenames not changed.
 		# Max_size = 0 because Discord sets its own limit on attachments’ size (today it’s 10 MB)
 		Temp_list = await Download_files(Table, Storage_folder, Date, Attachments, 0)
 		Downloaded_filenames.extend(Temp_list)
