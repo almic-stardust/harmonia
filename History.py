@@ -58,7 +58,7 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 	# Group the attachments by the final base name that will be assigned to them.
 	# This first pass is necessary because when someone sends a message by copy-pasting several
 	# different images, Discord names them all image.png. Therefore they’re duplicates, even though
-	# they haven’t been saved to the disk yet.
+	# they haven’t been saved on disk yet.
 	for Attachment in Attachments:
 		Base_name, File_ext = os.path.splitext(Attachment.filename)
 		# Em dashes would conflict with the handling of duplicates, but Discord already removes them
@@ -74,7 +74,7 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 		Unnumbered_filename = None
 		Existing_suffixes = []
 
-		# Compare the filenames in this message with those already on the disk
+		# Compare the filenames in this message with those already on disk
 		File_pattern = os.path.join(Storage_folder, f"{Base_name}*{File_ext}")
 		for Path in glob.glob(File_pattern):
 			Matching_files.add(os.path.basename(Path))
@@ -101,7 +101,7 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 		Numbering_needed = (
 				# Duplicates in the same message
 				len(Attachments_list) > 1
-				# Duplicates present on the disk
+				# Duplicates present on disk
 				or Unnumbered_filename is not None
 				or len(Existing_suffixes) > 0
 		)
@@ -129,8 +129,8 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 		# Assign a unique number at the end of the base name of the current file, by determining the
 		# biggest suffix that has already been assigned (even if one of the duplicate files has been
 		# deleted from Discord and not kept in the storage folder).
-		# The default value applies when Existing_suffixes remains empty, because there were no
-		# duplicates on disk, but two files with the same name were uploaded in the same message.
+		# The default value applies when Existing_suffixes remains empty (no duplicates on disk, but
+		# two files with the same name uploaded in one message)
 		Next_suffix = max(Existing_suffixes, default=0) + 1
 		for Attachment in Attachments_list:
 			Assignments.append(
@@ -161,13 +161,13 @@ async def Download_from_Discord(Table, Message):
 		# Check if the filename is already present in the other_sources folder, as it may have
 		# been downloaded from another source than Discord. And if the attachments are images, the
 		# version we receive from Discord has gone through their processing, which can recompress
-		# images. Since the original is already on the disk, there’s no point in keeping a version
+		# images. Since the original is already on disk, there’s no point in keeping a version
 		# potentially degraded by Discord.
 		# Discord can change filenames, so those received from Discord won’t necessarily match the
 		# original filenames. And since on_message() from Discord_manager.py brings us here at a
 		# time when we have yet no trace of the original filename, that means the following check
 		# will miss some files. Nevertheless, checking here will work for the majority of files, and
-		# avoids writing them twice on the disk.
+		# avoids writing them twice on disk.
 
 		Other_source_file_path = os.path.join(Other_source_folder, Discord_filename)
 		# The file already exists → move it

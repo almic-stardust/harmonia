@@ -4,6 +4,7 @@
 import discord
 from discord.ext import commands
 from discord.ext import tasks
+import traceback
 import time
 import datetime
 from zoneinfo import ZoneInfo
@@ -60,7 +61,6 @@ async def on_ready():
 # But for development, it’s not convenient. So when not in prod, we enable exceptions in events.
 @bot.event
 async def on_error(event, *args, **kwargs):
-	import traceback
 	traceback.print_exc()
 
 @bot.event
@@ -497,7 +497,8 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 					wait=True
 			)
 		except aiohttp.client_exceptions.ServerDisconnectedError:
-			print("[Discord] Error while relaying message: disconnected from server.")
+			print(f"Relay failed: {IRC_nick=} {Message=}")
+			traceback.print_stack()
 			return
 	else:
 		Chan = bot.get_channel(Bridge["Discord_chan"])
