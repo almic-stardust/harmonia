@@ -89,13 +89,14 @@ async def on_command_error(Context, Error):
 async def Shutdown_Discord():
 	global HTTP_session
 	print("[Discord] Disconnecting…")
+	await bot.close()
+	print(f"[Discord] {bot.is_closed()=}")
 	if HTTP_session:
 		await HTTP_session.close()
 		if HTTP_session.closed:
 			print("[Discord] HTTP session closed.")
 		# Prevent reuse after closing
 		HTTP_session = None
-	await bot.close()
 
 ###############################################################################
 # Handling chans
@@ -344,6 +345,9 @@ async def on_message(Message):
 			await bot.process_commands(Message)
 		return
 
+	# If the command was !quit, no need to continue
+	if Gears.Shutdown_in_progress.is_set():
+		return
 	# After this point, the bot ignores its own messages
 	if Author == bot.user:
 		return
@@ -421,7 +425,7 @@ async def Get_avatar_filename(Author_name, Discord_ID=None):
 
 async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
-	if Gears.Shutting_down.is_set():
+	if Gears.Shutdown_in_progress.is_set():
 		return
 	Bridge = Get_bridge_by_IRC_chan(IRC_chan)
 	if not Bridge:

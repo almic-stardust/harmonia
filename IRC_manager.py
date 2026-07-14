@@ -138,7 +138,7 @@ async def Run_IRC_loop():
 	Reconnect_delay = 5
 	Max_reconnect_delay = 300
 
-	while not Gears.Shutting_down.is_set():
+	while not Gears.Shutdown_in_progress.is_set():
 
 		New_instance = Connection_handler(
 			nickname=Config["IRC"]["Nick"],
@@ -160,14 +160,14 @@ async def Run_IRC_loop():
 			# Wait until either the bot is disconnected, or a shutdown request is requested
 			await Gears.Wait_for_events(
 					New_instance.Disconnection.wait(),
-					Gears.Shutting_down.wait()
+					Gears.Shutdown_in_progress.wait()
 			)
 			# If shutdown was requested, exit loop
-			if Gears.Shutting_down.is_set():
+			if Gears.Shutdown_in_progress.is_set():
 				break
 		except Exception as Error:
 			# If shutdown was requested, don’t treat as a real error
-			if Gears.Shutting_down.is_set():
+			if Gears.Shutdown_in_progress.is_set():
 				print("[IRC] Connection aborted due to shutdown")
 				break
 			print(f"[IRC] Connection error: {Error}")
@@ -177,7 +177,7 @@ async def Run_IRC_loop():
 				Instance = None
 
 		# Handle reconnection (only if not shutting down)
-		if not Gears.Shutting_down.is_set():
+		if not Gears.Shutdown_in_progress.is_set():
 			print(f"[IRC] Disconnected. Reconnecting in {Reconnect_delay:.1f}s…")
 			await asyncio.sleep(Reconnect_delay)
 			# Exponential backoff with jitter, to prevent synchronized reconnection attempts. If
@@ -257,28 +257,17 @@ class Connection_handler(pydle.Client):
 					f"identify {Config['IRC']['Nick']} {Config['IRC']['Password']}"
 			)
 			print("[IRC] Identified with nickserv")
-		asyncio.create_task(self.Ensure_chans())
 
 	async def on_disconnect(self, Expected):
 		await super().on_disconnect(Expected)
 		self.Disconnection.set()
-		if Gears.Shutting_down.is_set():
+		if Gears.Shutdown_in_progress.is_set():
 			return
 		print(f"[IRC] Instance {self.Instance_ID} disconnected.")
 
 	async def Shutdown_IRC(self):
 		print("[IRC] Disconnecting…")
 		await self.quit(Config["IRC"].get("Quit_message", "Something clever"))
-
-	async def Ensure_chans(self):
-		global Expected_chans
-		while not Gears.Shutting_down.is_set():
-			# Check every day
-			await asyncio.sleep(86400)
-			for IRC_chan in Expected_chans:
-				if IRC_chan not in self.channels:
-					print(f"[IRC] Recovering: rejoining {IRC_chan}")
-					await self.join(IRC_chan)
 
 	# Wrap the raw handler to avoid crashes, but continue to log the errors
 	async def on_raw(self, Message):

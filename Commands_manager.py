@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # “Commands” is susceptible to be a keyword used elsewhere → this file is named Commands_manager.py
 
+import asyncio
 import inspect
 import random
 import re
@@ -13,6 +14,7 @@ import DB_manager
 import Gears
 from Discord_manager import bot
 
+Request_shutdown = asyncio.Event()
 IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
@@ -123,7 +125,7 @@ async def No_help_for_IRC(Targets):
 
 async def Quit_command(Bot_owner, User):
 	if User == Bot_owner:
-		await Gears.Stop_bot()
+		Request_shutdown.set()
 
 @bot.command(name="quit")
 async def Discord_quit(Context):

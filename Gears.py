@@ -5,7 +5,7 @@ import asyncio
 from Config_manager import Config
 import Discord_manager
 
-Shutting_down = asyncio.Event()
+Shutdown_in_progress = asyncio.Event()
 IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
@@ -46,9 +46,9 @@ async def Start_bot():
 
 async def Stop_bot():
 	print("Shutdown initiated…")
-	if Shutting_down.is_set():
+	if Shutdown_in_progress.is_set():
 		return
-	Shutting_down.set()
+	Shutdown_in_progress.set()
 	# Stop IRC loop
 	if IRC_enabled:
 		global IRC_task
@@ -74,12 +74,14 @@ async def Stop_bot():
 ###############################################################################
 
 async def Wait_for_events(*Events):
-	Tasks = [asyncio.create_task(Event) for Event in Events]
-	Done, Pending = await asyncio.wait(Tasks, return_when=asyncio.FIRST_COMPLETED)
-	for Task in Pending:
-		Task.cancel()
-	await asyncio.gather(*Pending, return_exceptions=True)
-	return Done
+	Tasks = []
+	for Event in Events:
+		if isinstance(Event, asyncio.Task):
+			Tasks.append(Event)
+		else:
+			Tasks.append(asyncio.create_task(Event))
+	First_done, Pending_tasks = await asyncio.wait(Tasks, return_when=asyncio.FIRST_COMPLETED)
+	return First_done, Pending_tasks
 
 ###############################################################################
 # Chans
