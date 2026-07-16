@@ -108,7 +108,7 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		Cursor.close()
 		Connection.close()
 
-def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames, Deleted):
+def History_edition(Table, Keep, Message_ID, Date, New_text, Current_attachments, Deleted_attachments):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -135,14 +135,14 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames, 
 		Content_history[Date] = {
 				"Text": New_text
 		}
-		if len(Deleted) > 0:
+		if len(Deleted_attachments) > 0:
 			Content_history[Date] = {
-					"Deleted_attachments": Deleted
+					"Deleted_attachments": Deleted_attachments
 			}
 		Values = [json.dumps(Content_history)]
-		if Updated_filenames:
+		if Current_attachments:
 			Query += ", attachments = %s"
-			Values.append(json.dumps(Updated_filenames))
+			Values.append(json.dumps(Current_attachments))
 		Query += f" WHERE message_id = {Message_ID}"
 		Cursor.execute(Query, Values)
 		Connection.commit()
@@ -153,7 +153,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Updated_filenames, 
 		Cursor.close()
 		Connection.close()
 
-def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
+def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -172,9 +172,9 @@ def History_deletion(Table, Keep, Message_ID, Date, Updated_filenames):
 		if Keep:
 			Query = f"UPDATE {Table} SET deletion_date = %s"
 			Values = [Date]
-			if Updated_filenames:
+			if Deleted_attachments:
 				Query += ", attachments = %s"
-				Values.append(json.dumps(Updated_filenames))
+				Values.append(json.dumps(Deleted_attachments))
 			Query += f" WHERE message_id = %s"
 			Values.append(Message_ID)
 		else:

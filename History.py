@@ -188,8 +188,8 @@ async def Download_from_Discord(Table, Message):
 		Downloaded_filenames.extend(Temp_list)
 	return Downloaded_filenames
 
-def Delete_attachment(Table, Keep, Attachments):
-	Updated_filenames = []
+def Delete_attachments(Table, Keep, Attachments):
+	Deleted_filenamess = []
 	Storage_folder = Config["History"].get("Storage_folder")
 	if not os.path.exists(Storage_folder):
 		print("[History] Warning: The folder for the attachments isn’t accessible.")
@@ -200,7 +200,7 @@ def Delete_attachment(Table, Keep, Attachments):
 	for Filename in Attachments:
 		# File already deleted: don’t tag it twice, instead keep it as it is
 		if Keep and "_DELETED" in Filename:
-			Updated_filenames.append(Filename)
+			Deleted_filenamess.append(Filename)
 			continue
 		File_path = os.path.join(Storage_folder, Filename)
 		if Keep:
@@ -213,13 +213,13 @@ def Delete_attachment(Table, Keep, Attachments):
 				print(f"Warning: File {Filename} not found.")
 				# To avoid losing all reference, keep the filename in the DB but mark it invalid
 				New_filename = f"INVALID_{Filename}"
-			Updated_filenames.append(New_filename)
+			Deleted_filenamess.append(New_filename)
 		else:
 			try:
 				os.remove(File_path)
 			except OSError as Error:
 				print(f"Warning: can’t delete file {Filename}: {Error}")
-	return Updated_filenames
+	return Deleted_filenamess
 
 ###############################################################################
 # Handling messages
@@ -252,8 +252,9 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 			Author_name, Text, Attachments_filenames, Relayed
 	)
 
-def Message_edited(Table, Message):
-	Infos_message = DB_manager.History_fetch_message(Table, Message.id)
+def Message_edited(Table, Message_ID, Payload):
+
+	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
 	if not Infos_message:
 		print("[History] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 		return
@@ -266,19 +267,30 @@ def Message_edited(Table, Message):
 			Infos_user = Users[User_ID]
 			Keep = Infos_user["History_keep_all"]
 	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
-	New_text = Message.content
-	Updated_filenames = []
-	Deleted = []
+	Content_history = Infos_message["Content_history"]
+	# The keys are ISO timestamps, so lexicographic order matches chronological order
+	Date_last_edit = max(Content_history)
+
+	# Check if the text has changed
+	Old_text = Content_history[Date_last_edit]["Text"]
+	if "content" in Payload:
+		New_text = Payload["content"]
+	else:
+		New_text = Old_text
+	Text_changed = (Old_text != New_text)
+
+	# Compare the attachments stored in the DB with the attachments currently reported by Discord
+	Current_attachments = []
+	Deleted_attachments = []
 	Old_attachments = Infos_message["Attachments"]
 	if Old_attachments:
-		New_attachments = []
-		Updated_filenames = []
-		for Attachment in Message.attachments:
-			New_attachments.append(Attachment.filename)
+		Discord_attachments = []
+		for Attachment in Payload.get("attachments", []):
+			Discord_attachments.append(Attachment["filename"])
 		for Attachment in Old_attachments:
 			# If a file has already been deleted, no need to process it a second time.
 			if "_DELETED" in Attachment:
-				Updated_filenames.append(Attachment)
+				Current_attachments.append(Attachment)
 				continue
 			# The comparaison must be on the filenames sent on Discord: revert the modifications
 			# made when a filename is stored in the DB
@@ -288,13 +300,19 @@ def Message_edited(Table, Message):
 			# Remove trailing copy index (—number)
 			Base_name = re.sub(r"—\d+$", "", Base_name)
 			Normalized_old_name = Base_name + File_ext
-			if Normalized_old_name in New_attachments:
-				Updated_filenames.append(Attachment)
+			if Normalized_old_name in Discord_attachments:
+				Current_attachments.append(Attachment)
 			else:
-				Deleted_files = Delete_attachment(Table, Keep, Attachment)
-				Updated_filenames.extend(Deleted_files)
-				Deleted.extend(Deleted_files)
-	DB_manager.History_edition(Table, Keep, Message.id, Date, New_text, Updated_filenames, Deleted)
+				Deleted = Delete_attachments(Table, Keep, Attachment)
+				Current_attachments.extend(Deleted)
+				Deleted_attachments.extend(Deleted)
+
+	# Ignore Discord automatic edits (resolving links, webhook normalization, etc)
+	if not Text_changed and Old_attachments == Current_attachments:
+		return
+	DB_manager.History_edition(
+			Table, Keep, Message_ID, Date, New_text, Current_attachments, Deleted_attachments
+	)
 
 def Message_deleted(Table, Message_ID):
 	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
@@ -310,8 +328,8 @@ def Message_deleted(Table, Message_ID):
 			Users = DB_manager.Users_fetch_users(Users_table)
 			Infos_user = Users[User_ID]
 			Keep = Infos_user["History_keep_all"]
-	Updated_filenames = []
+	Deleted_filenamess = []
 	Attachments_filenames = Infos_message["Attachments"]
 	if Attachments_filenames:
-		Updated_filenames = Delete_attachment(Table, Keep, Attachments_filenames)
-	DB_manager.History_deletion(Table, Keep, Message_ID, Date, Updated_filenames)
+		Deleted_filenamess = Delete_attachments(Table, Keep, Attachments_filenames)
+	DB_manager.History_deletion(Table, Keep, Message_ID, Date, Deleted_filenamess)

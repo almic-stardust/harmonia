@@ -520,18 +520,9 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			Register_original_in_MPD(Attachment_id, Original_filename)
 
 @bot.event
-async def on_message_edit(Old_message, New_message):
+async def on_raw_message_edit(Payload):
 	if History_enabled:
-		# Check if the text or the attachments have changed
-		Text_changed = (Old_message.content or "") != (New_message.content or "")
-		Old_files = [File.filename for File in Old_message.attachments]
-		New_files = [File.filename for File in New_message.attachments]
-		# Compare the filenames, not the attachments objects
-		Attachments_changed = set(Old_files) != set(New_files)
-		# Don’t record Discord automatic edits (resolving links, webhook normalization, etc)
-		if not Text_changed and not Attachments_changed:
-			return
-		History.Message_edited(History_table, New_message)
+		History.Message_edited(History_table, Payload.message_id, Payload.data)
 
 @bot.event
 async def on_raw_message_delete(Payload):
