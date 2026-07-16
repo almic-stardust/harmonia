@@ -152,11 +152,9 @@ async def Download_from_Discord(Table, Message):
 	Downloaded_filenames = []
 	Assignments = Handle_duplicate_filenames(Table, Storage_folder, Date, Message.attachments)
 	for Attachment, Destination_filename in Assignments:
-		Discord_filename = Attachment.filename
-
 		# When Discord changes the filename, duplicates (see the comment just below) can only be
 		# handled in Discord_manager.py
-		Register_destination_in_MPD(Discord_filename, Destination_filename)
+		Register_destination_in_MPD(Attachment.id, Destination_filename)
 
 		# Check if the filename is already present in the other_sources folder, as it may have
 		# been downloaded from another source than Discord. And if the attachments are images, the
@@ -169,7 +167,7 @@ async def Download_from_Discord(Table, Message):
 		# will miss some files. Nevertheless, checking here will work for the majority of files, and
 		# avoids writing them twice on disk.
 
-		Other_source_file_path = os.path.join(Other_source_folder, Discord_filename)
+		Other_source_file_path = os.path.join(Other_source_folder, Attachment.filename)
 		# The file already exists → move it
 		if os.path.exists(Other_source_file_path):
 			Destination_path = os.path.join(Storage_folder, Destination_filename)

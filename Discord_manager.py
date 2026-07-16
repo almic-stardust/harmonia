@@ -191,7 +191,7 @@ async def Reconcile_downloaded_files():
 			print(f"[Discord_m] Creating the folder for other sources attachments.")
 			os.makedirs(Other_sources)
 		# list() prevents runtime modification errors
-		for Discord_filename, Filenames_map in list(Map_pending_downloads.items()):
+		for Attachment_id, Filenames_map in list(Map_pending_downloads.items()):
 			if not Filenames_map or "Original_filename" not in Filenames_map \
 					or "Destination_filename" not in Filenames_map:
 				continue
@@ -212,7 +212,7 @@ async def Reconcile_downloaded_files():
 			# If the file was in other_sources: once processed, its key is no longer needed.
 			# If the file wasn’t there: that means its name wasn’t changed by Discord, and it had
 			# already been moved in Storage_folder by History.py. So we can also delete its key.
-			del Map_pending_downloads[Discord_filename]
+			del Map_pending_downloads[Attachment_id]
 	except Exception as Error:
 		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
 
@@ -371,7 +371,7 @@ async def on_message(Message):
 		URL_base = Config["History"].get("Storage_url").rstrip("/") + "/"
 		Urls = []
 		for Attachment in Message.attachments:
-			Filenames_map = Map_pending_downloads.get(Attachment.filename)
+			Filenames_map = Map_pending_downloads.get(Attachment.id)
 			# If the history isn’t enabled, the files won't be in Map_pending_downloads anyway
 			if Filenames_map:
 				# URL-encode safely
@@ -394,15 +394,15 @@ async def on_message(Message):
 		)
 
 # Register the original filename in Map_pending_downloads
-def Register_original_in_MPD(Discord_filename, Original_filename):
+def Register_original_in_MPD(Attachment_id, Original_filename):
 	global Map_pending_downloads
-	Entry = Map_pending_downloads.setdefault(Discord_filename, {})
+	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
 	Entry["Original_filename"] = Original_filename
 
 # Register the destination filename in Map_pending_downloads
-def Register_destination_in_MPD(Discord_filename, Destination_filename):
+def Register_destination_in_MPD(Attachment_id, Destination_filename):
 	global Map_pending_downloads
-	Entry = Map_pending_downloads.setdefault(Discord_filename, {})
+	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
 	Entry["Destination_filename"] = Destination_filename
 
 async def Get_avatar_filename(Author_name, Discord_ID=None):
@@ -514,10 +514,10 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	if Sent_message and len(Sent_message.attachments) > 0:
 		for Index, Attachment in enumerate(Sent_message.attachments):
 			# Files_for_Discord was built in the same order since Discord preserves attachment order
-			Discord_filename = Attachment.filename
+			Attachment_id = Attachment.id
 			# In this case, Destination_filename points to the original filename in other_sources
 			Original_filename = Files_to_download[Index]["Destination_filename"]
-			Register_original_in_MPD(Discord_filename, Original_filename)
+			Register_original_in_MPD(Attachment_id, Original_filename)
 
 @bot.event
 async def on_message_edit(Old_message, New_message):
