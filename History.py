@@ -91,7 +91,7 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 			)
 			# If an existing filename matches the format YYYYMMDD—Name_on_Discord.ext, it means that
 			# it has been stored without duplicate so far, and therefore wasn’t numbered. Now it
-			# must be renamed, on disk and in the DB, to add "—1" at the end.
+			# must be renamed to add "—001" at the end, both on disk and in the DB.
 			if len(Parts) == 2 and Prefix_is_date:
 				Unnumbered_filename = Filename
 			# If the filename matches YYYYMMDD—Name_on_Discord—Number.ext
@@ -115,10 +115,10 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 			Old_name = Unnumbered_filename
 			Old_path = os.path.join(Storage_folder, Old_name)
 			Stem = os.path.splitext(Old_name)[0]
-			New_name = f"{Base_name}—1{File_ext}"
+			New_name = f"{Base_name}—001{File_ext}"
 			# If the file was deleted but kept in storage, it still needs to be numbered
 			if Stem.endswith("_DELETED"):
-				New_name = f"{Base_name}—1_DELETED{File_ext}"
+				New_name = f"{Base_name}—001_DELETED{File_ext}"
 			New_path = os.path.join(Storage_folder, New_name)
 			# Only rename if the file actually exists on disk
 			if os.path.exists(Old_path):
@@ -136,7 +136,9 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 			Assignments.append(
 				(
 					Attachment,
-					f"{Base_name}—{Next_suffix}{File_ext}",
+					#f"{Base_name}—{Next_suffix}{File_ext}",
+					# Fixed-width numbering (00X format for files 1 to 9, then 0XX format)
+					f"{Base_name}—{Next_suffix:03d}{File_ext}"
 				)
 			)
 			Next_suffix += 1
