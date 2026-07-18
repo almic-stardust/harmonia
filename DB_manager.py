@@ -23,30 +23,38 @@ def History_update_filename(Table, Old_filename, New_filename):
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		# Check if there is an entry whose attachments field contains the value of Old_filename
+		# Check if there is an entry with Old_filename in its content_history field
 		Cursor.execute(f"""
-				SELECT message_id, attachments FROM {Table}
-				WHERE JSON_CONTAINS(attachments, %s)""",
-				(json.dumps(Old_filename),)
+				SELECT message_id, content_history
+				FROM {Table}
+				WHERE JSON_SEARCH(content_history, 'one', %s) IS NOT NULL """,
+				(Old_filename,)
 		)
 		Result = Cursor.fetchone()
 		if not Result:
 			print("[DB] Error: There’s already a file with that name in the folder, but it wasn’t registered in the DB for that message")
 			return
-		Message_ID = Result[0]
-		Filenames = json.loads(Result[1])
-		Updated_filenames = []
-		for Filename in Filenames:
-			if Filename == Old_filename:
-				Updated_filenames.append(New_filename)
-			else:
-				Updated_filenames.append(Filename)
-		# Convert the list into a string to store it into the DB
-		Updated_filenames = json.dumps(Updated_filenames)
+		Message_ID, Content_history = Result
+		Content_history = json.loads(Content_history)
+		Modified = False
+		for Entry in Content_history:
+			if "Attachments" in Content_history[Entry]:
+				for Index, Filename in enumerate(Content_history[Entry]["Attachments"]):
+					if Filename == Old_filename:
+						Content_history[Entry]["Attachments"][Index] = New_filename
+						Modified = True
+			if "Deleted_attachments" in Content_history[Entry]:
+				for Index, Filename in enumerate(Content_history[Entry]["Deleted_attachments"]):
+					if Filename == Old_filename:
+						Content_history[Entry]["Deleted_attachments"][Index] = New_filename
+						Modified = True
+		if not Modified:
+			print("[DB] Error: filename found by JSON_SEARCH(), but no matching list entry was updated.")
+			return
 		Cursor.execute(f"""
-				UPDATE {Table} SET attachments = %s
-				WHERE message_id = %s""",
-				(Updated_filenames, Message_ID)
+				UPDATE {Table} SET content_history = %s
+				WHERE message_id = {Message_ID}""",
+				(json.dumps(Content_history),)
 		)
 		# Autocommit could leave the DB in a partially updated state: a batch of related updates
 		# could be only partially applied, because one of them raised an exception. Therefore, it’s
@@ -76,28 +84,25 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 			print("[DB] Warning: this message was already stored in the DB.")
 			return
 		Centiseconds = round(Date.microsecond / 10000)
-		Formatted_date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
-		Content_history = {Formatted_date: {
+		New_entry = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
+		Content_history = {New_entry: {
 				"Text": Text
 		}}
-		Content_history = json.dumps(Content_history)
 		if len(Attachments) > 0:
-			Attachments = json.dumps(Attachments)
-		# If the list is empty, save NULL in the attachments field
-		else:
-			Attachments = None
+			Content_history[New_entry]["Attachments"] = Attachments
+		Content_history = json.dumps(Content_history)
 		Cursor.execute(f"""
 				INSERT INTO {Table} (
 					creation_date,
 					server_id, chan_id, message_id,
 					reply_to,
-					user, content_history, attachments, relayed)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+					user, content_history, relayed)
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
 				(
 					Date,
 					Server_ID, Chan_ID, Message_ID,
 					Replied_message_ID,
-					Discord_username, Content_history, Attachments, Relayed
+					Discord_username, Content_history, Relayed
 				)
 		)
 		Connection.commit()
@@ -108,7 +113,8 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		Cursor.close()
 		Connection.close()
 
-def History_edition(Table, Keep, Message_ID, Date, New_text, Current_attachments, Deleted_attachments):
+def History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames):
+
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -116,7 +122,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Current_attachments
 			raise ValueError("[DB] Error: invalid table name.")
 		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
-				SELECT user, content_history FROM {Table}
+				SELECT content_history FROM {Table}
 				WHERE message_id = %s""",
 				(Message_ID,)
 		)
@@ -124,28 +130,44 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Current_attachments
 		if not Result:
 			print(f"[DB] Warning: this message can’t be edited in the DB, because it hasn’t been recorded in it.")
 			return
-		Query = f"UPDATE {Table} SET content_history = %s"
-		Content_history = json.loads(Result[1])
+
+		Content_history = json.loads(Result[0])
+		# The keys are ISO timestamps, so lexicographic order matches chronological order
+		First_entry = min(Content_history)
 		if Keep:
 			Centiseconds = round(Date.microsecond / 10000)
-			Date = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
+			Current_entry = Date.isoformat(timespec="seconds") + f".{Centiseconds:02d}"
 		else:
-			# If Keep is False, there’ll only ever be one entry in the dictionary
-			Date = next(iter(Content_history))
-		Content_history[Date] = {
-				"Text": New_text
-		}
-		if len(Deleted_attachments) > 0:
-			Content_history[Date] = {
-					"Deleted_attachments": Deleted_attachments
-			}
-		Values = [json.dumps(Content_history)]
-		if Current_attachments:
-			Query += ", attachments = %s"
-			Values.append(json.dumps(Current_attachments))
-		Query += f" WHERE message_id = {Message_ID}"
+			Current_entry = First_entry
+		Last_text_entry = First_entry
+		Content_history[Current_entry] = {}
+		for Entry in Content_history:
+			if "Text" in Content_history[Entry] and Last_text_entry < Entry:
+				Last_text_entry = Entry
+		if Content_history[Last_text_entry]["Text"] != New_text:
+			Content_history[Current_entry]["Text"] = New_text
+
+		if len(Deleted_filenames) > 0:
+			if Keep:
+				Content_history[Current_entry]["Deleted_attachments"] = []
+			for Deleted_filename in Deleted_filenames:
+				if Deleted_filename["Previous_filename"] in Content_history[First_entry]["Attachments"]:
+					Content_history[First_entry]["Attachments"].remove(
+							Deleted_filename["Previous_filename"]
+					)
+					if len(Content_history[First_entry]["Attachments"]) == 0:
+						del Content_history[First_entry]["Attachments"]
+				if Keep:
+					Content_history[Current_entry]["Deleted_attachments"].append(
+							Deleted_filename["New_filename"]
+					)
+
+		Content_history = json.dumps(Content_history)
+		Query = f"UPDATE {Table} SET content_history = %s WHERE message_id = {Message_ID}"
+		Values = [Content_history]
 		Cursor.execute(Query, Values)
 		Connection.commit()
+
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
@@ -161,7 +183,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 			raise ValueError("[DB] Error: invalid table name.")
 		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
-				SELECT user FROM {Table}
+				SELECT content_history FROM {Table}
 				WHERE message_id = %s""",
 				(Message_ID,)
 		)
@@ -169,12 +191,30 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 		if not Result:
 			print(f"[DB] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")
 			return
+		Content_history = json.loads(Result[0])
+		# The keys are ISO timestamps, so lexicographic order matches chronological order
+		Current_entry = max(Content_history)
 		if Keep:
 			Query = f"UPDATE {Table} SET deletion_date = %s"
 			Values = [Date]
-			if Deleted_attachments:
-				Query += ", attachments = %s"
-				Values.append(json.dumps(Deleted_attachments))
+			if len(Deleted_attachments) > 0:
+				# if Deleted_attachments isn’t empty, it means Content_history[Current_entry] had an
+				# "Attachements" entry, with files that have just been marked as deleted
+				if "Attachments" in Content_history[Current_entry]:
+					del Content_history[Current_entry]["Attachments"]
+				# The message might have been edited to delete some attachments but not all, so the
+				# latest edition could already contain a "Deleted_attachments" entry
+				if "Deleted_attachments" in Content_history[Current_entry]:
+					Content_history[Current_entry]["Deleted_attachments"].extend(
+							Deleted_attachments
+					)
+				else:
+					Content_history[Current_entry]["Deleted_attachments"] = list(
+							Deleted_attachments
+					)
+				Content_history = json.dumps(Content_history)
+				Query += ", content_history = %s"
+				Values.append(Content_history)
 			Query += f" WHERE message_id = %s"
 			Values.append(Message_ID)
 		else:
@@ -190,6 +230,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 		Connection.close()
 
 def History_fetch_message(Table, Message_ID):
+
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -204,7 +245,6 @@ def History_fetch_message(Table, Message_ID):
 					reply_to,
 					user,
 					content_history,
-					attachments,
 					reactions,
 					relayed,
 					expired,
@@ -212,8 +252,13 @@ def History_fetch_message(Table, Message_ID):
 				FROM {Table} WHERE message_id = %s""",
 				(Message_ID,))
 		Result = Cursor.fetchone()
+
 		Infos_message = None
+		Content_history = {}
+		Attachments = []
+
 		if Result:
+
 			if Result[6]:
 				Content_history = Result[6]
 				# Decode the JSON only if the returned object is a string: depending on the driver
@@ -221,27 +266,22 @@ def History_fetch_message(Table, Message_ID):
 				if isinstance(Content_history, str):
 					try:
 						Content_history = json.loads(Content_history)
+						Content_history = {
+							datetime.datetime.fromisoformat(Date): Text
+							for Date, Text in Content_history.items()
+						}
+						First_entry = min(Content_history)
+						Attachments = Content_history[First_entry].get("Attachments", [])
 					except json.JSONDecodeError:
-						print("[DB] Invalid JSON in content_history:", repr(Content_history))
-						Content_history = {}
-				Content_history = {
-					datetime.datetime.fromisoformat(Date): Text
-					for Date, Text in Content_history.items()
-				}
-			else:
-				Content_history = {}
+						print("[DB] Invalid data in the content_history field:", repr(Content_history))
+
 			if Result[7]:
-				Attachments = Result[7]
-				if isinstance(Attachments, str):
-					Attachments = json.loads(Attachments)
-			else:
-				Attachments = []
-			if Result[8]:
-				Reactions = Result[8]
+				Reactions = Result[7]
 				if isinstance(Reactions, str):
 					Reactions = json.loads(Reactions)
 			else:
 				Reactions = {}
+
 			Infos_message = {
 					"Creation_date":	Result[0],
 					"Server_ID":		Result[1],
@@ -252,11 +292,13 @@ def History_fetch_message(Table, Message_ID):
 					"Content_history":	Content_history,
 					"Attachments":		Attachments,
 					"Reactions":		Reactions,
-					"Relayed":			bool(Result[9]),
-					"Expired":			bool(Result[10]),
-					"Deletion_date":	Result[11] if Result[11] else None,
+					"Relayed":			bool(Result[8]),
+					"Expired":			bool(Result[9]),
+					"Deletion_date":	Result[10] if Result[10] else None,
 			}
+
 		return Infos_message
+
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
@@ -276,7 +318,6 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 				reply_to,
 				user,
 				content_history,
-				attachments,
 				reactions,
 				creation_date,
 				deletion_date
