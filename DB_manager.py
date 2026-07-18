@@ -256,6 +256,7 @@ def History_fetch_message(Table, Message_ID):
 		Infos_message = None
 		Content_history = {}
 		Attachments = []
+		Deleted_attachments = []
 
 		if Result:
 
@@ -272,6 +273,12 @@ def History_fetch_message(Table, Message_ID):
 						}
 						First_entry = min(Content_history)
 						Attachments = Content_history[First_entry].get("Attachments", [])
+						Deleted_attachments = []
+						for Entry in Content_history:
+							if "Deleted_attachments" in Content_history[Entry]:
+								Deleted_attachments.append(
+										Content_history[Entry]["Deleted_attachments"]
+								)
 					except json.JSONDecodeError:
 						print("[DB] Invalid data in the content_history field:", repr(Content_history))
 
@@ -283,18 +290,19 @@ def History_fetch_message(Table, Message_ID):
 				Reactions = {}
 
 			Infos_message = {
-					"Creation_date":	Result[0],
-					"Server_ID":		Result[1],
-					"Chan_ID":			Result[2],
-					"Message_ID":		Result[3],
-					"Reply_to":			Result[4] if Result[4] else None,
-					"User":				Result[5],
-					"Content_history":	Content_history,
-					"Attachments":		Attachments,
-					"Reactions":		Reactions,
-					"Relayed":			bool(Result[8]),
-					"Expired":			bool(Result[9]),
-					"Deletion_date":	Result[10] if Result[10] else None,
+					"Creation_date":		Result[0],
+					"Server_ID":			Result[1],
+					"Chan_ID":				Result[2],
+					"Message_ID":			Result[3],
+					"Reply_to":				Result[4] if Result[4] else None,
+					"User":					Result[5],
+					"Content_history":		Content_history,
+					"Attachments":			Attachments,
+					"Deleted_attachments":  Deleted_attachments,
+					"Reactions":			Reactions,
+					"Relayed":				bool(Result[8]),
+					"Expired":				bool(Result[9]),
+					"Deletion_date":		Result[10] if Result[10] else None,
 			}
 
 		return Infos_message
