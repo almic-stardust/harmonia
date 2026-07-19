@@ -8,7 +8,6 @@ import json
 import datetime
 
 from Config_manager import Config
-import Gears
 
 def Connect_DB():
 	try:
@@ -39,16 +38,18 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Content_history = json.loads(Content_history)
 		Modified = False
 		for Entry in Content_history:
+			# Avoid adding a dependency on Gears and Discord_manager modules for display_history
+			from Gears import Is_URL
 			if "Attachments" in Content_history[Entry]:
 				for Index, Filename in enumerate(Content_history[Entry]["Attachments"]):
-					if Gears.Is_URL(Filename):
+					if Is_URL(Filename):
 						continue
 					if Filename == Old_filename:
 						Content_history[Entry]["Attachments"][Index] = New_filename
 						Modified = True
 			if "Deleted_attachments" in Content_history[Entry]:
 				for Index, Filename in enumerate(Content_history[Entry]["Deleted_attachments"]):
-					if Gears.Is_URL(Filename):
+					if Is_URL(Filename):
 						continue
 					if Filename == Old_filename:
 						Content_history[Entry]["Deleted_attachments"][Index] = New_filename
@@ -227,6 +228,80 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 			Values = [Message_ID]
 		Cursor.execute(Query, Values)
 		Connection.commit()
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def SyncHistory_add_period(Server_ID, Chan_ID, Oldest, Latest):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
+	try:
+		Cursor.execute("""
+				SELECT oldest_message_id, latest_message_id FROM history_sync
+				WHERE server_id = %s AND chan_id = %s
+				ORDER BY oldest_message_id""",
+				(Server_ID, Chan_ID)
+		)
+		Periods = Cursor.fetchall()
+		New_oldest = Oldest
+		New_latest = Latest
+		Delete = []
+		for Period in Periods:
+			Periods_not_overlapping = (
+				Period["latest_message_id"] + 1 < New_oldest
+				or Period["oldest_message_id"] - 1 > New_latest
+			)
+			if Periods_not_overlapping:
+				continue
+			New_oldest = min(New_oldest, Period["oldest_message_id"])
+			New_latest = max(New_latest, Period["latest_message_id"])
+			Delete.append((Period["oldest_message_id"], Period["latest_message_id"]))
+		for Period in Delete:
+			Cursor.execute("""
+					DELETE FROM history_sync
+					WHERE server_id=%s AND chan_id=%s
+					AND oldest_message_id=%s AND latest_message_id=%s""",
+					(Server_ID, Chan_ID, Period[0], Period[1])
+			)
+		Cursor.execute("""
+				INSERT INTO history_sync (server_id, chan_id, oldest_message_id, latest_message_id)
+				VALUES (%s, %s, %s, %s)""",
+				(Server_ID, Chan_ID, New_oldest, New_latest)
+		)
+		Connection.commit()
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
+def SyncHistory_find_next_gap(Server_ID, Chan_ID):
+	Connection = Connect_DB()
+	# To manipulate results using a dictionary
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
+	try:
+		Cursor.execute("""
+				SELECT oldest_message_id, latest_message_id FROM history_sync
+				WHERE server_id = %s AND chan_id = %s
+				ORDER BY latest_message_id DESC""",
+				(Server_ID, Chan_ID)
+		)
+
+		Periods = Cursor.fetchall()
+		if not Periods:
+			return {"Latest": None}
+		# Walk from latest to oldest looking for a gap
+		Previous_oldest = Periods[0]["oldest_message_id"]
+		for Period in Periods[1:]:
+			if Period["latest_message_id"] + 1 < Previous_oldest:
+				return {"Latest": Previous_oldest}
+			Previous_oldest = Period["oldest_message_id"]
+		# Still haven’t reached the beginning of the chan
+		return {"Latest": Previous_oldest}
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)

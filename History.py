@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import discord
+from discord.ext import tasks
 import datetime
 from zoneinfo import ZoneInfo
 import aiohttp
@@ -341,3 +343,38 @@ def Message_deleted(Table, Message_ID):
 	if Previous_filenames:
 		Deleted_filenames = Delete_attachments(Keep, Previous_filenames)
 	DB_manager.History_deletion(Table, Keep, Message_ID, Date, Deleted_filenames)
+
+###############################################################################
+# Synchronization
+###############################################################################
+
+@tasks.loop(hours=1)
+async def Synchronize_history(Table):
+	from Discord_manager import bot
+	Server = bot.get_guild(Config["Discord"]["Server"])
+	for Channel in Server.text_channels:
+		# Find one gap that still needs synchronization
+		Gap = DB_manager.SyncHistory_find_next_gap(Server.id, Channel.id)
+		if Gap is None:
+			continue
+		if Gap["Latest"] is None:
+			History = Channel.history(limit=10, oldest_first=False)
+		else:
+			History = Channel.history(
+					before=discord.Object(Gap["Latest"]),
+					limit=10, oldest_first=False
+			)
+		Lowest = Highest = None
+		# History is an asynchronous iterator
+		async for Message in History:
+			await Message_added(Table,
+				Message.author, Channel.id, Message, Message.content, Relayed=False
+			)
+			if Lowest is None:
+				Lowest = Message.id
+				Highest = Message.id
+			else:
+				Lowest = min(Lowest, Message.id)
+				Highest = max(Highest, Message.id)
+		if Lowest is not None:
+			DB_manager.SyncHistory_add_period(Server.id, Channel.id, Lowest, Highest)

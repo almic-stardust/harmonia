@@ -27,6 +27,8 @@ History:
   DB_table:               "project_history"
   Storage_folder:         "/path/to/bot_files"
   Storage_url:            "https://domain.tld/bot_files"
+  # When the bot is added to a new server, it saves the existing history
+  Sync_old:               True/False
 
 Users:
   DB_table:               "project_users"

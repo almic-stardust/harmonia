@@ -11,6 +11,8 @@ if IRC_enabled:
 	import IRC_manager
 	IRC_task = None
 History_enabled = Config["Enabled_sections"]["History"]
+if History_enabled:
+	History_table = Config["History"]["DB_table"]
 Users_enabled = Config["Enabled_sections"]["Users"]
 
 ###############################################################################
@@ -36,9 +38,14 @@ async def Start_bot():
 		if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
 			if History_enabled and Users_enabled:
 				Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
-	if not Discord_manager.Reconcile_downloaded_files.is_running():
-		if History_enabled:
+	if History_enabled:
+		if not Discord_manager.Reconcile_downloaded_files.is_running():
 			Discord_manager.Reconcile_downloaded_files.start()
+		if Config["History"]["Sync_old"]:
+			# Don’t add non-essential circular dependencies to this module
+			from History import Synchronize_history
+			if not Synchronize_history.is_running():
+				Synchronize_history.start(History_table)
 
 ###############################################################################
 # Shutdown
