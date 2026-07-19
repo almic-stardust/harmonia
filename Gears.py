@@ -134,3 +134,10 @@ async def Send_DM(User, Context, Message, Message_IRC=None):
 				await IRC_instance.Safe_message(User, Message_IRC)
 			else:
 				await IRC_instance.Safe_message(User, Message)
+
+###############################################################################
+# Files
+###############################################################################
+
+def Is_URL(Location):
+	return Location.startswith(("http://", "https://"))

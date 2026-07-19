@@ -8,6 +8,7 @@ import json
 import datetime
 
 from Config_manager import Config
+import Gears
 
 def Connect_DB():
 	try:
@@ -40,11 +41,15 @@ def History_update_filename(Table, Old_filename, New_filename):
 		for Entry in Content_history:
 			if "Attachments" in Content_history[Entry]:
 				for Index, Filename in enumerate(Content_history[Entry]["Attachments"]):
+					if Gears.Is_URL(Filename):
+						continue
 					if Filename == Old_filename:
 						Content_history[Entry]["Attachments"][Index] = New_filename
 						Modified = True
 			if "Deleted_attachments" in Content_history[Entry]:
 				for Index, Filename in enumerate(Content_history[Entry]["Deleted_attachments"]):
+					if Gears.Is_URL(Filename):
+						continue
 					if Filename == Old_filename:
 						Content_history[Entry]["Deleted_attachments"][Index] = New_filename
 						Modified = True

@@ -10,6 +10,7 @@ import smtplib
 
 from Config_manager import Config
 import DB_manager
+import Gears
 
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
@@ -281,19 +282,34 @@ def Message_edited(Table, Message_ID, Payload):
 	Deleted_filenames = []
 	Previous_filenames = Infos_message["Attachments"]
 	if Previous_filenames:
-		Discord_attachments = []
+		Discord_URLs = []
+		Discord_filenames = []
 		for Attachment in Payload.get("attachments", []):
-			Discord_attachments.append(Attachment["filename"])
+			Discord_URLs.append(Attachment["url"])
+			Discord_filenames.append(Attachment["filename"])
 		for Previous_filename in Previous_filenames:
-			# The comparaison must be on the filenames sent on Discord: revert the modifications
-			# made when a filename is stored in the DB
+
+			# Attachments stored as URLs
+			if Gears.Is_URL(Previous_filename):
+				# Compare the original filename reported by Discord
+				if Previous_filename in Discord_URLs:
+					continue
+				if Keep:
+					# When the attachment is no longer present in the list reported by Discord, add
+					# it as-is to Deleted_filenames, since URLs must not renamed
+					Deleted_filenames.append(Previous_filename)
+				continue
+
+			# Attachments stored as files
+			# The comparaison is on the filenames reported by Discord: revert the modifications made
+			# when a filename is stored in the DB
 			Base_name, File_ext = os.path.splitext(Previous_filename)
 			# Remove leading date prefix
 			Base_name = re.sub(r"^\d{8}—", "", Base_name)
 			# Remove trailing copy index (—number)
 			Base_name = re.sub(r"—\d+$", "", Base_name)
-			Normalized_previous_filename = Base_name + File_ext
-			if not Normalized_previous_filename in Discord_attachments:
+			Reverted_previous_filename = Base_name + File_ext
+			if not Reverted_previous_filename in Discord_filenames:
 				# Delete_attachments() returns a list, but in this case it processes only one file
 				New_filename = Delete_attachments(Keep, Previous_filename)[0]
 				Deleted_filenames.append({
