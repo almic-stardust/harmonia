@@ -50,14 +50,15 @@ Create the virtual environment:
 When you’ll have to upgrade the venv:
 
 	% ~/.local/pydle-python3.13/bin/python -m pip install --upgrade pip
-	% ~/.local/pydle-python3.13/bin/python -m pip install --upgrade discord.py pydle PyYAML mysqlclient python-dateutil
+	% ~/.local/pydle-python3.13/bin/python -m pip install --upgrade --log ~/pip_log-`date +%Y%m%d` discord.py pydle PyYAML mysqlclient python-dateutil
 
 When you’ll upgrade your Linux distribution, the Python version will change and you’ll have to recreate the venv.
 
 #### Database
 
-Create a base according to your Config.yaml, then create these tables. The creation\_date field
-prevents the SQL requests of some functions from requiring a JSON extraction.
+Create a base according to your Config.yaml, then create these tables. The creation\_date field of
+the project\_history table prevents the SQL requests of some functions from requiring a JSON
+extraction.
 
 	CREATE TABLE project_history (
 	    creation_date               TIMESTAMP NOT NULL,
@@ -105,6 +106,19 @@ prevents the SQL requests of some functions from requiring a JSON extraction.
 	    active                      BOOLEAN NOT NULL DEFAULT TRUE
 	);
 
+	CREATE TABLE history_sync (
+	    server_id                   BIGINT NOT NULL,
+	    chan_id                     BIGINT NOT NULL,
+	    oldest_message_id           BIGINT NOT NULL,
+	    latest_message_id           BIGINT NOT NULL,
+	    PRIMARY KEY                 (server_id, chan_id, latest_message)
+	);
+
+For performance, create composite indexes in the DB:
+
+	CREATE INDEX Index_latest_messages ON history_sync (server_id, chan_id, latest_message_id);
+
+
 #### Last steps
 
 	% git https://github.com/almic-stardust/harmonia
@@ -128,10 +142,10 @@ Here is the procedure to set up this feature.
 
 For performance, create composite indexes in the DB:
 
-	CREATE INDEX Index_messages ON history (server_id, chan_id, creation_date);
-	CREATE INDEX Index_replies ON history (reply_to);
-	CREATE INDEX Index_deletions ON history (server_id, chan_id, deletion_date);
-	CREATE INDEX Index_expiration ON history (relayed, expired, creation_date);
+	CREATE INDEX Index_messages ON project_history (server_id, chan_id, creation_date);
+	CREATE INDEX Index_replies ON project_history (reply_to);
+	CREATE INDEX Index_deletions ON project_history (server_id, chan_id, deletion_date);
+	CREATE INDEX Index_expiration ON project_history (relayed, expired, creation_date);
 
 The ASGI server I use is Hypercorn. On the system where you want to run it:
 
