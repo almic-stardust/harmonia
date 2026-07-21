@@ -237,6 +237,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 
 def SyncHistory_add_period(Server_ID, Chan_ID, Oldest, Latest):
 	Connection = Connect_DB()
+	# To manipulate results using a dictionary
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		Cursor.execute("""
@@ -281,7 +282,6 @@ def SyncHistory_add_period(Server_ID, Chan_ID, Oldest, Latest):
 
 def SyncHistory_find_next_gap(Server_ID, Chan_ID):
 	Connection = Connect_DB()
-	# To manipulate results using a dictionary
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		Cursor.execute("""
@@ -312,7 +312,7 @@ def SyncHistory_find_next_gap(Server_ID, Chan_ID):
 def History_fetch_message(Table, Message_ID):
 
 	Connection = Connect_DB()
-	Cursor = Connection.cursor()
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
@@ -340,8 +340,8 @@ def History_fetch_message(Table, Message_ID):
 
 		if Result:
 
-			if Result[6]:
-				Content_history = Result[6]
+			if Result["content_history"]:
+				Content_history = Result["content_history"]
 				# Decode the JSON only if the returned object is a string: depending on the driver
 				# version, MariaDB may return JSON columns as already-decoded Python objects
 				if isinstance(Content_history, str):
@@ -362,27 +362,28 @@ def History_fetch_message(Table, Message_ID):
 					except json.JSONDecodeError:
 						print("[DB] Invalid data in the content_history field:", repr(Content_history))
 
-			if Result[7]:
-				Reactions = Result[7]
+			if Result["reactions"]:
+				Reactions = Result["reactions"]
 				if isinstance(Reactions, str):
 					Reactions = json.loads(Reactions)
 			else:
 				Reactions = {}
 
 			Infos_message = {
-					"Creation_date":		Result[0],
-					"Server_ID":			Result[1],
-					"Chan_ID":				Result[2],
-					"Message_ID":			Result[3],
-					"Reply_to":				Result[4] if Result[4] else None,
-					"User":					Result[5],
+					"Creation_date":		Result["creation_date"],
+					"Server_ID":			Result["server_id"],
+					"Chan_ID":				Result["chan_id"],
+					"Message_ID":			Result["message_id"],
+					"Reply_to":				Result["reply_to"] if Result["reply_to"] else None,
+					"User":					Result["user"],
 					"Content_history":		Content_history,
 					"Attachments":			Attachments,
 					"Deleted_attachments":  Deleted_attachments,
 					"Reactions":			Reactions,
-					"Relayed":				bool(Result[8]),
-					"Expired":				bool(Result[9]),
-					"Deletion_date":		Result[10] if Result[10] else None,
+					"Relayed":				bool(Result["relayed"]),
+					"Expired":				bool(Result["expired"]),
+					"Deletion_date":		Result["deletion_date"] \
+													if Result["deletion_date"] else None,
 			}
 
 		return Infos_message
@@ -466,7 +467,7 @@ def Messages_potentially_expired(Table):
 	"""Return the messages corresponding to the two expiration periods: after one month, and after
 	one year (plus a delay as safety margin)."""
 	Connection = Connect_DB()
-	Cursor = Connection.cursor()
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
@@ -482,10 +483,10 @@ def Messages_potentially_expired(Table):
 		if Result:
 			for Row in Result:
 				Messages.append({
-						"creation_date": Row[0],
-						"chan_id": Row[1],
-						"message_id": Row[2],
-						"user": Row[3],
+						"creation_date":	Row["creation_date"],
+						"chan_id":			Row["chan_id"],
+						"message_id":		Row["message_id"],
+						"user":				Row["user"],
 				})
 		return Messages
 	except MySQLdb.Error as Error:
@@ -519,7 +520,7 @@ def Users_check_presence(Table, Infos_user):
 	identifiers already present in the DB."""
 
 	Connection = Connect_DB()
-	Cursor = Connection.cursor()
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	Fields = {
 			"pseudo": "",
 			"mail": "",
@@ -557,23 +558,24 @@ def Users_check_presence(Table, Infos_user):
 				Results = Cursor.fetchall()
 				if len(Results) > 0:
 					for Result in Results:
-						Mail_login = Result[2].split("@")[0]
+						Mail_login = Result["mail"].split("@")[0]
 						Mail_login = Mail_login.split("+")[0]
 						# Sometimes used as an alternative recipient delimiter
 						Mail_login = Mail_login.split("-")[0]
-						# Result[1] = user ID so this line means “Other_identifiers[user ID]”
-						Other_identifiers[Result[1]] = {
-								"Mail":					Result[2],
-								"First_name":			Result[3],
-								"Last_name":			Result[4],
+						User_ID = Result["id"]
+						Other_identifiers[User_ID] = {
+								"Mail":						Result["mail"],
+								"First_name":				Result["first_name"],
+								"Last_name":				Result["last_name"],
 								"Pseudos": {
-										"Main":			Result[0],
-										"Mail_login":	Mail_login,
-										"ML":			Result[5],
-										"Wiki":			Result[6],
-										"IRC":			Result[7],
-										"Forum":		Result[8],
-										"Discord":		Result[9],
+										"Main":				Result["pseudo"],
+										"Mail_login":		Mail_login,
+										"ML":				Result["ml_pseudo"],
+										"Wiki":				Result["wiki_pseudo"],
+										"IRC":				Result["irc_pseudo"],
+										"Forum":			Result["forum_pseudo"],
+										"Discord_username":	Result["discord_username"],
+										"Pseudo_displayed_on_Discord": Result["pseudo_displayed_on_discord"],
 								}
 						}
 
@@ -617,7 +619,7 @@ def Users_check_presence(Table, Infos_user):
 
 def Users_fetch_users(Table):
 	Connection = Connect_DB()
-	Cursor = Connection.cursor()
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	Users = {}
 	try:
 		if not Table.isidentifier():
@@ -625,13 +627,13 @@ def Users_fetch_users(Table):
 		Cursor.execute(f"SELECT * FROM {Table}")
 		Results = Cursor.fetchall()
 		for Result in Results:
-			User_ID = Result[1]
-			Keep = Result[12]
+			User_ID = Result["id"]
+			Keep = Result["history_keep_all"]
 			if Keep is None:
 				Keep = True
 			else:
 				Keep = bool(Keep)
-			Dates = json.loads(Result[14]) if Result[14] else {}
+			Dates = json.loads(Result["renewals"]) if Result["renewals"] else {}
 			Renewals = {}
 			for Year, Dates_for_year in Dates.items():
 				Year = int(Year)
@@ -639,29 +641,29 @@ def Users_fetch_users(Table):
 				for Date in Dates_for_year:
 					Renewals[Year].append(datetime.datetime.fromisoformat(Date))
 				Renewals[Year].sort()
-			Amounts = json.loads(Result[15]) if Result[15] else {}
+			Amounts = json.loads(Result["contributions"]) if Result["contributions"] else {}
 			Contributions = {}
 			if len(Amounts) > 0:
 				for Year, Amount in Amounts.items():
 					Contributions[int(Year)] = Amount
 			Infos_user = {
-					"Pseudo":						Result[0],
+					"Pseudo":						Result["pseudo"],
 					"ID":							User_ID,
-					"Mail":							Result[2],
-					"First_name":					Result[3],
-					"Last_name":					Result[4],
-					"ML_pseudo":					Result[5],
-					"Wiki_pseudo":					Result[6],
-					"IRC_pseudo":					Result[7],
-					"Forum_pseudo":					Result[8],
-					"Discord_username":				Result[9],
-					"Pseudo_displayed_on_Discord":	Result[10],
-					"Discord_expiration_for_IRC":	Result[11],
+					"Mail":							Result["mail"],
+					"First_name":					Result["first_name"],
+					"Last_name":					Result["last_name"],
+					"ML_pseudo":					Result["ml_pseudo"],
+					"Wiki_pseudo":					Result["wiki_pseudo"],
+					"IRC_pseudo":					Result["irc_pseudo"],
+					"Forum_pseudo":					Result["forum_pseudo"],
+					"Discord_username":				Result["discord_username"],
+					"Pseudo_displayed_on_Discord":	Result["pseudo_displayed_on_Discord"],
+					"Discord_expiration_for_IRC":	Result["discord_expiration_for_irc"],
 					"History_keep_all":				Keep,
-					"Avatar_URL":					Result[13],
+					"Avatar_URL":					Result["avatar_url"],
 					"Renewals":						Renewals,
 					"Contributions":				Contributions,
-					"Last_medium":					Result[16],
+					"Last_medium":					Result["last_medium"],
 			}
 			Users[User_ID] = Infos_user
 		return Users
@@ -824,7 +826,7 @@ def Polls_delete(Table, Poll_ID):
 
 def Polls_fetch(Table, Poll_ID):
 	Connection = Connect_DB()
-	Cursor = Connection.cursor()
+	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		if not Table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
@@ -836,21 +838,21 @@ def Polls_fetch(Table, Poll_ID):
 		Result = Cursor.fetchone()
 		if not Result:
 			return None
-		Choices = json.loads(Result[4]) if Result[4] else {}
+		Choices = json.loads(Result["choices"]) if Result["choices"] else {}
 		if Choices:
 			Temp = {}
 			for Index, Choice in enumerate(Choices):
 				Temp[Index + 1] = Choice
 			Choices = Temp
 		Infos_poll = {
-				"ID": Poll_ID,
-				"Creation_date": Result[1],
-				"Author": Result[2] if Result[2] else "Anonymous",
-				"Question": Result[3],
-				"Choices": Choices,
-				"Votes": json.loads(Result[5]) if Result[5] else {},
-				"Proxies": json.loads(Result[6]) if Result[6] else {},
-				"Active": bool(Result[7]),
+				"ID":				Poll_ID,
+				"Creation_date":	Result["creation_date"],
+				"Author":			Result["user"] if Result["user"] else "Anonymous",
+				"Question":			Result["question"],
+				"Choices":			Choices,
+				"Votes":			json.loads(Result["votes"]) if Result["votes"] else {},
+				"Proxies":			json.loads(Result["proxies"]) if Result["proxies"] else {},
+				"Active":			bool(Result["active"]),
 		}
 		return Infos_poll
 	except MySQLdb.Error as Error:
