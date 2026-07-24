@@ -14,6 +14,8 @@ History_enabled = Config["Enabled_sections"]["History"]
 if History_enabled:
 	History_table = Config["History"]["DB_table"]
 Users_enabled = Config["Enabled_sections"]["Users"]
+if Users_enabled:
+	Users_table = Config["Users"]["DB_table"]
 
 ###############################################################################
 # Startup
@@ -89,6 +91,32 @@ async def Wait_for_events(*Events):
 			Tasks.append(asyncio.create_task(Event))
 	First_done, Pending_tasks = await asyncio.wait(Tasks, return_when=asyncio.FIRST_COMPLETED)
 	return First_done, Pending_tasks
+
+###############################################################################
+# Users
+###############################################################################
+
+def Get_Discord_pseudo(User):
+	# The bot is replying to someone, or saying something on its own
+	print(f"{User=}")
+	if User == Discord_manager.bot.user:
+		return Config["Discord"].get("Bot_name", "Bot")
+	# User.display_name = the server nickname if set, otherwise the global display name if set,
+	# otherwise the Discord username
+	Author_name = User.display_name
+	# If a user has requested that the bot assign them a specific name on Discord, then this name
+	# will be used by Discord_manager.bot.Relay_IRC_message(). But for the history and messages
+	# transferred to IRC, it’s the IRC nick that needs to be returned.
+	if Users_enabled:
+		# Don’t add non-essential circular dependencies to this module
+		from DB_manager import Users_fetch_users
+		Users = Users_fetch_users(Users_table)
+		for User_ID in Users:
+			Infos_user = Users[User_ID]
+			if Infos_user["Pseudo_displayed_on_Discord"] == Author_name:
+				Author_name = Infos_user.get("IRC_pseudo", Author_name)
+				break
+	return Author_name
 
 ###############################################################################
 # Chans

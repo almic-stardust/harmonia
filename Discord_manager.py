@@ -294,40 +294,24 @@ async def on_message(Message):
 	if IRC_enabled:
 		Bridge = Get_bridge_by_Discord_chan(Discord_chan)
 	Author = Message.author
+	Author_name = Gears.Get_Discord_pseudo(Author)
 	Text = Message.content
 	User_join = False
 	if Message.type == discord.MessageType.new_member:
 		User_join = True
 		Text = "Joined the server."
 
-	# Author.display_name = the server nickname if set, otherwise the global display name if set,
-	# otherwise the Discord username
-	Author_name = Author.display_name
-	# If a user has requested that the bot assign them a specific name on Discord, then this name
-	# will be used on Discord, but use the IRC nick for the history and messages transferred to IRC
-	if Users_enabled:
-		Users = DB_manager.Users_fetch_users(Users_table)
-		for User_ID in Users:
-			Infos_user = Users[User_ID]
-			if Infos_user["Pseudo_displayed_on_Discord"] == Author_name:
-				Author_name = Infos_user.get("IRC_pseudo", Author_name)
-				break
-
 	Relayed_message = False
 	# If the message comes from IRC to Discord, through a webhook
 	if Message.webhook_id is not None:
 		Relayed_message = True
-	if Author == bot.user:
-		# If the message comes from IRC to Discord, without a webhook
-		if Bridge and Text.startswith("<**"):
-			Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
-			if Match:
-				Relayed_message = True
-				Author_name = Match.group(1)
-				Text = Match.group(2)
-		# It’s the bot, responding to someone or saying something by itself
-		else:
-			Author_name = Config["Discord"].get("Bot_name", "Bot")
+	# If the message comes from IRC to Discord, without a webhook
+	if Author == bot.user and Bridge and Text.startswith("<**"):
+		Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
+		if Match:
+			Relayed_message = True
+			Author_name = Match.group(1)
+			Text = Match.group(2)
 
 	if History_enabled:
 		await History.Message_added(History_table,

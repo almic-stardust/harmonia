@@ -657,7 +657,7 @@ def Users_fetch_users(Table):
 					"IRC_pseudo":					Result["irc_pseudo"],
 					"Forum_pseudo":					Result["forum_pseudo"],
 					"Discord_username":				Result["discord_username"],
-					"Pseudo_displayed_on_Discord":	Result["pseudo_displayed_on_Discord"],
+					"Pseudo_displayed_on_Discord":	Result["pseudo_displayed_on_discord"],
 					"Discord_expiration_for_IRC":	Result["discord_expiration_for_irc"],
 					"History_keep_all":				Keep,
 					"Avatar_URL":					Result["avatar_url"],

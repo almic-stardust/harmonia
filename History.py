@@ -367,8 +367,9 @@ async def Synchronize_history(Table):
 		Lowest = Highest = None
 		# History is an asynchronous iterator
 		async for Message in History:
+			Author_name = Gears.Get_Discord_pseudo(Message.author)
 			await Message_added(Table,
-				Message.author, Channel.id, Message, Message.content, Relayed=False
+				Author_name, Channel.id, Message, Message.content, Relayed=False
 			)
 			if Lowest is None:
 				Lowest = Message.id
