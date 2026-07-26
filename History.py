@@ -349,33 +349,31 @@ def Message_deleted(Table, Message_ID):
 ###############################################################################
 
 @tasks.loop(hours=1)
-async def Synchronize_history(Table):
+async def Synchronization(Table):
 	from Discord_manager import bot
 	Server = bot.get_guild(Config["Discord"]["Server"])
 	for Channel in Server.text_channels:
 		# Find one gap that still needs synchronization
-		Gap = DB_manager.SyncHistory_find_next_gap(Server.id, Channel.id)
+		Gap = DB_manager.Sync_history_find_next_gap(Server.id, Channel.id)
 		if Gap is None:
 			continue
-		if Gap["Latest"] is None:
+		if Gap["Oldest"] is None:
+			# Get the 10 most recent messages
 			History = Channel.history(limit=10, oldest_first=False)
 		else:
-			History = Channel.history(
-					before=discord.Object(Gap["Latest"]),
-					limit=10, oldest_first=False
-			)
-		Lowest = Highest = None
+			ID_oldest_message = discord.Object(id=Gap["Oldest"])
+			History = Channel.history(before=ID_oldest_message, limit=10, oldest_first=False)
+		Newest = None
 		# History is an asynchronous iterator
 		async for Message in History:
+			# First message seen
+			if Newest is None:
+				Newest = Message.id
+			# Last message seen (overwritten until the loop is finished)
+			Oldest = Message.id
 			Author_name = Gears.Get_Discord_pseudo(Message.author)
 			await Message_added(Table,
 				Author_name, Channel.id, Message, Message.content, Relayed=False
 			)
-			if Lowest is None:
-				Lowest = Message.id
-				Highest = Message.id
-			else:
-				Lowest = min(Lowest, Message.id)
-				Highest = max(Highest, Message.id)
-		if Lowest is not None:
-			DB_manager.SyncHistory_add_period(Server.id, Channel.id, Lowest, Highest)
+		if Oldest is not None:
+			DB_manager.Sync_history_add_period(Server.id, Channel.id, Oldest, Newest)

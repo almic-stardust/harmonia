@@ -45,9 +45,9 @@ async def Start_bot():
 			Discord_manager.Reconcile_downloaded_files.start()
 		if Config["History"]["Sync_old"]:
 			# Don’t add non-essential circular dependencies to this module
-			from History import Synchronize_history
-			if not Synchronize_history.is_running():
-				Synchronize_history.start(History_table)
+			from History import Synchronization
+			if not Synchronization.is_running():
+				Synchronization.start(History_table)
 
 ###############################################################################
 # Shutdown
@@ -98,7 +98,6 @@ async def Wait_for_events(*Events):
 
 def Get_Discord_pseudo(User):
 	# The bot is replying to someone, or saying something on its own
-	print(f"{User=}")
 	if User == Discord_manager.bot.user:
 		return Config["Discord"].get("Bot_name", "Bot")
 	# User.display_name = the server nickname if set, otherwise the global display name if set,

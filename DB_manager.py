@@ -235,43 +235,49 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 		Cursor.close()
 		Connection.close()
 
-def SyncHistory_add_period(Server_ID, Chan_ID, Oldest, Latest):
+def Sync_history_add_period(Server_ID, Chan_ID, Oldest, Newest):
+	# Nothing to record
+	if Oldest is None or Newest is None:
+		return
 	Connection = Connect_DB()
 	# To manipulate results using a dictionary
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		Cursor.execute("""
-				SELECT oldest_message_id, latest_message_id FROM history_sync
-				WHERE server_id = %s AND chan_id = %s
-				ORDER BY oldest_message_id""",
-				(Server_ID, Chan_ID)
-		)
-		Periods = Cursor.fetchall()
-		New_oldest = Oldest
-		New_latest = Latest
-		Delete = []
-		for Period in Periods:
-			Periods_not_overlapping = (
-				Period["latest_message_id"] + 1 < New_oldest
-				or Period["oldest_message_id"] - 1 > New_latest
-			)
-			if Periods_not_overlapping:
-				continue
-			New_oldest = min(New_oldest, Period["oldest_message_id"])
-			New_latest = max(New_latest, Period["latest_message_id"])
-			Delete.append((Period["oldest_message_id"], Period["latest_message_id"]))
-		for Period in Delete:
+				SELECT oldest_message_id, newest_message_id
+				FROM history_sync
+				WHERE server_id=%s AND chan_id=%s
+		""", (Server_ID, Chan_ID))
+		Period = Cursor.fetchone()
+		# First synchronization of this channel
+		if Period is None:
 			Cursor.execute("""
-					DELETE FROM history_sync
-					WHERE server_id=%s AND chan_id=%s
-					AND oldest_message_id=%s AND latest_message_id=%s""",
-					(Server_ID, Chan_ID, Period[0], Period[1])
+					INSERT INTO history_sync (
+						server_id,
+						chan_id,
+						oldest_message_id,
+						newest_message_id
+					)
+					VALUES (%s, %s, %s, %s)""",
+					(Server_ID, Chan_ID, Oldest, Newest)
 			)
-		Cursor.execute("""
-				INSERT INTO history_sync (server_id, chan_id, oldest_message_id, latest_message_id)
-				VALUES (%s, %s, %s, %s)""",
-				(Server_ID, Chan_ID, New_oldest, New_latest)
-		)
+		# Extend the synchronized interval
+		else:
+			Existing_oldest = Period["oldest_message_id"]
+			Existing_newest = Period["newest_message_id"]
+			# Recover gracefully from an inconsistent row
+			if Existing_oldest is None:
+				Existing_oldest = Oldest
+			if Existing_newest is None:
+				Existing_newest = Newest
+			New_oldest = min(Oldest, Existing_oldest)
+			New_newest = max(Newest, Existing_newest)
+			Cursor.execute("""
+					UPDATE history_sync
+					SET oldest_message_id=%s, newest_message_id=%s
+					WHERE server_id=%s AND chan_id=%s""",
+					(New_oldest, New_newest, Server_ID, Chan_ID)
+			)
 		Connection.commit()
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
@@ -280,28 +286,27 @@ def SyncHistory_add_period(Server_ID, Chan_ID, Oldest, Latest):
 		Cursor.close()
 		Connection.close()
 
-def SyncHistory_find_next_gap(Server_ID, Chan_ID):
+def Sync_history_find_next_gap(Server_ID, Chan_ID):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		Cursor.execute("""
-				SELECT oldest_message_id, latest_message_id FROM history_sync
+				SELECT oldest_message_id, newest_message_id FROM history_sync
 				WHERE server_id = %s AND chan_id = %s
-				ORDER BY latest_message_id DESC""",
+				ORDER BY newest_message_id DESC""",
 				(Server_ID, Chan_ID)
 		)
-
 		Periods = Cursor.fetchall()
 		if not Periods:
-			return {"Latest": None}
-		# Walk from latest to oldest looking for a gap
+			return {"Oldest": None}
+		# Walk from newest to oldest looking for a gap
 		Previous_oldest = Periods[0]["oldest_message_id"]
 		for Period in Periods[1:]:
-			if Period["latest_message_id"] + 1 < Previous_oldest:
-				return {"Latest": Previous_oldest}
+			if Period["newest_message_id"] + 1 < Previous_oldest:
+				return {"Oldest": Previous_oldest}
 			Previous_oldest = Period["oldest_message_id"]
 		# Still haven’t reached the beginning of the chan
-		return {"Latest": Previous_oldest}
+		return {"Oldest": Previous_oldest}
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)
