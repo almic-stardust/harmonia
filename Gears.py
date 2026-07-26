@@ -54,10 +54,42 @@ async def Start_bot():
 ###############################################################################
 
 async def Stop_bot():
+
 	print("Shutdown initiated…")
 	if Shutdown_in_progress.is_set():
 		return
 	Shutdown_in_progress.set()
+
+	# Stop background tasks first
+	if History_enabled and Config["History"]["Sync_old"]:
+		from History import Synchronization
+		if Synchronization.is_running():
+			Synchronization.cancel()
+			try:
+				await Synchronization.get_task()
+			except asyncio.CancelledError:
+				pass
+			except Exception as Error:
+				print(f"[History] Error while stopping synchronization: {Error}")
+	if History_enabled:
+		if Discord_manager.Reconcile_downloaded_files.is_running():
+			Discord_manager.Reconcile_downloaded_files.cancel()
+			try:
+				await Discord_manager.Reconcile_downloaded_files.get_task()
+			except asyncio.CancelledError:
+				pass
+			except Exception as Error:
+				print(f"[History] Error while stopping file reconciliation: {Error}")
+	if IRC_enabled:
+		if Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
+			Discord_manager.Delete_expired_IRC_messages_from_Discord.cancel()
+			try:
+				await Discord_manager.Delete_expired_IRC_messages_from_Discord.get_task()
+			except asyncio.CancelledError:
+				pass
+			except Exception as Error:
+				print(f"[Discord] Error while stopping IRC cleanup: {Error}")
+
 	# Stop IRC loop
 	if IRC_enabled:
 		global IRC_task
@@ -74,7 +106,8 @@ async def Stop_bot():
 				await IRC_task
 			except Exception as Error:
 				print(f"[IRC] Error during task loop exit: {Error}")
-	# Stop Discord
+
+	# Finally, disconnect from Discord
 	await Discord_manager.Shutdown_Discord()
 	print("Shutdown complete.")
 
