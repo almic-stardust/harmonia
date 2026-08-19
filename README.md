@@ -110,13 +110,14 @@ extraction.
 	    server_id                   BIGINT NOT NULL,
 	    chan_id                     BIGINT NOT NULL,
 	    oldest_message_id           BIGINT NOT NULL,
-	    latest_message_id           BIGINT NOT NULL,
-	    PRIMARY KEY                 (server_id, chan_id, latest_message)
+	    newest_message_id           BIGINT NOT NULL,
+	    complete_backlog            BOOLEAN NOT NULL DEFAULT FALSE,
+	    PRIMARY KEY                 (server_id, chan_id)
 	);
 
 For performance, create composite indexes in the DB:
 
-	CREATE INDEX Index_latest_messages ON history_sync (server_id, chan_id, latest_message_id);
+	CREATE INDEX Index_newest_messages ON history_sync (server_id, chan_id, newest_message_id);
 
 
 #### Last steps
