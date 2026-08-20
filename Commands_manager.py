@@ -7,6 +7,7 @@ import random
 import re
 import hashlib
 import datetime
+from zoneinfo import ZoneInfo
 from dateutil.relativedelta import relativedelta
 
 from Config_manager import Config
@@ -53,6 +54,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 	"Subcommands": {
 			"help":			(Polls_help,				False,			False),
 			"members":		(Polls_members,				True,			False),
+			"add_adhesion":	(Polls_add_adhesion,		True,			True),
 			"create":		(Polls_create,				True,			True),
 			"close":		(IRC_polls_close,			True,			True),
 			"delete":		(IRC_polls_delete,			True,			True),
@@ -612,7 +614,7 @@ async def Polls_members(Targets, List_of_users, Discord_author=None):
 async def Discord_polls_members(Context, *, Members=None):
 	"""Display informations about members’ voting rights.\n
 	 \n
-	!straws members [Member1 Member2 …]
+	!polls members [Member1 Member2 …]
 	Parameters
 	----------
 	Members : str"""
@@ -620,6 +622,121 @@ async def Discord_polls_members(Context, *, Members=None):
 	Discord_author = Context.author.display_name
 	# In the !help for this subcommand, it’s better to display Members instead of List_of_users
 	await Polls_members(Targets, Members, Discord_author)
+
+async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
+
+	Output = ""
+	Output_IRC = ""
+	Users = DB_manager.Users_fetch_users(Users_table)
+	Authorized = False
+	if Context:
+		Media = "Discord"
+		if Context.author.name == Config["Discord"]["Bot_owner"]:
+			Authorized = True
+	else:
+		Media = "IRC"
+		if User == Config["IRC"]["Bot_owner"]:
+			Authorized = True
+	if IRC_enabled and Media == "Discord":
+		Output_IRC = f"<\x02{User}\x02> !polls add_adhesion {Arguments}\n"
+	Help_usage = "Usage: !polls add_adhesion Pseudo Mail [YYYYMMDD]"
+	if not Authorized:
+		if IRC_enabled:
+			Output_IRC += Output
+		await Gears.Send(Targets, Output, Output_IRC)
+		await Gears.Send_DM(User, Context, "Permission denied.")
+		return
+	if not Arguments:
+		Output = Help_usage
+		if IRC_enabled:
+			Output_IRC += Output
+		await Gears.Send(Targets, Output, Output_IRC)
+		return
+	Parts = Arguments.split()
+	if len(Parts) != 3:
+		Output += "Error: invalid syntax. " + Help_usage
+		if IRC_enabled:
+			Output_IRC += Output
+		await Gears.Send(Targets, Output, Output_IRC)
+		return
+	Pseudo = Parts[0]
+	Mail = Parts[1]
+	Date = Parts[2]
+	try:
+		Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(
+				tzinfo=ZoneInfo("Europe/Paris")
+		)
+	except ValueError:
+		Output += "Error: invalid date. " + Help_usage
+		if IRC_enabled:
+			Output_IRC += Output
+		await Gears.Send(Targets, Output, Output_IRC)
+		return
+	Year = str(Date.year)
+	Infos_user = {
+			"Pseudo": Pseudo,
+			"Mail": Mail
+	}
+
+	User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
+	# Renewal
+	if User_ID:
+		Infos_user = Users[User_ID]
+		Renewals = []
+		for Dates in Infos_user["Renewals"].values():
+			Renewals.extend(Dates)
+		Renewals.sort()
+		Last_renewal = Renewals[-1] if len(Renewals) > 0 else None
+		# Some infos are updated only if it’s the latest renewal
+		if not Last_renewal or Last_renewal < Date:
+			Infos_user["Mail"] = Mail
+			Infos_user["Last_medium"] = "Harmonia"
+		# Make sure the key exists before appending the date
+		if Year not in Infos_user["Renewals"]:
+			Infos_user["Renewals"][Year] = []
+		if Date not in Infos_user["Renewals"][Year]:
+			Infos_user["Renewals"][Year].append(Date)
+			Infos_user["Renewals"][Year].sort()
+		DB_manager.Users_manage_user(Users_table, "Update", Infos_user)
+		Output = f"{Pseudo}’s membership has been renewed on {Date.strftime('%d/%m/%Y')}"
+	# New member
+	else:
+		# Complete the dictionary, in addition to what we got from the arguments
+		Infos_user["First_name"] =					None
+		Infos_user["Last_name"] =					None
+		Infos_user["ML_pseudo"] =					None
+		Infos_user["Wiki_pseudo"] =					None
+		Infos_user["IRC_pseudo"] =					None
+		Infos_user["Forum_pseudo"] =				None
+		Infos_user["Discord_username"] =			None
+		Infos_user["Pseudo_displayed_on_Discord"] = None
+		Infos_user["Discord_expiration_for_IRC"] =	None
+		Infos_user["History_keep_all"] =			True
+		Infos_user["Avatar_URL"] =					None
+		Infos_user["Renewals"] =					{Year: [Date]}
+		Infos_user["Contributions"] =				None
+		Infos_user["Last_medium"] =					"Harmonia"
+		DB_manager.Users_manage_user(Users_table, "Add", Infos_user)
+		Output = f"{Pseudo} has been added with membership date {Date.strftime('%d/%m/%Y')}"
+
+	if IRC_enabled:
+		Output_IRC += Output
+	await Gears.Send(Targets, Output, Output_IRC)
+
+@polls.command(name="add_adhesion")
+async def Discord_polls_add_adhesion(Context, *, Arguments):
+	"""Record a membership renewal.\n
+	 \n
+	!polls add_adhesion Pseudo Mail [YYYYMMDD]
+	Parameters
+	----------
+	Arguments : str"""
+	if Context.guild is None:
+		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
+		return
+	Targets = Gears.Get_target_chans(Context.channel.id)
+	Discord_author = Context.author.display_name
+	await Polls_add_adhesion(Targets, Discord_author, Arguments, Context)
 
 async def Polls_create(Targets, User, Arguments, From_Discord=False):
 	Output = ""

@@ -710,7 +710,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					renewals,
 					contributions,
 					last_medium)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	if Action == "Update":
 		User_ID = Infos_user["ID"]
 		Query = f"""

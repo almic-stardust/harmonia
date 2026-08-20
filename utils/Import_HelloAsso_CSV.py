@@ -104,12 +104,12 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 		if User_ID:
 			Infos_user = Users[User_ID]
 			Output += f"{Infos_user['Pseudo']} ({Infos_user['ID']})\n"
-			# Some infos are updated only if it’s the latest renewal
 			Renewals = []
 			for Dates in Infos_user["Renewals"].values():
 				Renewals.extend(Dates)
 			Renewals.sort()
 			Last_renewal = Renewals[-1] if len(Renewals) > 0 else None
+			# Some infos are updated only if it’s the latest renewal
 			if not Last_renewal or Last_renewal < Date:
 				Infos_user["Mail"] = Mail
 				Infos_user["Last_medium"] = "HelloAsso"
@@ -153,7 +153,7 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			Infos_user["Forum_pseudo"] =				None
 			Infos_user["Discord_username"] =			None
 			Infos_user["Pseudo_displayed_on_Discord"] = None
-			Infos_user["Discord_expiration_for_IRC"] =	365
+			Infos_user["Discord_expiration_for_IRC"] =	None
 			Infos_user["History_keep_all"] =			True
 			Infos_user["Avatar_URL"] =					None
 			Infos_user["Renewals"] =					{File_year: [Date]}

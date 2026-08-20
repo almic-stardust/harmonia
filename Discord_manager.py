@@ -124,7 +124,8 @@ def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
 	for User_ID in Users:
 		Infos_user = Users[User_ID]
 		if Infos_user["IRC_pseudo"] == IRC_pseudo:
-			Expiration_period = Infos_user["Discord_expiration_for_IRC"]
+			if Expiration_period:
+				Expiration_period = Infos_user["Discord_expiration_for_IRC"]
 			break
 	return Expiration_period
 
