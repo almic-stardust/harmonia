@@ -653,7 +653,7 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	Parts = Arguments.split()
-	if len(Parts) != 3:
+	if len(Parts) < 2 or len(Parts) > 3:
 		Output += "Error: invalid syntax. " + Help_usage
 		if IRC_enabled:
 			Output_IRC += Output
@@ -661,17 +661,20 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		return
 	Pseudo = Parts[0]
 	Mail = Parts[1]
-	Date = Parts[2]
-	try:
-		Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(
-				tzinfo=ZoneInfo("Europe/Paris")
-		)
-	except ValueError:
-		Output += "Error: invalid date. " + Help_usage
-		if IRC_enabled:
-			Output_IRC += Output
-		await Gears.Send(Targets, Output, Output_IRC)
-		return
+	if len(Parts) == 2:
+		Date = datetime.datetime.now(ZoneInfo("Europe/Paris"))
+	elif len(Parts) == 3:
+		Date = Parts[2]
+		try:
+			Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(
+					tzinfo=ZoneInfo("Europe/Paris")
+			)
+		except ValueError:
+			Output += "Error: invalid date. " + Help_usage
+			if IRC_enabled:
+				Output_IRC += Output
+			await Gears.Send(Targets, Output, Output_IRC)
+			return
 	Year = str(Date.year)
 	Infos_user = {
 			"Pseudo": Pseudo,
