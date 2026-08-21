@@ -37,6 +37,8 @@ if History_enabled:
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
+UTC = datetime.timezone.utc
+Timezone = ZoneInfo(Config["Server_timezone"])
 HTTP_session = None
 Users_buffers = {}
 Map_pending_downloads = {}
@@ -145,8 +147,8 @@ async def Delete_expired_IRC_messages_from_Discord():
 			# An expiration period of 0 means no expiration
 			if Expiration_period == 0:
 				continue
-			Now = datetime.datetime.now(datetime.timezone.utc)
-			Date_creation = Row["creation_date"].replace(tzinfo=datetime.timezone.utc)
+			Now = datetime.datetime.now(UTC)
+			Date_creation = Row["creation_date"].replace(tzinfo=UTC)
 			Message_duration = Now - Date_creation
 			if Message_duration > datetime.timedelta(days=Expiration_period):
 				Chan = bot.get_channel(Row["chan_id"])
@@ -421,7 +423,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Images_URLs = re.findall(Pattern_image_URL, Message)
 	if Images_URLs:
 		Storage_folder = os.path.join(Config["History"].get("Storage_folder"), "other_sources")
-		Date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
+		Date = datetime.datetime.now(Timezone).strftime("%Y%m%d")
 		Max_size = 52428800 # 50 MB
 		Files_to_download = []
 		for URL in Images_URLs:

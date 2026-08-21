@@ -9,6 +9,8 @@ import datetime
 
 from Config_manager import Config
 
+UTC = datetime.timezone.utc
+
 def Connect_DB():
 	try:
 		Connection = MySQLdb.connect(**Config["mysqlclient"])
@@ -644,7 +646,9 @@ def Users_fetch_users(Table):
 				Year = int(Year)
 				Renewals[Year] = []
 				for Date in Dates_for_year:
-					Renewals[Year].append(datetime.datetime.fromisoformat(Date))
+					Renewals[Year].append(
+							datetime.datetime.fromisoformat(Date).replace(tzinfo=UTC)
+					)
 				Renewals[Year].sort()
 			Amounts = json.loads(Result["contributions"]) if Result["contributions"] else {}
 			Contributions = {}

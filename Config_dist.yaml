@@ -1,6 +1,8 @@
 # You must restart the bot if you modify this file. If you use the web display of the history, don’t
 # forget Hypercorn and/or Uvicorn.
 
+Server_timezone:          "Europe/Paris"
+
 Discord:
   Bot_owner:              ""
   # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html

@@ -42,6 +42,9 @@ for Section, Keys in Required.items():
 # Optional sections
 ###############################################################################
 
+if "Server_timezone" not in Config:
+	Config["Server_timezone"] = "UTC"
+
 Optional = {
 	"Mail": (
 		"Server",

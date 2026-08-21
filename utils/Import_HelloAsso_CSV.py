@@ -6,9 +6,14 @@ import os
 import fnmatch
 import csv
 import datetime
+from zoneinfo import ZoneInfo
 
 from Config_manager import Config
 import DB_manager
+
+UTC = datetime.timezone.utc
+Timezone = ZoneInfo(Config["Server_timezone"])
+Filename = sys.argv[1]
 
 if not Config["Enabled_sections"]["Users"]:
 	print("Error: For this script to be of any use, the \"users\" section must be enabled in the config file.")
@@ -16,18 +21,21 @@ if not Config["Enabled_sections"]["Users"]:
 if len(sys.argv) == 1 or not fnmatch.fnmatch(sys.argv[1], "*csv"):
 	print("Error: Missing CSV file.\nUsage: Import_HelloAsso_CSV.py File.csv")
 	sys.exit(1)
-Filename = sys.argv[1]
 if not os.path.exists(Filename):
 	print(f"Error: File {Filename} not found.")
 	sys.exit(1)
 
 def Parse_date(Date):
 	Date = str(Date).strip()
-	Formats = ["%d/%m/%Y",	"%d/%m/%Y %H:%M"]
+	Formats = ["%d/%m/%Y", "%d/%m/%Y %H:%M"]
 	Error = ""
 	for Format in Formats:
 		try:
-			return datetime.datetime.strptime(Date, Format)
+			Date = datetime.datetime.strptime(Date, Format)
+			# CSV files from HelloAsso use the French timezone
+			Date = Date.replace(tzinfo=ZoneInfo("Europe/Paris"))
+			# MariaDB DATETIME doesn’t support timezone offsets, so the time must be in UTC
+			return Date.astimezone(datetime.timezone.utc)
 		except Exception as e:
 			Error = e
 			continue

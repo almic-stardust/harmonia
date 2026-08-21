@@ -17,6 +17,8 @@ import Gears
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
+UTC = datetime.timezone.utc
+Timezone = ZoneInfo(Config["Server_timezone"])
 
 ###############################################################################
 # Handling attachments
@@ -151,7 +153,7 @@ async def Download_from_Discord(Table, Message):
 	from Discord_manager import Register_destination_in_MPD
 	Storage_folder = Config["History"].get("Storage_folder")
 	Other_source_folder = os.path.join(Storage_folder, "other_sources")
-	Date = Message.created_at.astimezone(ZoneInfo("Europe/Paris")).strftime("%Y%m%d")
+	Date = Message.created_at.astimezone(Timezone).strftime("%Y%m%d")
 	Attachments = []
 	Downloaded_filenames = []
 	Assignments = Handle_duplicate_filenames(Table, Storage_folder, Date, Message.attachments)
@@ -237,7 +239,7 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 	# without timezone.
 	# The creation_field cannot be automatically created by MariaDB, because the bot might be
 	# retrieving old messages.
-	Date = Message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+	Date = Message.created_at.astimezone(UTC).replace(tzinfo=None)
 	# Set 0 if it’s a DM
 	Server_ID = Message.guild.id if Message.guild else 0
 	Replied_message_ID = 0
@@ -267,7 +269,7 @@ def Message_edited(Table, Message_ID, Payload):
 			Users = DB_manager.Users_fetch_users(Users_table)
 			Infos_user = Users[User_ID]
 			Keep = Infos_user["History_keep_all"]
-	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+	Date = datetime.datetime.now(UTC).replace(tzinfo=None)
 	Content_history = Infos_message["Content_history"]
 	# The keys are ISO timestamps, so lexicographic order matches chronological order
 	Date_last_edit = max(Content_history)
@@ -325,7 +327,7 @@ def Message_edited(Table, Message_ID, Payload):
 	DB_manager.History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames)
 
 def Message_deleted(Table, Message_ID):
-	Date = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+	Date = datetime.datetime.now(UTC).replace(tzinfo=None)
 	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
 	if not Infos_message:
 		print("[History] Warning: this message can’t be deleted from the DB, because it hasn’t been recorded in it.")

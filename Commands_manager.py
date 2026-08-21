@@ -25,6 +25,8 @@ if Users_enabled:
 Polls_enabled = Config["Enabled_sections"]["Polls"]
 if Polls_enabled:
 	Polls_table = Config["Polls"]["DB_table"]
+UTC = datetime.timezone.utc
+Timezone = ZoneInfo(Config["Server_timezone"])
 Straws_bag = {}
 Straws_bag["Common_key"] = {}
 Straws_bag["Users"] = []
@@ -525,8 +527,9 @@ def Polls_voting_rights(Infos_user):
 	Infos_user["Penultimate_year"] = None
 	if len(Renewals_years) >= 2:
 		Penultimate_year = Renewals_years[-2]
-		Infos_user["Penultimate_year"] = datetime.datetime.strptime(str(Penultimate_year), "%Y")
-	Now = datetime.datetime.now()
+		# A datetime representing January 1st of the penultimate year, in UTC
+		Infos_user["Penultimate_year"] = datetime.datetime(Penultimate_year, 1, 1, tzinfo=UTC)
+	Now = datetime.datetime.now(UTC)
 	# relativedelta rather than timedelta, to calculate voting rights with calendar years and months
 	Has_one_year_membership = Infos_user["Registration"] <= Now - relativedelta(years=1)
 	Renewal_within_last_year = Infos_user["Last_renewal"] >= Now - relativedelta(years=1)
@@ -599,10 +602,10 @@ async def Polls_members(Targets, List_of_users, Discord_author=None):
 			Output += f"can vote "
 		else:
 			Output += f"{Infos_user['Pseudo']} can’t vote "
-		Registration = datetime.datetime.strftime(Infos_user["Registration"], "%d/%m/%Y")
-		Last_renewal = datetime.datetime.strftime(Infos_user["Last_renewal"], "%d/%m/%Y")
+		Registration = Infos_user["Registration"].astimezone(Timezone).strftime("%d/%m/%Y")
+		Last_renewal = Infos_user["Last_renewal"].astimezone(Timezone).strftime("%d/%m/%Y")
 		if Infos_user["Penultimate_year"]:
-			Penultimate_year = datetime.datetime.strftime(Infos_user["Penultimate_year"], "%Y")
+			Penultimate_year = Infos_user["Penultimate_year"].strftime("%Y")
 			Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
 		else:
 			Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
@@ -659,13 +662,13 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 	Pseudo = Parts[0]
 	Mail = Parts[1]
 	if len(Parts) == 2:
-		Date = datetime.datetime.now(ZoneInfo("Europe/Paris"))
+		Date = datetime.datetime.now(Timezone)
 	elif len(Parts) == 3:
 		Date = Parts[2]
 		try:
-			Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(
-					tzinfo=ZoneInfo("Europe/Paris")
-			)
+			Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(tzinfo=Timezone)
+			# MariaDB DATETIME doesn’t support timezone offsets, so the time must be in UTC
+			Date = Date.astimezone(UTC)
 		except ValueError:
 			Output += "Error: invalid date. " + Help_usage
 			if IRC_enabled:
@@ -1236,7 +1239,7 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 					"Error: only moderators can delegate the proxy of someone else."
 			)
 			return
-	Now = datetime.datetime.now(datetime.timezone.utc)
+	Now = datetime.datetime.now(Timezone)
 	for Old_holder in Proxies:
 		if User in Proxies[Old_holder]:
 			if Old_holder == Proxy_holder:
@@ -1533,7 +1536,7 @@ async def Polls_info(Targets, Poll_ID=None, Discord_author=None):
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
 
-	Creation_date = datetime.datetime.strftime(Infos_poll["Creation_date"], "%d/%m/%Y")
+	Creation_date = Infos_poll["Creation_date"].astimezone(Timezone).strftime("%d/%m/%Y")
 	Choices = Infos_poll["Choices"]
 	# Blank votes will be displayed after the votes
 	Choices[0] = "Blank"
