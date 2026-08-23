@@ -25,7 +25,9 @@ if Users_enabled:
 Polls_enabled = Config["Enabled_sections"]["Polls"]
 if Polls_enabled:
 	Polls_table = Config["Polls"]["DB_table"]
+# Times stored in the DB are in UTC
 UTC = datetime.timezone.utc
+# Timezone used when interpreting user input or displaying dates
 Timezone = ZoneInfo(Config["Server_timezone"])
 Straws_bag = {}
 Straws_bag["Common_key"] = {}
@@ -529,6 +531,7 @@ def Polls_voting_rights(Infos_user):
 		Penultimate_year = Renewals_years[-2]
 		# A datetime representing January 1st of the penultimate year, in UTC
 		Infos_user["Penultimate_year"] = datetime.datetime(Penultimate_year, 1, 1, tzinfo=UTC)
+	# Times stored in the DB are UTC
 	Now = datetime.datetime.now(UTC)
 	# relativedelta rather than timedelta, to calculate voting rights with calendar years and months
 	Has_one_year_membership = Infos_user["Registration"] <= Now - relativedelta(years=1)
@@ -672,9 +675,8 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 	elif len(Parts) == 3:
 		Date = Parts[2]
 		try:
+			# The given date is interpreted as being in Timezone
 			Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(tzinfo=Timezone)
-			# MariaDB DATETIME doesn’t support timezone offsets, so the time must be in UTC
-			Date = Date.astimezone(UTC)
 		except ValueError:
 			Output += "Error: invalid date. " + Help_usage
 			if IRC_enabled:
@@ -682,6 +684,8 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
 	Year = Date.year
+	# Times stored in the DB are UTC
+	Date = Date.astimezone(UTC)
 	Infos_user = {
 			"Pseudo": Pseudo,
 			"Mail": Mail
@@ -739,7 +743,8 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		Infos_user["Contributions"] =				None
 		Infos_user["Last_medium"] =					"Harmonia"
 		DB_manager.Users_manage_user(Users_table, "Add", Infos_user)
-		Output = f"{Pseudo} has been added with membership date {Date.strftime('%d/%m/%Y')}"
+		Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
+		Output = f"{Pseudo} has been added with membership date {Date}."
 
 	if IRC_enabled:
 		Output_IRC += Output

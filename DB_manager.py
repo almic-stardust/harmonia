@@ -9,6 +9,7 @@ import datetime
 
 from Config_manager import Config
 
+# Times stored in the DB are in UTC
 UTC = datetime.timezone.utc
 
 def Connect_DB():
@@ -646,6 +647,7 @@ def Users_fetch_users(Table):
 				Year = int(Year)
 				Renewals[Year] = []
 				for Date in Dates_for_year:
+					# Times stored in the DB are in UTC
 					Renewals[Year].append(
 							datetime.datetime.fromisoformat(Date).replace(tzinfo=UTC)
 					)
@@ -692,7 +694,7 @@ def Users_manage_user(Table, Action, Infos_user):
 	for Year, Dates_for_year in Infos_user["Renewals"].items():
 		Dates[Year] = []
 		for Date in Dates_for_year:
-			Dates[Year].append(Date.isoformat(sep=" "))
+			Dates[Year].append(Date.strftime("%Y-%m-%d %H:%M:%S"))
 	Renewals = json.dumps(Dates)
 	Contributions = json.dumps(Infos_user["Contributions"]) if Infos_user["Contributions"] else None
 	if Action == "Add":

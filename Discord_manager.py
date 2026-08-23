@@ -37,7 +37,9 @@ if History_enabled:
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
+# Times stored in the DB are in UTC
 UTC = datetime.timezone.utc
+# Timezone used when interpreting user input or displaying dates
 Timezone = ZoneInfo(Config["Server_timezone"])
 HTTP_session = None
 Users_buffers = {}
@@ -147,6 +149,7 @@ async def Delete_expired_IRC_messages_from_Discord():
 			# An expiration period of 0 means no expiration
 			if Expiration_period == 0:
 				continue
+			# Times stored in the DB are in UTC
 			Now = datetime.datetime.now(UTC)
 			Date_creation = Row["creation_date"].replace(tzinfo=UTC)
 			Message_duration = Now - Date_creation

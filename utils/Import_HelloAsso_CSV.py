@@ -11,7 +11,9 @@ from zoneinfo import ZoneInfo
 from Config_manager import Config
 import DB_manager
 
+# Times stored in the DB are UTC
 UTC = datetime.timezone.utc
+# Timezone used when interpreting user input or displaying dates
 Timezone = ZoneInfo(Config["Server_timezone"])
 Filename = sys.argv[1]
 
@@ -28,18 +30,16 @@ if not os.path.exists(Filename):
 def Parse_date(Date):
 	Date = str(Date).strip()
 	Formats = ["%d/%m/%Y", "%d/%m/%Y %H:%M"]
-	Error = ""
 	for Format in Formats:
 		try:
 			Date = datetime.datetime.strptime(Date, Format)
 			# CSV files from HelloAsso use the French timezone
 			Date = Date.replace(tzinfo=ZoneInfo("Europe/Paris"))
-			# MariaDB DATETIME doesn’t support timezone offsets, so the time must be in UTC
-			return Date.astimezone(datetime.timezone.utc)
-		except Exception as e:
-			Error = e
+			# Times stored in the DB are UTC
+			return Date.astimezone(UTC)
+		except ValueError as Error:
 			continue
-	print(f"Error while parsing date: {Error}")
+	print(f"Error while parsing {Date}: {Error}")
 	return None
 
 def Parse_contribution(Value):

@@ -17,7 +17,9 @@ import Gears
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
+# Times stored in the DB are in UTC
 UTC = datetime.timezone.utc
+# Timezone used when interpreting user input or displaying dates
 Timezone = ZoneInfo(Config["Server_timezone"])
 
 ###############################################################################
@@ -269,6 +271,7 @@ def Message_edited(Table, Message_ID, Payload):
 			Users = DB_manager.Users_fetch_users(Users_table)
 			Infos_user = Users[User_ID]
 			Keep = Infos_user["History_keep_all"]
+	# Times stored in the DB are in UTC
 	Date = datetime.datetime.now(UTC).replace(tzinfo=None)
 	Content_history = Infos_message["Content_history"]
 	# The keys are ISO timestamps, so lexicographic order matches chronological order
@@ -327,6 +330,7 @@ def Message_edited(Table, Message_ID, Payload):
 	DB_manager.History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames)
 
 def Message_deleted(Table, Message_ID):
+	# Times stored in the DB are in UTC
 	Date = datetime.datetime.now(UTC).replace(tzinfo=None)
 	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
 	if not Infos_message:
