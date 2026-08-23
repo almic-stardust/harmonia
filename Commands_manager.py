@@ -630,7 +630,6 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 
 	Output = ""
 	Output_IRC = ""
-	Users = DB_manager.Users_fetch_users(Users_table)
 	if Context:
 		Media = "Discord"
 		Command_author = Context.author.name
@@ -639,7 +638,7 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		Command_author = User
 	if IRC_enabled and Media == "Discord":
 		Output_IRC = f"<\x02{User}\x02> !polls add_adhesion {Arguments}\n"
-	Help_usage = "Usage: !polls add_adhesion Pseudo Mail [YYYYMMDD]"
+	Help_usage = "Usage: !polls add_adhesion Pseudo Mail_address [YYYYMMDD]"
 	if Command_author != Config[Media]["Bot_owner"]:
 		if IRC_enabled:
 			Output_IRC += Output
@@ -661,6 +660,13 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		return
 	Pseudo = Parts[0]
 	Mail = Parts[1]
+	# [^@\s]+ → one or more characters that aren’t @ or space
+	if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", Mail):
+		Output = "Error: invalid mail address. " + Help_usage
+		if IRC_enabled:
+			Output_IRC += Output
+		await Gears.Send(Targets, Output, Output_IRC)
+		return
 	if len(Parts) == 2:
 		Date = datetime.datetime.now(Timezone)
 	elif len(Parts) == 3:
@@ -675,21 +681,32 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
-	Year = str(Date.year)
+	Year = Date.year
 	Infos_user = {
 			"Pseudo": Pseudo,
 			"Mail": Mail
 	}
-
+	# To be placed here, because if it’s placed at the beginning of the function alongside the
+	# initialization of other variables, it’ll cause a complete DB fetch even in case of syntax
+	# errors or unauthorized calls
+	Users = DB_manager.Users_fetch_users(Users_table)
 	User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
+
 	# Renewal
 	if User_ID:
 		Infos_user = Users[User_ID]
 		Renewals = []
-		for Dates in Infos_user["Renewals"].values():
-			Renewals.extend(Dates)
-		Renewals.sort()
-		Last_renewal = Renewals[-1] if len(Renewals) > 0 else None
+		for Renewal in Infos_user["Renewals"].values():
+			Renewals.extend(Renewal)
+		if Year in Infos_user["Renewals"] and Date in Infos_user["Renewals"][Year]:
+			Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
+			Output = f"Error: {Pseudo} already has a renewal for {Date}."
+			if IRC_enabled:
+				Output_IRC += Output
+			await Gears.Send(Targets, Output, Output_IRC)
+			return
+		# max() doesn’t need Renewals.sort(), and this dictionary won’t be used for the DB
+		Last_renewal = max(Renewals, default=None)
 		# Some infos are updated only if it’s the latest renewal
 		if not Last_renewal or Last_renewal < Date:
 			Infos_user["Mail"] = Mail
@@ -700,8 +717,10 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		if Date not in Infos_user["Renewals"][Year]:
 			Infos_user["Renewals"][Year].append(Date)
 			Infos_user["Renewals"][Year].sort()
+			Infos_user["Renewals"] = dict(sorted(Infos_user["Renewals"].items()))
 		DB_manager.Users_manage_user(Users_table, "Update", Infos_user)
-		Output = f"{Pseudo}’s membership has been renewed on {Date.strftime('%d/%m/%Y')}"
+		Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
+		Output = f"{Pseudo}’s membership has been renewed for {Date}."
 	# New member
 	else:
 		# Complete the dictionary, in addition to what we got from the arguments
@@ -730,7 +749,7 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 async def Discord_polls_add_adhesion(Context, *, Arguments):
 	"""Record a membership renewal.\n
 	 \n
-	!polls add_adhesion Pseudo Mail [YYYYMMDD]
+	!polls add_adhesion Pseudo Mail_address [YYYYMMDD]
 	Parameters
 	----------
 	Arguments : str"""

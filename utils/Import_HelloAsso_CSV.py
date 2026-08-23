@@ -113,10 +113,10 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			Infos_user = Users[User_ID]
 			Output += f"{Infos_user['Pseudo']} ({Infos_user['ID']})\n"
 			Renewals = []
-			for Dates in Infos_user["Renewals"].values():
-				Renewals.extend(Dates)
-			Renewals.sort()
-			Last_renewal = Renewals[-1] if len(Renewals) > 0 else None
+			for Renewal in Infos_user["Renewals"].values():
+				Renewals.extend(Renewal)
+			# max() doesn’t need Renewals.sort(), and this dictionary won’t be used for the DB
+			Last_renewal = max(Renewals, default=None)
 			# Some infos are updated only if it’s the latest renewal
 			if not Last_renewal or Last_renewal < Date:
 				Infos_user["Mail"] = Mail
@@ -136,6 +136,7 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			if Date not in Infos_user["Renewals"][File_year]:
 				Infos_user["Renewals"][File_year].append(Date)
 				Infos_user["Renewals"][File_year].sort()
+				Infos_user["Renewals"] = dict(sorted(Infos_user["Renewals"].items()))
 			DB_manager.Users_manage_user(Users_table, "Update", Infos_user)
 		# New member
 		else:
