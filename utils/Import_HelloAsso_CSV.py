@@ -89,6 +89,8 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 	print(f"\n>>> Year {File_year} <<<\n")
 
 	for Line in Normalized_lines:
+		# Remove spaces from pseudos
+		Pseudo = Line.get("pseudo", "").replace(" ", "")
 		Mail = Line.get("email", "").strip().lower()
 		if not Mail:
 			Mail = Line.get("email payeur", "").strip().lower()
@@ -96,9 +98,8 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 		First_name = Line.get("prénom adhérent", "").strip().title()
 		# Last names can be compound, or contain spaces or apostrophes
 		Last_name = Line.get("nom adhérent", "").strip().title()
-		Pseudo = Line.get("pseudo", "").strip()
-		Date = Parse_date(Line.get("date de la commande"))
 		Contribution = Parse_contribution(Line.get("montant tarif"))
+		Date = Parse_date(Line.get("date de la commande"))
 		Infos_user = {
 				"Pseudo": Pseudo,
 				"Mail": Mail,
