@@ -288,35 +288,35 @@ def Message_edited(Table, Message_ID, Payload):
 
 	# Compare the attachments stored in the DB with the attachments currently reported by Discord
 	Deleted_filenames = []
-	Previous_filenames = Infos_message["Attachments"]
-	if Previous_filenames:
+	Stored_filenames = Infos_message["Attachments"]
+	if Stored_filenames:
 		Discord_URLs = []
 		Discord_filenames = []
 		for Attachment in Payload.get("attachments", []):
 			Discord_URLs.append(Attachment["url"])
 			Discord_filenames.append(Attachment["filename"])
-		for Previous_filename in Previous_filenames:
+		for Stored_filename in Stored_filenames:
 
 			# Attachments stored as URLs
-			if Gears.Is_URL(Previous_filename):
+			if Gears.Is_URL(Stored_filename):
 				# Compare the original filename reported by Discord
-				if Previous_filename in Discord_URLs:
+				if Stored_filename in Discord_URLs:
 					continue
 				if Keep:
 					# When the attachment is no longer present in the list reported by Discord, add
 					# it as-is to Deleted_filenames, since URLs must not renamed
-					Deleted_filenames.append(Previous_filename)
+					Deleted_filenames.append(Stored_filename)
 				continue
 
 			# Attachments stored as files
 			# The comparaison is on the filenames reported by Discord: revert the modifications made
 			# when a filename is stored in the DB
-			Retrieved_previous_filename = Gears.Retrieve_original_filename(Previous_filename)
-			if Retrieved_previous_filename not in Discord_filenames:
+			Original_filename = Gears.Retrieve_original_filename(Stored_filename)
+			if Original_filename not in Discord_filenames:
 				# Delete_attachments() returns a list, but in this case it processes only one file
-				New_filename = Delete_attachments(Keep, Previous_filename)[0]
+				New_filename = Delete_attachments(Keep, Stored_filename)[0]
 				Deleted_filenames.append({
-						"Previous_filename": Previous_filename,
+						"Old_filename": Stored_filename,
 						"New_filename": New_filename,
 				})
 
@@ -341,9 +341,9 @@ def Message_deleted(Table, Message_ID):
 			Infos_user = Users[User_ID]
 			Keep = Infos_user["History_keep_all"]
 	Deleted_filenames = []
-	Previous_filenames = Infos_message["Attachments"]
-	if Previous_filenames:
-		Deleted_filenames = Delete_attachments(Keep, Previous_filenames)
+	Stored_filenames = Infos_message["Attachments"]
+	if Stored_filenames:
+		Deleted_filenames = Delete_attachments(Keep, Stored_filenames)
 	DB_manager.History_deletion(Table, Keep, Message_ID, Date, Deleted_filenames)
 
 ###############################################################################

@@ -160,9 +160,9 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames):
 			if Keep:
 				Content_history[Current_entry]["Deleted_attachments"] = []
 			for Deleted_filename in Deleted_filenames:
-				if Deleted_filename["Previous_filename"] in Content_history[First_entry]["Attachments"]:
+				if Deleted_filename["Old_filename"] in Content_history[First_entry]["Attachments"]:
 					Content_history[First_entry]["Attachments"].remove(
-							Deleted_filename["Previous_filename"]
+							Deleted_filename["Old_filename"]
 					)
 					if len(Content_history[First_entry]["Attachments"]) == 0:
 						del Content_history[First_entry]["Attachments"]

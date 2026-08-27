@@ -189,19 +189,19 @@ async def Reconcile_downloaded_files():
 	try:
 		global Map_pending_downloads
 		Storage_folder = Config["History"].get("Storage_folder")
-		Other_sources = os.path.join(Storage_folder, "other_sources")
+		Other_sources_folder = os.path.join(Storage_folder, "other_sources")
 		if not os.path.exists(Storage_folder):
 			print(f"[Discord_m] Warning: The folder for the attachments isn’t accessible.")
 			return
-		if not os.path.exists(Other_sources):
+		if not os.path.exists(Other_sources_folder):
 			print(f"[Discord_m] Creating the folder for other sources attachments.")
-			os.makedirs(Other_sources)
+			os.makedirs(Other_sources_folder)
 		# list() prevents runtime modification errors
 		for Attachment_id, Filenames_map in list(Map_pending_downloads.items()):
 			if not Filenames_map or "Original_filename" not in Filenames_map \
 					or "Destination_filename" not in Filenames_map:
 				continue
-			Original_path = os.path.join(Other_sources, Filenames_map["Original_filename"])
+			Original_path = os.path.join(Other_sources_folder, Filenames_map["Original_filename"])
 			Destination_path = os.path.join(Storage_folder, Filenames_map["Destination_filename"])
 			# Address the rare cases where the task runs precisely when a file with a name modified
 			# by Discord is being processed in History.py. If the file has already been downloaded
@@ -425,7 +425,9 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
 	Images_URLs = re.findall(Pattern_image_URL, Message)
 	if Images_URLs:
-		Storage_folder = os.path.join(Config["History"].get("Storage_folder"), "other_sources")
+		Other_sources_folder = os.path.join(
+				Config["History"].get("Storage_folder"), "other_sources"
+		)
 		Max_size = 52428800 # 50 MB
 		Files_to_download = []
 		for URL in Images_URLs:
@@ -440,10 +442,10 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			# Download the files so that they’ll be already present in the other_sources folder, to
 			# avoid keeping a version potentially degraded by Discord
 			Downloaded_filenames = await History.Download_files(
-					History_table, Storage_folder, Files_to_download, Max_size
+					History_table, Other_sources_folder, Files_to_download, Max_size
 			)
 			for Filename in Downloaded_filenames:
-				File_path = os.path.join(Storage_folder, Filename)
+				File_path = os.path.join(Other_sources_folder, Filename)
 				Files_for_Discord.append(discord.File(File_path))
 			# Remove images URLs from message body
 			Message = re.sub(Pattern_image_URL, "", Message).strip()
