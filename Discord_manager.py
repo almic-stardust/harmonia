@@ -426,12 +426,11 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Images_URLs = re.findall(Pattern_image_URL, Message)
 	if Images_URLs:
 		Storage_folder = os.path.join(Config["History"].get("Storage_folder"), "other_sources")
-		Date = datetime.datetime.now(Timezone).strftime("%Y%m%d")
 		Max_size = 52428800 # 50 MB
 		Files_to_download = []
 		for URL in Images_URLs:
 			Filename = os.path.basename(URL.split("?")[0])
-			Filename = Filename.replace("—", "_")
+			Filename = Gears.Normalize_filename(Filename)
 			Files_to_download.append({
 				"URL": URL,
 				"Destination_filename": Filename
@@ -441,7 +440,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			# Download the files so that they’ll be already present in the other_sources folder, to
 			# avoid keeping a version potentially degraded by Discord
 			Downloaded_filenames = await History.Download_files(
-					History_table, Storage_folder, Date, Files_to_download, Max_size
+					History_table, Storage_folder, Files_to_download, Max_size
 			)
 			for Filename in Downloaded_filenames:
 				File_path = os.path.join(Storage_folder, Filename)

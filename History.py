@@ -26,7 +26,7 @@ Timezone = ZoneInfo(Config["Server_timezone"])
 # Handling attachments
 ###############################################################################
 
-async def Download_files(Table, Storage_folder, Date, Files_to_download, Max_size):
+async def Download_files(Table, Storage_folder, Files_to_download, Max_size):
 	# Wikimedia wants a User-Agent identifying the application
 	Headers = {"User-Agent": "HarmoniaBot/0.1"}
 	Downloaded_filenames = []
@@ -57,7 +57,7 @@ async def Download_files(Table, Storage_folder, Date, Files_to_download, Max_siz
 		print(f"[History] Warning: Oversized file\n{Oversized_files}")
 	return Downloaded_filenames
 
-def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
+def Determine_filenames(Table, Storage_folder, Date, Attachments):
 
 	Assignments = []
 	Assigned_base_names = {}
@@ -68,8 +68,7 @@ def Handle_duplicate_filenames(Table, Storage_folder, Date, Attachments):
 	# they haven’t been saved on disk yet.
 	for Attachment in Attachments:
 		Base_name, File_ext = os.path.splitext(Attachment.filename)
-		# Em dashes would conflict with the handling of duplicates, but Discord already removes them
-		#Base_name = Base_name.replace("—", "_")
+		Base_name = Gears.Normalize_filename(Base_name)
 		Base_name = f"{Date}—{Base_name}"
 		Key = (Base_name, File_ext)
 		if Key not in Assigned_base_names:
@@ -158,7 +157,9 @@ async def Download_from_Discord(Table, Message):
 	Date = Message.created_at.astimezone(Timezone).strftime("%Y%m%d")
 	Attachments = []
 	Downloaded_filenames = []
-	Assignments = Handle_duplicate_filenames(Table, Storage_folder, Date, Message.attachments)
+	# Determine the filename now to avoid duplicates, including when a message contains the same
+	# filename multiple times
+	Assignments = Determine_filenames(Table, Storage_folder, Date, Message.attachments)
 	for Attachment, Destination_filename in Assignments:
 		# When Discord changes the filename, duplicates (see the comment just below) can only be
 		# handled in Discord_manager.py
@@ -192,7 +193,7 @@ async def Download_from_Discord(Table, Message):
 		# A temporary list, because the same message may contain files with names changed or not by
 		# Discord, and Downloaded_filenames can already contain filenames not changed.
 		# Max_size = 0 because Discord sets its own limit on attachments’ size (today it’s 10 MB)
-		Temp_list = await Download_files(Table, Storage_folder, Date, Attachments, 0)
+		Temp_list = await Download_files(Table, Storage_folder, Attachments, 0)
 		Downloaded_filenames.extend(Temp_list)
 	return Downloaded_filenames
 
@@ -310,13 +311,8 @@ def Message_edited(Table, Message_ID, Payload):
 			# Attachments stored as files
 			# The comparaison is on the filenames reported by Discord: revert the modifications made
 			# when a filename is stored in the DB
-			Base_name, File_ext = os.path.splitext(Previous_filename)
-			# Remove leading date prefix
-			Base_name = re.sub(r"^\d{8}—", "", Base_name)
-			# Remove trailing copy index (—number)
-			Base_name = re.sub(r"—\d+$", "", Base_name)
-			Reverted_previous_filename = Base_name + File_ext
-			if not Reverted_previous_filename in Discord_filenames:
+			Retrieved_previous_filename = Gears.Retrieve_original_filename(Previous_filename)
+			if Retrieved_previous_filename not in Discord_filenames:
 				# Delete_attachments() returns a list, but in this case it processes only one file
 				New_filename = Delete_attachments(Keep, Previous_filename)[0]
 				Deleted_filenames.append({

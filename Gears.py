@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import os
+import re
 
 from Config_manager import Config
 import Discord_manager
@@ -209,3 +211,24 @@ async def Send_DM(User, Context, Message, Message_IRC=None):
 
 def Is_URL(Location):
 	return Location.startswith(("http://", "https://"))
+
+def Normalize_filename(Filename):
+	"""Normalize a filename before adding the date prefix"""
+	# For files stored on the server, em dashes serve as separators, either after the date prefix or
+	# before the duplicate index. So if a filename contains em dashes, they must be replaced.
+	Filename = Filename.replace("—", "_")
+	# Recover filename when an em dash has been converted to its UTF-8 hexadecimal bytes
+	Filename = Filename.replace("E28094", "_")
+	# Recover filename when it already contained the YYYYMMDD prefix
+	Filename = re.sub(r"^\d{8}_", "", Filename)
+	return Filename
+
+def Retrieve_original_filename(Stored_filename):
+	"""Revert the modifications made when a filename is stored in the DB, to get back the original
+	filename used by Discord"""
+	Base_name, File_ext = os.path.splitext(Stored_filename)
+	# Remove the date prefix
+	Base_name = re.sub(r"^\d{8}—", "", Base_name)
+	# Remove the duplicate index suffix (—number)
+	Base_name = re.sub(r"—\d+$", "", Base_name)
+	return Base_name + File_ext
