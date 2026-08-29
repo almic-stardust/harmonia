@@ -56,11 +56,10 @@ async def Download_files(Table, Storage_folder, Files_to_download, Max_size, Che
 					with open(File_path, "wb") as File:
 						File.write(await Response.read())
 					if Check_images:
-						Content_type = Response.headers.get("Content-Type", "").lower()
 						Downloaded_filenames.append({
-								"URL":		File_to_download["URL"],
-								"Filename":	Destination_filename,
-								"Is_image":	Content_type.startswith("image/")
+								"URL":			File_to_download["URL"],
+								"Content_type":	Response.headers.get("Content-Type", "").lower(),
+								"Filename":		Destination_filename
 						})
 					else:
 						Downloaded_filenames.append(Destination_filename)

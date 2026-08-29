@@ -449,9 +449,23 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 					History_table, Other_sources_folder, Files_to_download, Max_size, Check_images
 			)
 			for Downloaded_file in Downloaded_files:
-				if not Downloaded_file["Is_image"]:
+				Content_type = Downloaded_file["Content_type"]
+				if not Content_type.startswith("image/"):
 					continue
 				Filename = Downloaded_file["Filename"]
+				Base_name, Extension = os.path.splitext(Filename)
+				if not Extension:
+					Images_extensions = {
+							"image/jpeg": ".jpeg",
+							"image/png": ".png",
+							"image/gif": ".gif",
+							"image/webp": ".webp",
+					}
+					Old_file_path = os.path.join(Other_sources_folder, Filename)
+					New_filename = Filename + Images_extensions.get(Content_type, "")
+					New_file_path = os.path.join(Other_sources_folder, New_filename)
+					os.rename(Old_file_path, New_file_path)
+					Filename = New_filename
 				File_path = os.path.join(Other_sources_folder, Filename)
 				Files_for_Discord.append(discord.File(File_path))
 				# Remove the image URL from the message
