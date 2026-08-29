@@ -5,6 +5,7 @@ from discord.ext import tasks
 import datetime
 from zoneinfo import ZoneInfo
 import aiohttp
+import asyncio
 import glob
 import os
 import re
@@ -26,7 +27,7 @@ Timezone = ZoneInfo(Config["Server_timezone"])
 # Handling attachments
 ###############################################################################
 
-async def Download_files(Table, Storage_folder, Files_to_download, Max_size):
+async def Download_files(Table, Storage_folder, Files_to_download, Max_size, Check_images=False):
 	# Wikimedia wants a User-Agent identifying the application
 	Headers = {"User-Agent": "HarmoniaBot/0.1"}
 	Downloaded_filenames = []
@@ -36,13 +37,17 @@ async def Download_files(Table, Storage_folder, Files_to_download, Max_size):
 	async with aiohttp.ClientSession() as Session:
 		for File_to_download in Files_to_download:
 			try:
-				async with Session.get(File_to_download["URL"], headers=Headers) as Response:
+				async with Session.get(
+						File_to_download["URL"],
+						headers=Headers,
+						allow_redirects=True
+				) as Response:
 					if Response.status != 200:
 						print(f"[History] Warning: Response.status = {Response.status}")
 						continue
 					File_size = int(Response.headers.get("Content-Length", 0))
 					# Max_size > 0 to check if a size limit is set
-					# File_size > 0 in case the site don’t send the Content-Length header
+					# File_size > 0 in case the site doesn’t send the Content-Length header
 					if Max_size > 0 and File_size > 0 and File_size > Max_size:
 						Oversized_files.append(File_to_download["URL"])
 						continue
@@ -50,9 +55,17 @@ async def Download_files(Table, Storage_folder, Files_to_download, Max_size):
 					File_path = os.path.join(Storage_folder, Destination_filename)
 					with open(File_path, "wb") as File:
 						File.write(await Response.read())
-					Downloaded_filenames.append(Destination_filename)
-			except Exception as Error:
-				print(f"[History] Warning: {Error}")
+					if Check_images:
+						Content_type = Response.headers.get("Content-Type", "").lower()
+						Downloaded_filenames.append({
+								"URL":		File_to_download["URL"],
+								"Filename":	Destination_filename,
+								"Is_image":	Content_type.startswith("image/")
+						})
+					else:
+						Downloaded_filenames.append(Destination_filename)
+			except (aiohttp.ClientError, asyncio.TimeoutError) as Error:
+				print(f"[History] Warning: Could not retrieve {File_to_download['URL']}: {Error}")
 	if Oversized_files:
 		print(f"[History] Warning: Oversized file\n{Oversized_files}")
 	return Downloaded_filenames

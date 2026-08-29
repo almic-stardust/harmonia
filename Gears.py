@@ -232,3 +232,16 @@ def Retrieve_original_filename(Stored_filename):
 	# Remove the duplicate index suffix (—number)
 	Base_name = re.sub(r"—\d+$", "", Base_name)
 	return Base_name + File_ext
+
+###############################################################################
+# URLs
+###############################################################################
+
+def Clean_URL(URL):
+	# Check for closing parenthesis, because someone could write something like this:
+	# “I like https://URL1 (it’s the same thing as https://URL2)
+    while URL.endswith(")") and URL.count(")") > URL.count("("):
+        URL = URL[:-1]
+	# Check for other punctuation right after a URL
+    URL = URL.rstrip(".,!?;:")
+    return URL

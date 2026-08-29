@@ -422,33 +422,40 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		return
 
 	Files_for_Discord = []
-	Pattern_image_URL = r"(https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?)"
-	Images_URLs = re.findall(Pattern_image_URL, Message)
-	if Images_URLs:
+	Pattern_URL = r"https?://\S+"
+	URLs = re.findall(Pattern_URL, Message)
+	URLs = [Gears.Clean_URL(URL) for URL in URLs]
+	if URLs:
 		Other_sources_folder = os.path.join(
 				Config["History"].get("Storage_folder"), "other_sources"
 		)
 		Max_size = 52428800 # 50 MB
 		Files_to_download = []
-		for URL in Images_URLs:
+		for URL in URLs:
 			Filename = os.path.basename(URL.split("?")[0])
 			Filename = Gears.Normalize_filename(Filename)
+			if not Filename:
+				Filename = "Image_from_IRC"
 			Files_to_download.append({
-				"URL": URL,
-				"Destination_filename": Filename
+					"URL": URL,
+					"Destination_filename": Filename
 			})
 		# If history isn’t enabled, relay the links as-is on Discord
-		if len(Files_to_download) > 0 and History_enabled:
+		if History_enabled and len(Files_to_download) > 0:
 			# Download the files so that they’ll be already present in the other_sources folder, to
 			# avoid keeping a version potentially degraded by Discord
-			Downloaded_filenames = await History.Download_files(
-					History_table, Other_sources_folder, Files_to_download, Max_size
+			Check_images = True
+			Downloaded_files = await History.Download_files(
+					History_table, Other_sources_folder, Files_to_download, Max_size, Check_images
 			)
-			for Filename in Downloaded_filenames:
+			for Downloaded_file in Downloaded_files:
+				if not Downloaded_file["Is_image"]:
+					continue
+				Filename = Downloaded_file["Filename"]
 				File_path = os.path.join(Other_sources_folder, Filename)
 				Files_for_Discord.append(discord.File(File_path))
-			# Remove images URLs from message body
-			Message = re.sub(Pattern_image_URL, "", Message).strip()
+				# Remove the image URL from the message
+				Message = Message.replace(Downloaded_file["URL"], "")
 
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 
