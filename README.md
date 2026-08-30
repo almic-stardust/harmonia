@@ -12,17 +12,26 @@ The script used to start the bot.
 Config\_manager.py  
 Loads and processes the configuration and localizations.
 
-DB\_manager.py  
-Manages database-related operations.
+Gears.py  
+A set of functions, either core to the bot’s operations, or used by multiple modules.
 
 Discord\_related.py  
 Functions specific to Discord, like handling events concerning sent/deleted messages (on\_message/on\_raw\_message\_delete).
 
-IRC\_related.py  
-Functions specific to IRC, using pydle.
+DB\_manager.py  
+Manages database-related operations.
+
+History.py  
+Manages history-related operations.
 
 display\_history/  
 Everything related to the web display of the history.
+
+Commands\_manager.py  
+Manages commands issued by users.
+
+IRC\_related.py  
+Functions specific to IRC, using pydle.
 
 # Installation
 
@@ -148,34 +157,27 @@ For performance, create composite indexes in the DB:
 	CREATE INDEX Index_deletions ON project_history (server_id, chan_id, deletion_date);
 	CREATE INDEX Index_expiration ON project_history (relayed, expired, creation_date);
 
-The ASGI server I use is Hypercorn. On the system where you want to run it:
-
-	# apt install python3-hypercorn python3-fastapi python3-yaml python3-mysqldb
-	% cd harmonia/display_history
-	% hypercorn -k uvloop -w 4 --bind localhost:60444 --certfile /path/to/cert.pem --keyfile /path/to/key.pem --access-logfile - Main:Display_history
-
-Then you need to configure nginx (for example), with a site acting as a reverse proxy towards
-localhost:60444. You also need a nginx alias /static/ for harmonia/display\_history/static/ and
-another nginx alias /attachments/ for the storage folder specified in Config.yaml. Once this is
-done, the history should be accessible at:
-
-	https://domain.tld/chan/server_id/chan_id
-
-It could be useful to create a SystemD unit, so that Hypercorn starts when the system boots. If you
-read French, I wrote a [tutorial for Hypercorn](https://almic.fr/blog/2026/01/19/asgi-hypercorn/)
-(nginx configuration, TLS certificate, and SystemD service).
-
-Instead of Hypercorn you can use Uvicorn, which displays a digest log on its standard output. It’s
-useful during development.
+The ASGI server I use is Uvicorn. On the system where you want to run it:
 
 	# apt install uvicorn
-	% python3 -m uvicorn Main:Display_history --host LAN_IP --port 60081 --reload
+	% python3 -m uvicorn --host localhost --port 60090 --proxy-headers --forwarded-allow-ips=localhost --reload Main:Display_history
 
 Or, if you must have the very latest version:
 
 	% python3 -m venv ~/.local/uvicorn-python3.13
 	% ~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi PyYAML mysqlclient
-	% ~/.local/uvicorn-python3.13/bin/uvicorn Main:Display_history --host LAN_IP --port 60081 --reload
+	% ~/.local/uvicorn-python3.13/bin/uvicorn --host localhost --port 60090 --proxy-headers --forwarded-allow-ips=localhost --reload Main:Display_history
+
+Then you need to configure nginx (for example), with a site acting as a reverse proxy towards
+localhost:60090. You also need a nginx alias /static/ for harmonia/display\_history/static/ and
+another nginx alias /attachments/ for the storage folder specified in Config.yaml. Once this is
+done, the history should be accessible at:
+
+	https://domain.tld/chan/server_id/chan_id
+
+It could be useful to create a SystemD unit, so that Uvicorn starts when the system boots. If you
+read French, I wrote a [tutorial for Uvicorn](https://almic.fr/blog/2026/01/19/asgi-uvicorn/)
+(nginx configuration, TLS certificate, and SystemD service).
 
 Now the history should also be accessible at:
 
