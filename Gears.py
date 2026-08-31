@@ -155,10 +155,10 @@ def Get_Discord_pseudo(User):
 
 def Determine_language(User):
 	Language = Config["Users"]["Default_language"]
-	# Don’t add non-essential circular dependencies to this module
-	from DB_manager import Users_check_presence
-	User_ID = Users_check_presence(Users_table, {"Pseudo": User})
 	if User_ID:
+		# Don’t add non-essential circular dependencies to this module
+		from DB_manager import Users_check_presence
+		User_ID = Users_check_presence(Users_table, {"Pseudo": User})
 		Language = Users[User_ID]["Language"]
 	return Language
 
@@ -219,7 +219,7 @@ async def Send_DM(User, Context, Message, Message_IRC=None):
 ###############################################################################
 
 def Is_URL(Location):
-	return Location.startswith(("http://", "https://"))
+	return str(Location).lower().startswith(("http://", "https://"))
 
 def Normalize_filename(Filename):
 	"""Normalize a filename before adding the date prefix"""
@@ -247,6 +247,7 @@ def Retrieve_original_filename(Stored_filename):
 ###############################################################################
 
 def Clean_URL(URL):
+	"""Remove punctuation accidentally included after a URL"""
 	# Check for closing parenthesis, because someone could write something like this:
 	# “I like https://URL1 (it’s the same thing as https://URL2)
 	while URL.endswith(")") and URL.count(")") > URL.count("("):
