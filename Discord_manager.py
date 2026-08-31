@@ -14,7 +14,7 @@ import os
 import re
 from urllib.parse import quote
 
-from Config_manager import Config
+from Config_manager import Config, L10n
 import DB_manager
 import Gears
 import History
@@ -83,10 +83,10 @@ async def on_command_error(Context, Error):
 	IRC_chan = Bridge["IRC_chan"]
 	if not IRC_chan:
 		return
-	Author = Context.author.display_name
-	# Relay on IRC the command that caused the error
 	IRC_instance = IRC_manager.GCI()
 	if IRC_instance:
+		Author = Context.author.display_name
+		# Relay on IRC the command that caused the error
 		await IRC_instance.Relay_Discord_message(IRC_chan, Author, Context.message.content)
 		await IRC_instance.Safe_message(IRC_chan, f"Command error: {Error}")
 
@@ -280,14 +280,15 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 			if IRC_instance:
 				await IRC_instance.Relay_Discord_message(Bridge["IRC_chan"], Author_name, Message)
 	else:
-		# get_channel gets the channel object from the bot’s cache. fetch_channel gets it from
+		# get_channel() gets the channel object from the bot’s cache. fetch_channel() gets it from
 		# Discord, meaning a network request
 		Chan = bot.get_channel(Bridge["Discord_chan"])
 		if not Chan:
 			Chan = await bot.fetch_channel(Bridge["Discord_chan"])
-		await Chan.send(
-				f"{Author.mention} What you typed resulted in too many messages to relay on IRC in a short time. Therefore nothing was forwarded."
-		)
+		Language = Gears.Determine_language(Author_name)
+		Localized_replies = L10n[Language]
+		Output = f"{Author.mention} " + Localized_replies["too_many_messages"]
+		await Chan.send(Output)
 
 	# Cleanup buffer once decision is made
 	Users_buffers.pop(Buffer_key, None)

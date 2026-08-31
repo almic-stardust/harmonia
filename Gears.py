@@ -18,6 +18,9 @@ if History_enabled:
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
+	# Don’t add non-essential circular dependencies to this module
+	from DB_manager import Users_fetch_users
+	Users = Users_fetch_users(Users_table)
 
 ###############################################################################
 # Startup
@@ -143,15 +146,21 @@ def Get_Discord_pseudo(User):
 	# will be used by Discord_manager.bot.Relay_IRC_message(). But for the history and messages
 	# transferred to IRC, it’s the IRC nick that needs to be returned.
 	if Users_enabled:
-		# Don’t add non-essential circular dependencies to this module
-		from DB_manager import Users_fetch_users
-		Users = Users_fetch_users(Users_table)
 		for User_ID in Users:
 			Infos_user = Users[User_ID]
 			if Infos_user["Pseudo_displayed_on_Discord"] == Author_name:
 				Author_name = Infos_user.get("IRC_pseudo", Author_name)
 				break
 	return Author_name
+
+def Determine_language(User):
+	Language = Config["Users"]["Default_language"]
+	# Don’t add non-essential circular dependencies to this module
+	from DB_manager import Users_check_presence
+	User_ID = Users_check_presence(Users_table, {"Pseudo": User})
+	if User_ID:
+		Language = Users[User_ID]["Language"]
+	return Language
 
 ###############################################################################
 # Chans
@@ -240,8 +249,8 @@ def Retrieve_original_filename(Stored_filename):
 def Clean_URL(URL):
 	# Check for closing parenthesis, because someone could write something like this:
 	# “I like https://URL1 (it’s the same thing as https://URL2)
-    while URL.endswith(")") and URL.count(")") > URL.count("("):
-        URL = URL[:-1]
+	while URL.endswith(")") and URL.count(")") > URL.count("("):
+		URL = URL[:-1]
 	# Check for other punctuation right after a URL
-    URL = URL.rstrip(".,!?;:")
-    return URL
+	URL = URL.rstrip(".,!?;:")
+	return URL

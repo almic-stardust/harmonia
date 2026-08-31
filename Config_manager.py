@@ -52,6 +52,7 @@ Optional = {
 	),
 	"Users": (
 		"DB_table",
+		"Default_language",
 	),
 	"Polls": (
 		"DB_table",
@@ -105,3 +106,10 @@ if Config["Enabled_sections"]["IRC"]:
 			Config["IRC_bridges"][IRC_chan]["IRC_chan"] = f"#{IRC_chan}"
 	else:
 		Config["IRC_bridges"] = {}
+
+###############################################################################
+# Localization
+###############################################################################
+
+with open("Localization.yaml", "r") as File:
+    L10n = yaml.safe_load(File)

@@ -386,7 +386,7 @@ def History_fetch_message(Table, Message_ID):
 					"User":					Result["user"],
 					"Content_history":		Content_history,
 					"Attachments":			Attachments,
-					"Deleted_attachments":  Deleted_attachments,
+					"Deleted_attachments":	Deleted_attachments,
 					"Reactions":			Reactions,
 					"Relayed":				bool(Result["relayed"]),
 					"Expired":				bool(Result["expired"]),
@@ -663,6 +663,7 @@ def Users_fetch_users(Table):
 					"Mail":							Result["mail"],
 					"First_name":					Result["first_name"],
 					"Last_name":					Result["last_name"],
+					"Language":						Result["language"],
 					"ML_pseudo":					Result["ml_pseudo"],
 					"Wiki_pseudo":					Result["wiki_pseudo"],
 					"IRC_pseudo":					Result["irc_pseudo"],
@@ -690,6 +691,8 @@ def Users_manage_user(Table, Action, Infos_user):
 	assumed to have been performed."""
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
+	if "Language" not in Infos_user:
+		Infos_user["Language"] = Config["Users"]["Default_language"]
 	Dates = {}
 	for Year, Dates_for_year in Infos_user["Renewals"].items():
 		Dates[Year] = []
@@ -704,6 +707,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					mail,
 					first_name,
 					last_name,
+					language,
 					ml_pseudo,
 					wiki_pseudo,
 					irc_pseudo,
@@ -716,7 +720,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					renewals,
 					contributions,
 					last_medium)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	if Action == "Update":
 		User_ID = Infos_user["ID"]
 		Query = f"""
@@ -725,6 +729,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					mail = %s,
 					first_name = %s,
 					last_name = %s,
+					language = %s,
 					ml_pseudo = %s,
 					wiki_pseudo = %s,
 					irc_pseudo = %s,
@@ -746,6 +751,7 @@ def Users_manage_user(Table, Action, Infos_user):
 			Infos_user["Mail"],
 			Infos_user["First_name"],
 			Infos_user["Last_name"],
+			Infos_user["Language"],
 			Infos_user["ML_pseudo"],
 			Infos_user["Wiki_pseudo"],
 			Infos_user["IRC_pseudo"],

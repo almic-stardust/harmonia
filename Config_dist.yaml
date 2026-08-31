@@ -34,6 +34,7 @@ History:
 
 Users:
   DB_table:               "project_users"
+  Default_language:       "French"
 
 Polls:
   DB_table:               "project_polls"

@@ -10,7 +10,7 @@ Harmonia.py
 The script used to start the bot.
 
 Config\_manager.py  
-Loads and processes the configuration and localizations.
+Loads the configuration and localizations.
 
 Gears.py  
 A set of functions, either core to the bot’s operations, or used by multiple modules.
@@ -90,6 +90,7 @@ extraction.
 	    mail                        VARCHAR(255) NOT NULL,
 	    first_name                  VARCHAR(255) NULL,
 	    last_name                   VARCHAR(255) NULL,
+	    language                    VARCHAR(20) NULL,
 	    ml_pseudo                   VARCHAR(255) NULL,
 	    wiki_pseudo                 VARCHAR(255) NULL,
 	    irc_pseudo                  VARCHAR(255) NULL,
@@ -138,6 +139,9 @@ Adjust the configuration to your needs:
 
 Config\_dist.yaml  
 Example of configuration file to modify. Rename it as Config.yaml
+
+Localization\_dist.yaml  
+Example of localization file. You can adjust it, then rename it as Localization.yaml
 
 Finally, you can start the bot:
 
