@@ -1200,19 +1200,19 @@ async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
 		await Gears.Send(Targets, f"{User}’s vote has been removed from poll {Poll_ID}.")
 
 @polls.command(name="unvote")
-async def Discord_polls_unvote(Context):
+async def Discord_polls_unvote(Context, Poll_ID):
 	"""When a member wants to withdraw their participation in a poll.\n
 	 \n
 	!polls unvote [Poll_ID]
 	Parameters
 	----------
-	Arguments : str"""
+	Poll_ID : str"""
 	if Context.guild is None:
 		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
 		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
-	await Polls_unvote(Targets, User, Context)
+	await Polls_unvote(Targets, User, Poll_ID, Context)
 
 async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 
@@ -1577,12 +1577,23 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 			Number_of_voters += 1
 	Output += f"Poll {Poll_ID} ({Status}) created {Creation_date} by {Infos_poll['Author']} : "
 	Output += f"{Infos_poll['Question']}\n"
+
 	if Number_of_voters == 0:
-		Output += f"No one has voted in this poll yet."
+		if Status == "active":
+			Output += "Possible choices: "
+			Choices_sorted = sorted(Choices.items())
+			Output += " ".join(
+					f"[#{Choice_ID} {Choice_text}]"
+					for Choice_ID, Choice_text in Choices_sorted
+			)
+			Output += "\nNo one has voted in this poll yet."
+		else:
+			Output += "No one has voted in this poll."
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
+
 	Choices_with_votes = []
 	Choices_without_votes = []
 	for Choice_ID, Choice_text in Choices.items():
@@ -1598,8 +1609,10 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 			}])
 		else:
 			Choices_without_votes.append([Choice_ID, Choice_text])
-	# Sort the list by the first element of each sublist (= Percentage)
+	# Sort the list by percentage (first element of each sublist)
 	Choices_with_votes.sort(key=lambda Choice: Choice[0], reverse=True)
+	# Sort the list from smallest to greatest index number
+	Choices_without_votes.sort(key=lambda Choice: Choice[0])
 
 	Result = "tied"
 	# After “if Number_of_voters == 0:” Choices_with_votes[0] is always valid
@@ -1633,15 +1646,11 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 	elif Result == "blanks":
 		Output += "Result: Blanks are in the majority"
 	if len(Choices_without_votes) > 0:
-		Output += " § Choices without votes: ["
-		Index = 0
-		for Choice_ID, Choice_text in Choices_without_votes:
-			Index += 1
-			Output += f"#{Choice_ID} {Choice_text}"
-			if Index < len(Choices_without_votes):
-				Output += "] ["
-			else:
-				Output += "]"
+		Output += " § Choices without votes: "
+		Output += " ".join(
+				f"[#{Choice_ID} {Choice_text}]"
+				for Choice_ID, Choice_text in Choices_without_votes
+		)
 	Output += "\n"
 	for Choice_count, Choice in Choices_with_votes:
 		Output += f"#{Choice['ID']} {Choice['Percentage']}% {Choice['Text']} ({Choice_count} = "
