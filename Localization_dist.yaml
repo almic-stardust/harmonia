@@ -1,0 +1,169 @@
+# You must restart the bot if you modify this file.
+
+########
+English:
+########
+
+  # Discord_manager
+  DM_Too_many_messages:
+    "What you sent would result in too much to relay on IRC in a short time. So nothing was forwarded."
+
+  # Commands_manager.IRC_dispatcher()
+  CM_Dispatch_invalid_command:
+    "This command is invalid. Check “!help”"
+  CM_Dispatch_invalid_subcommand:
+    "This subcommand is invalid. Check “!help”"
+
+  # Commands_manager.No_help_for_IRC()
+  CM_No_help_irc:
+    "The “!help” command is only available on Discord."
+
+  CM_Command_is_public:
+    "Error! This command must be used in public."
+
+  # Commands_manager.Roll_Dice()
+  CM_Roll_error_faces:
+    "Error! It's not possible to roll dice with more than 1000 faces."
+  CM_Roll_error_rolls:
+    "Error! It's not possible to roll more than 10000 dice at once."
+  CM_Roll_summary:
+    "Lowest die {Min} | Average value {Average:.1f} | Highest die {Max} | Total value {Total}"
+  CM_Roll_help_usage:
+    "Error! The argument for this command must be XdY, with X being the number of dice, and Y being the number of faces for each die."
+
+  # Commands_manager.Straws()
+  CM_Straws_invalid_subcommand:
+    "This subcommand is invalid. Check “!help straws”"
+  CM_Straws_help_usage:
+    "Check “!help straws”"
+
+  # Commands_manager.Straws_current_state()
+  CM_Straws_state_display_participants:
+    "The participants from among whom straws will be drawn are:"
+  CM_Straws_state_display_words:
+    "The following users provided these words:"
+  CM_Straws_state_error_bag:
+    "But no words for the common key."
+  CM_Straws_state_error_participants_bag:
+    "There are no participants among whom to draw straws, and no words for the common key."
+  CM_Straws_state_error_participants:
+    "But there are no participants among whom to draw straws."
+
+  # Commands_manager.Straws_add()
+  CM_Straws_add_error:
+    "Your word couldn't be added to the common key!"
+  CM_Straws_add_result:
+    "Your word “{Straw}” has been added to the common key."
+  CM_Straws_join_help_usage:
+    "Usage: !straws join Word"
+  CM_Straws_contribute_help_usage:
+    "Usage: !straws contribute Word"
+
+  # Commands_manager.Straws_participants()
+  CM_Straws_participants_too_many:
+    "It is not possible to draw straws among more than 50 participants."
+  CM_Straws_participants_result:
+    The participants drawing straws have been selected (usernames exceeding 30 characters have been truncated).
+  CM_Straws_participants_help_usage:
+    "Usage: !straws participants Participant1 Participant2 …"
+
+  # Commands_manager.Straws_draw()
+  CM_Straws_draw_error_participants:
+    "There are no participants among whom to draw straws. Check “!help straws”"
+  CM_Straws_draw_error_straws:
+    "No words for the common key. Check “!help straws”"
+  CM_Straws_draw_display_participants:
+    "The participants who draw straws are:"
+  CM_Straws_draw_display_key:
+    "The common key is: “{Common_key}”."
+  CM_Straws_draw_announce_hashes:
+    "Hash for each participant:"
+  CM_Straws_draw_lucky_one:
+    "And {Lucky_one} is the lucky (?) participant who pulls the shortest straw."
+  CM_Straws_reset:
+    "The list of participants and the common key have been deleted."
+
+
+
+#######
+French:
+#######
+
+  # Discord_manager
+  DM_Too_many_messages:
+    "Ce que vous avez envoyé résulterait trop de messages à relayer sur IRC sur une courte durée.  Donc rien n'a été transmis."
+
+  # Commands_manager.IRC_dispatcher()
+  CM_Dispatch_invalid_command:
+    "Cette commande est invalide. Consultez « !help »"
+  CM_Dispatch_invalid_subcommand:
+    "Cette sous-commande est invalide. Consultez « !help »"
+
+  # Commands_manager.No_help_for_IRC()
+  CM_No_help_irc:
+    "La commande « !help » n’est disponible que sur Discord."
+
+  CM_Command_is_public:
+    "Erreur ! Cette commande doit être utilisée en public."
+
+  # Commands_manager.Roll_Dice()
+  CM_Roll_error_faces:
+    "Erreur ! Il n'est pas possible de lancer des dés de plus de 1000 faces."
+  CM_Roll_error_rolls:
+    "Erreur ! Il n'est pas possible de lancer plus de 10000 dés d'un seul coup."
+  CM_Roll_summary:
+    "Dé le plus bas {Min} | Valeur moyenne {Average:.1f} | Dé le plus élevé {Max} | Valeur totale {Total}"
+  CM_Roll_help_usage:
+    "Erreur ! L'argument pour cette commande doit être sous la forme XdY, où X est le nombre de dés, et Y le nombre de faces de chaque dé."
+
+  # Commands_manager.Straws()
+  CM_Straws_invalid_subcommand:
+    "Cette sous-commande est invalide. Consultez « !help straws »"
+  CM_Straws_help_usage:
+    "Consultez « !help” straws »"
+
+  # Commands_manager.Straws_current_state()
+  CM_Straws_state_display_participants:
+    "Les participants qui vont tirer à la courte paille sont :"
+  CM_Straws_state_display_words:
+    "Les utilisateurs suivants ont fourni ces mots :"
+  CM_Straws_state_error_bag:
+    "Mais aucun mot pour la clé commune."
+  CM_Straws_state_error_participants_bag:
+    "Il n'y a pas de participants parmi lesquels tirer à la courte paille, et aucun mot pour la clé commune."
+  CM_Straws_state_error_participants:
+    "Mais il n'y a pas de participants parmi lesquels tirer à la courte paille."
+
+  # Commands_manager.Straws_add()
+  CM_Straws_add_error:
+    "Votre mot n'a pas pu être ajoutée à la clé commune !"
+  CM_Straws_add_result:
+    "Votre mot « {Straw} » a été ajoutée à la clé commune."
+  CM_Straws_join_help_usage:
+    "Utilisation : !straws join Word"
+  CM_Straws_contribute_help_usage:
+    "Utilisation : !straws contribute Word"
+
+  # Commands_manager.Straws_participants()
+  CM_Straws_participants_too_many:
+    "Il n'est pas possible de tirer à la courte paille entre plus de 50 participants."
+  CM_Straws_participants_result:
+    "Les participants au tirage au sort ont été sélectionnés (les noms d'utilisateur dépassant 30 caractères ont été tronqués)."
+  CM_Straws_participants_help_usage:
+    "Utilisation : !straws participants Participant1 Participant2 …"
+
+  # Commands_manager.Straws_draw()
+  CM_Straws_draw_error_participants:
+    "Il n'y a pas de participants parmi lesquels tirer à la courte paille. Consultez « !help straws »"
+  CM_Straws_draw_error_straws:
+    "Mais aucun mot pour la clé commune. Consultez « !help straws »"
+  CM_Straws_draw_display_participants:
+    "Les participants qui tirent à la courte paille sont :"
+  CM_Straws_draw_display_key:
+    "La clé commune est : « {Common_key} »."
+  CM_Straws_draw_announce_hashes:
+    "Hash pour chaque participant :"
+  CM_Straws_draw_lucky_one:
+    Et {Lucky_one} a la chance (?) de tirer la courte paille.
+  CM_Straws_reset:
+    "La liste des participants et la clé commune ont été supprimées."
