@@ -152,7 +152,7 @@ Finally, you can start the bot:
 Here is the procedure to set up this feature.
 
 	% cd harmonia/display_history
-	% for File in Config_manager.py Config.yaml DB_manager.py ; ln -s ../$File
+	% for File in Config_manager.py Config.yaml Localization.yaml DB_manager.py ; ln -s ../$File
 
 For performance, create composite indexes in the DB:
 
@@ -192,6 +192,6 @@ Now the history should also be accessible at:
 A script is provided to import CSV files supplied by HelloAsso.
 
 	% cd harmonia/utils
-	% for File in Config_manager.py Config.yaml DB_manager.py ; ln -s ../$File
+	% for File in Config_manager.py Config.yaml Localization.yaml DB_manager.py ; ln -s ../$File
 	% chmod +x Import_HelloAsso_CSV.py
 	% for File in *csv ; ./Import_HelloAsso_CSV.py $File

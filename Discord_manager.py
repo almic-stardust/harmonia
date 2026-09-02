@@ -287,7 +287,7 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 			Chan = await bot.fetch_channel(Bridge["Discord_chan"])
 		Language = Gears.Determine_language(Author_name)
 		Localized_replies = L10n[Language]
-		Output = f"{Author.mention} " + Localized_replies["too_many_messages"]
+		Output = f"{Author.mention} " + Localized_replies["DM_Too_many_messages"]
 		await Chan.send(Output)
 
 	# Cleanup buffer once decision is made

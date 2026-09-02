@@ -155,7 +155,7 @@ def Get_Discord_pseudo(User):
 
 def Determine_language(User):
 	Language = Config["Users"]["Default_language"]
-	if User_ID:
+	if Users_enabled:
 		# Don’t add non-essential circular dependencies to this module
 		from DB_manager import Users_check_presence
 		User_ID = Users_check_presence(Users_table, {"Pseudo": User})
@@ -199,7 +199,7 @@ async def Send(Targets, Message, Message_IRC=None):
 				await IRC_instance.Safe_message(Targets["IRC_chan"], Message)
 
 async def Send_DM(User, Context, Message, Message_IRC=None):
-	"""Send a DM, either on Discord or IRC"""
+	"""Send a DM on Discord, or on IRC when Context == None"""
 	# The user wrote to the bot via Discord, reply via DM
 	if Context:
 		for Fragment in Discord_manager.Split_message(Message):
