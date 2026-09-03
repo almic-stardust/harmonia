@@ -578,7 +578,8 @@ def Polls_voting_rights(Infos_user):
 	return Infos_user
 
 async def Polls_members(Targets, User, List_of_users, From_Discord=False):
-	Unregistered = []
+
+	Unregistered_users = []
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
@@ -594,7 +595,8 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	Users = DB_manager.Users_fetch_users(Users_table)
-	# “!polls members” lists all members with voting rights
+
+	# “!polls members” without arguments → list all members with voting rights
 	if not List_of_users:
 		List_of_users_from_argument = False
 		Users_to_display = Users
@@ -602,36 +604,37 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 		List_of_users_from_argument = True
 		Users_to_display = {}
 		# List_of_users is a string
-		for User in List_of_users.split():
-			Infos_user = {}
-			Infos_user["Pseudo"] = User
-			User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
+		for Pseudo in List_of_users.split():
+			User_ID = DB_manager.Users_check_presence(Users_table, {"Pseudo": Pseudo})
 			if User_ID:
 				Users_to_display[User_ID] = Users[User_ID]
 			else:
-				Unregistered.append(User)
-	if len(Unregistered) > 0:
-		if len(Unregistered) == 1:
-			Output += f"{Unregistered[0]} isn’t a member.\n"
+				Unregistered_users.append(Pseudo)
+	if len(Unregistered_users) > 0:
+		if len(Unregistered_users) == 1:
+			Output += f"{Unregistered_users[0]} isn’t a member.\n"
 		else:
-			for User in Unregistered:
-				Output += f"{User} "
+			for Unregistered_user in Unregistered_users:
+				Output += f"{Unregistered_user} "
 			Output += "aren’t members.\n"
 		if not Users_to_display:
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
+
+	Number_voting_members = 0
 	for User_ID in Users_to_display:
 		Infos_user = Users_to_display[User_ID]
 		Infos_user = Polls_voting_rights(Infos_user)
-		if Infos_user["Can_vote"]:
-			Output += f"{Infos_user['Pseudo']} "
 		# If we display all voting members, keep a concise display
 		if not List_of_users_from_argument:
+			if Infos_user["Can_vote"]:
+				Number_voting_members += 1
+				Output += f"{Infos_user['Pseudo']} "
 			continue
 		if Infos_user["Can_vote"]:
-			Output += f"can vote "
+			Output += f"{Infos_user['Pseudo']} can vote "
 		else:
 			Output += f"{Infos_user['Pseudo']} can’t vote "
 		Registration = Infos_user["Registration"].astimezone(Timezone).strftime("%d/%m/%Y")
@@ -641,6 +644,12 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 			Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
 		else:
 			Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
+	if not List_of_users_from_argument:
+		if Number_voting_members > 0:
+			Output = f"({Number_voting_members}) " + Output
+		else:
+			Output = "Nobody have voting rights."
+
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
@@ -1259,9 +1268,7 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 		return
 
 	# Only members with voting rights can delegate a proxy
-	Infos_user = {}
-	Infos_user["Pseudo"] = User
-	User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
+	User_ID = DB_manager.Users_check_presence(Users_table, {"Pseudo": User})
 	if not User_ID:
 		await Gears.Send_DM(User, Context, "Error: you’re not registered.")
 		return
