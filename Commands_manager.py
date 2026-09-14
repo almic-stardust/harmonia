@@ -59,7 +59,7 @@ async def IRC_dispatcher(Bridge, User, Text):
 	"Subcommands": {
 			"help":			(Polls_help,				False),
 			"members":		(Polls_members,				True),
-			"add_adhesion":	(Polls_add_adhesion,		True),
+			"adhesion":		(Polls_adhesion,			True),
 			"create":		(Polls_create,				True),
 			"close":		(IRC_polls_close,			True),
 			"delete":		(IRC_polls_delete,			True),
@@ -231,13 +231,13 @@ async def Straws_current_state(Targets, User, From_Discord=False):
 		Output_IRC = f"<\x02{User}\x02> !straws\n"
 	if len(Straws_bag["Participants"]) > 0:
 		Presence_participants = True
-		Output += Localized_replies["CM_Straws_state_display_participants"] + " "
+		Output += Localized_replies["CM_Straws_state_show_participants"] + " "
 		Output += ", ".join(Straws_bag["Participants"]) + ".\n\n"
 	if len(Straws_bag["Common_key"]) > 0:
 		Presence_straws = True
-		Output += Localized_replies["CM_Straws_state_display_words"] + "\n"
+		Output += Localized_replies["CM_Straws_state_show_words"] + "\n"
 		for User, Straw in Straws_bag["Common_key"].items():
-			Output += f"[{User}] {Straw}\n"
+			Output += f"• {User} {Straw}\n"
 
 	if Presence_participants:
 		if not Presence_straws:
@@ -258,31 +258,32 @@ async def Straws_current_state(Targets, User, From_Discord=False):
 @bot.group()
 async def straws(Context):
 	"""Draw straws among a group, with a reproducible pseudo-randomness."""
-	Output_IRC = ""
 	if Context.invoked_subcommand is None:
 		Targets = Gears.Get_target_chans(Context.channel.id)
 		User = Context.author.display_name
-		# If there’s something after “!straws”, but it’s not a valid subcommand
+		# When there’s something after “!straws” that hasn’t been handled by the command processor,
+		# it means it’s not a valid subcommand
 		if Context.subcommand_passed is not None:
 			Language = Gears.Determine_language(User)
 			Localized_replies = L10n[Language]
 			Output = Localized_replies["CM_Straws_invalid_subcommand"]
+			Output_IRC = ""
 			if IRC_enabled:
 				Output_IRC = f"<\x02{User}\x02> !straws {Context.subcommand_passed}\n" + Output
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
-		# If no subcommand is invoked, show what’s currently in the bag
+		# No subcommand is invoked → show what’s currently in the bag
 		await Straws_current_state(Targets, User, True)
 
 async def Straws_help(Targets, User, From_Discord=False):
 	Language = Gears.Determine_language(User)
 	Localized_replies = L10n[Language]
-	Output_IRC = ""
-	# If the command was sent on Discord, relay it on IRC
-	if IRC_enabled and From_Discord:
-		Output_IRC = f"<\x02{User}\x02> !straws help\n"
 	Output = Localized_replies["CM_Straws_help_usage"]
+	Output_IRC = ""
 	if IRC_enabled:
+		# If the command was sent on Discord, relay it on IRC
+		if From_Discord:
+			Output_IRC = f"<\x02{User}\x02> !straws help\n"
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
 
@@ -291,22 +292,21 @@ async def Discord_straws_help(Context):
 	"""Placeholder redirecting towards !help straws"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
-	await Straws_help(Targets, User)
+	await Straws_help(Targets, User, True)
 
 # This function requires Context as an argument, so it replaces From_Discord
 async def Straws_add(Targets, User, Action, Straw, Context=None):
 	global Straws_bag
 	Language = Gears.Determine_language(User)
 	Localized_replies = L10n[Language]
-	if IRC_enabled:
+	# If the command was sent on Discord, relay it on IRC
+	if IRC_enabled and Context:
 		IRC_instance = IRC_manager.GCI()
-		# If the command was sent on Discord, relay it on IRC
-		if Context:
-			if IRC_instance:
-				# No usage of Output_IRC for this function, because confirmations are sent privately
-				await IRC_instance.Relay_Discord_message(
-						Targets["IRC_chan"], User, f"!straws {Action} {Straw}"
-				)
+		if IRC_instance:
+			# No usage of Output_IRC for this function, because confirmations are sent privately
+			await IRC_instance.Relay_Discord_message(
+					Targets["IRC_chan"], User, f"!straws {Action} {Straw}"
+			)
 	try:
 		# Remove dots, commas and underscores
 		Straw = Straw.replace(".", " ").replace(",", " ").replace("_", " ")
@@ -410,7 +410,7 @@ async def Discord_straws_participants(Context, *, Participants):
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
 		Localized_replies = L10n[Language]
-		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_not_private"])
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
 		return
 	await Straws_participants(Targets, User, Participants, True)
 
@@ -456,10 +456,11 @@ async def Straws_draw(Targets, User, From_Discord=False):
 	for Participant in Straws_bag["Participants"]:
 		# Display only the beginning of the hash: it’s more readable, and sufficient to verify
 		Beginning_hash = Hashes[Participant][:30]
-		Output += f"[{Participant}] {Beginning_hash}[…]\n"
-	# Shortest straw = smallest hash 
-	Lucky_one = Participants[0]
-	Output += "\n" + Localized_replies["CM_Straws_draw_lucky_one"].format(Lucky_one=Lucky_one)
+		Output += f"• {Participant} {Beginning_hash}[…]\n"
+	Output += "\n" + Localized_replies["CM_Straws_draw_lucky_one"].format(
+			# Shortest straw = smallest hash
+			Lucky_one=Participants[0]
+	)
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
@@ -472,7 +473,7 @@ async def Discord_straws_draw(Context):
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
 		Localized_replies = L10n[Language]
-		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_not_private"])
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
 		return
 	await Straws_draw(Targets, User, True)
 
@@ -499,7 +500,7 @@ async def Discord_straws_reset(Context):
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
 		Localized_replies = L10n[Language]
-		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_not_private"])
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
 		return
 	await Straws_reset(Targets, User, True)
 
@@ -510,18 +511,21 @@ async def Discord_straws_reset(Context):
 @bot.group()
 async def polls(Context):
 	"""Organize votes and participate in them."""
-	Output_IRC = ""
 	if Context.invoked_subcommand is None:
 		Targets = Gears.Get_target_chans(Context.channel.id)
 		User = Context.author.display_name
-		# If there’s something after “!polls”, but it’s not a valid subcommand
+		# When there’s something after “!polls” that hasn’t been handled by the command processor,
+		# it means it’s not a valid subcommand
 		if Context.subcommand_passed is not None:
-			Output = "Invalid subcommand. See !help polls"
+			Language = Gears.Determine_language(User)
+			Localized_replies = L10n[Language]
+			Output = Localized_replies["CM_Polls_invalid_subcommand"]
+			Output_IRC = ""
 			if IRC_enabled:
 				Output_IRC = f"<\x02{User}\x02> !polls {Context.subcommand_passed}\n" + Output
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
-		# If no subcommand is invoked: “!polls” = “!polls list”
+		# No subcommand is invoked → “!polls” = “!polls list”
 		# Arguments: Polls_list(Targets, User, Arguments=None, From_Discord=False):
 		await Polls_list(Targets, User, None, True)
 
@@ -529,11 +533,15 @@ async def IRC_polls(Targets, User):
 	await Polls_list(Targets, User)
 
 async def Polls_help(Targets, User, From_Discord=False):
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
+	Output = Localized_replies["CM_Polls_help_usage"]
 	Output_IRC = ""
-	# If the command was sent on Discord, relay it on IRC
-	if IRC_enabled and From_Discord:
-		Output_IRC = f"<\x02{User}\x02> !polls help\n"
-	Output = "See !help polls"
+	if IRC_enabled:
+		# If the command was sent on Discord, relay it on IRC
+		if From_Discord:
+			Output_IRC = f"<\x02{User}\x02> !polls help\n"
+		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
 
 @polls.command(name="help")
@@ -541,7 +549,7 @@ async def Discord_polls_help(Context):
 	"""Placeholder redirecting towards !help polls"""
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
-	await Polls_help(Targets, User)
+	await Polls_help(Targets, User, True)
 
 def Polls_voting_rights(Infos_user):
 	Infos_user["Can_vote"] = False
@@ -580,6 +588,8 @@ def Polls_voting_rights(Infos_user):
 async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 
 	Unregistered_users = []
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
@@ -589,7 +599,7 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls members\n"
 	if not Users_enabled:
-		Output += "Error: This command requires the users section to be enabled in the config file."
+		Output += Localized_replies["CM_Polls_members_error_config_users"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -612,11 +622,14 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 				Unregistered_users.append(Pseudo)
 	if len(Unregistered_users) > 0:
 		if len(Unregistered_users) == 1:
-			Output += f"{Unregistered_users[0]} isn’t a member.\n"
+			Output += Localized_replies["CM_Polls_members_error_membership_one"].format(
+					Unregistered=Unregistered_users[0]
+			)
+			Output += "\n"
 		else:
 			for Unregistered_user in Unregistered_users:
 				Output += f"{Unregistered_user} "
-			Output += "aren’t members.\n"
+			Output += Localized_replies["CM_Polls_members_error_membership_several"] + "\n"
 		if not Users_to_display:
 			if IRC_enabled:
 				Output_IRC += Output
@@ -627,28 +640,36 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 	for User_ID in Users_to_display:
 		Infos_user = Users_to_display[User_ID]
 		Infos_user = Polls_voting_rights(Infos_user)
-		# If we display all voting members, keep a concise display
 		if not List_of_users_from_argument:
 			if Infos_user["Can_vote"]:
 				Number_voting_members += 1
 				Output += f"{Infos_user['Pseudo']} "
+			# When we display all voting members, keep a concise display
 			continue
 		if Infos_user["Can_vote"]:
-			Output += f"{Infos_user['Pseudo']} can vote "
+			Output += f"• {Infos_user['Pseudo']} "
+			Output += Localized_replies["CM_Polls_members_authorized_vote"] + " "
 		else:
-			Output += f"{Infos_user['Pseudo']} can’t vote "
+			Output += f"• {Infos_user['Pseudo']} "
+			Output += Localized_replies["CM_Polls_members_not_authorized_vote"] + " "
 		Registration = Infos_user["Registration"].astimezone(Timezone).strftime("%d/%m/%Y")
 		Last_renewal = Infos_user["Last_renewal"].astimezone(Timezone).strftime("%d/%m/%Y")
 		if Infos_user["Penultimate_year"]:
-			Penultimate_year = Infos_user["Penultimate_year"].strftime("%Y")
-			Output += f"(Last renewal {Last_renewal} | Penultimate for {Penultimate_year})\n"
+			Output += Localized_replies["CM_Polls_members_infos_penultimate"].format(
+					Last_renewal=Last_renewal,
+					Penultimate_year=Infos_user["Penultimate_year"].strftime("%Y")
+			)
 		else:
-			Output += f"(last renewal {Last_renewal} | registration {Registration})\n"
+			Output += Localized_replies["CM_Polls_members_infos_registration"].format(
+					Last_renewal=Last_renewal, Registration=Registration
+			)
+		Output += "\n"
+
 	if not List_of_users_from_argument:
 		if Number_voting_members > 0:
 			Output = f"({Number_voting_members}) " + Output
 		else:
-			Output = "Nobody have voting rights."
+			Output = Localized_replies["CM_Polls_members_nobody_can_vote"]
 
 	if IRC_enabled:
 		Output_IRC += Output
@@ -666,25 +687,29 @@ async def Discord_polls_members(Context, *, List_of_users=None):
 	User = Context.author.display_name
 	await Polls_members(Targets, User, List_of_users, True)
 
-async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
+async def Polls_adhesion(Targets, User, Arguments, Context=None):
 
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
 	Output_IRC = ""
+	Help_usage = Localized_replies["CM_Polls_adhesion_help_usage"]
 	if Context:
 		Media = "Discord"
 		# Owner’s username, not display name
 		Command_author = Context.author.name
 		if IRC_enabled:
-			Output_IRC = f"<\x02{User}\x02> !polls add_adhesion {Arguments}\n"
+			Output_IRC = f"<\x02{User}\x02> !polls adhesion {Arguments}\n"
 	else:
 		Media = "IRC"
 		Command_author = User
-	Help_usage = "Usage: !polls add_adhesion Pseudo Mail_address [YYYYMMDD]"
 	if Command_author != Config[Media]["Bot_owner"]:
-		if IRC_enabled:
-			Output_IRC += Output
-		await Gears.Send(Targets, Output, Output_IRC)
-		await Gears.Send_DM(User, Context, "Permission denied.")
+		# Since the function is going to stop: if the command was sent on Discord, relay it on IRC
+		if IRC_enabled and Context:
+			IRC_instance = IRC_manager.GCI()
+			if IRC_instance:
+				await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User, Output_IRC)
+		await Gears.Send_DM(User, Context, Localized_replies["CM_Polls_adhesion_permission_denied"])
 		return
 	if not Arguments:
 		Output = Help_usage
@@ -694,16 +719,16 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		return
 	Parts = Arguments.split()
 	if len(Parts) < 2 or len(Parts) > 3:
-		Output += "Error: invalid syntax. " + Help_usage
+		Output += Localized_replies["CM_Polls_adhesion_error_syntax"] + " " + Help_usage
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	Pseudo = Parts[0]
 	Mail = Parts[1]
-	# [^@\s]+ → one or more characters that aren’t @ or space
+	# [^@\s]+ = one or more characters that aren’t @ or space
 	if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", Mail):
-		Output = "Error: invalid mail address. " + Help_usage
+		Output += Localized_replies["CM_Polls_adhesion_error_mail"] + " " + Help_usage
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -716,7 +741,7 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 			# The given date is interpreted as being in Timezone
 			Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(tzinfo=Timezone)
 		except ValueError:
-			Output += "Error: invalid date. " + Help_usage
+			Output += Localized_replies["CM_Polls_adhesion_error_date"] + " " + Help_usage
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -742,7 +767,9 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 			Renewals.extend(Renewal)
 		if Year in Infos_user["Renewals"] and Date in Infos_user["Renewals"][Year]:
 			Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
-			Output = f"Error: {Pseudo} already has a renewal for {Date}."
+			Output += Localized_replies["CM_Polls_adhesion_already_renewed"].format(
+					Pseudo=Pseudo, Date=Date
+			)
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -762,7 +789,8 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 			Infos_user["Renewals"] = dict(sorted(Infos_user["Renewals"].items()))
 		DB_manager.Users_manage_user(Users_table, "Update", Infos_user)
 		Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
-		Output = f"{Pseudo}’s membership has been renewed for {Date}."
+		Output += Localized_replies["CM_Polls_adhesion_renewed"].format(Pseudo=Pseudo, Date=Date)
+
 	# New member
 	else:
 		# Complete the dictionary, in addition to what we got from the arguments
@@ -782,41 +810,45 @@ async def Polls_add_adhesion(Targets, User, Arguments, Context=None):
 		Infos_user["Last_medium"] =					"Harmonia"
 		DB_manager.Users_manage_user(Users_table, "Add", Infos_user)
 		Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
-		Output = f"{Pseudo} has been added with membership date {Date}."
+		Output += Localized_replies["CM_Polls_adhesion_added"].format(Pseudo=Pseudo, Date=Date)
 
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
 
-@polls.command(name="add_adhesion")
-async def Discord_polls_add_adhesion(Context, *, Arguments):
+@polls.command(name="adhesion")
+async def Discord_polls_adhesion(Context, *, Arguments):
 	"""Record a membership renewal.\n
 	 \n
-	!polls add_adhesion Pseudo Mail_address [YYYYMMDD]
+	!polls adhesion Pseudo Mail_address [YYYYMMDD]
 	Parameters
 	----------
 	Arguments : str"""
-	if Context.guild is None:
-		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
-		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
-	await Polls_add_adhesion(Targets, User, Arguments, Context)
+	if Context.guild is None:
+		Language = Gears.Determine_language(User)
+		Localized_replies = L10n[Language]
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
+		return
+	await Polls_adhesion(Targets, User, Arguments, Context)
 
 async def Polls_create(Targets, User, Arguments, From_Discord=False):
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
 	if IRC_enabled and From_Discord:
 		Output_IRC = f"<\x02{User}\x02> !polls create {Arguments}\n"
 	if not Polls_enabled:
-		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output = Localized_replies["CM_Polls_create_error_config_polls"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	if not Arguments:
-		Output += "Usage: !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
+		Output = Localized_replies["CM_Polls_create_help_usage"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -836,7 +868,7 @@ async def Polls_create(Targets, User, Arguments, From_Discord=False):
 				List_of_choices.append(Choice)
 		Choices = List_of_choices
 		if len(Choices) == 1:
-			Output += "If there’s only one choice, what’s the point of having a vote?"
+			Output += Localized_replies["CM_Polls_create_error_one_choice"]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -844,14 +876,17 @@ async def Polls_create(Targets, User, Arguments, From_Discord=False):
 	else:
 		Choices = ["Yes", "No"]
 	Poll_ID = DB_manager.Polls_create(Polls_table, User, Question, Choices)
-	Output += f"Poll {Poll_ID}: {Question}\n[#0 Blank] ["
+	Output += Localized_replies["CM_Polls_create_summary_start"].format(
+			Poll_ID=Poll_ID, Question=Question
+	)
+	Output += "\n[#0 Blank] ["
 	for Index, Choice in enumerate(Choices):
 		Output += f"#{Index + 1} {Choice}"
 		if Index + 1 < len(Choices):
 			Output += "] ["
 		else:
 			Output += "]\n"
-	Output += f"Vote with: !polls vote <Choice_number> [{Poll_ID}]"
+	Output += Localized_replies["CM_Polls_create_summary_end"].format(Poll_ID=Poll_ID)
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
@@ -1033,16 +1068,16 @@ async def IRC_polls_delete(Targets, User, Arguments=None):
 async def Polls_vote(Targets, User, Arguments, Context=None):
 
 	global Proxies
-	if IRC_enabled:
+	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
+	# If the command was sent on Discord, relay it on IRC
+	if IRC_enabled and Context:
 		IRC_instance = IRC_manager.GCI()
-		# If the command was sent on Discord, relay it on IRC
-		if Context:
-			if IRC_instance:
-				# No usage of Output_IRC for this function, because user related errors are sent
-				# privately
-				await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User,
-						f"<\x02{User}\x02> !polls vote {Arguments}"
-				)
+		if IRC_instance:
+			# No usage of Output_IRC for this function, because user related errors are sent
+			# privately
+			await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User,
+					f"<\x02{User}\x02> !polls vote {Arguments}"
+			)
 	if not Polls_enabled:
 		await Gears.Send(Targets,
 				"Error: This command requires the polls section to be enabled in the config file."
@@ -1053,14 +1088,13 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 				"Error: This command requires the users section to be enabled in the config file."
 		)
 		return
-	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
 	if not Arguments:
 		await Gears.Send(Targets, Help_usage)
 		return
 
 	Parts = Arguments.split()
 	Proxy_giver = None
-	# If the user casts a different vote for one of their proxies giver
+	# When the user casts a different vote for one of their proxies giver
 	if len(Parts) == 3:
 		Claimed_proxy_giver = Parts[2]
 		# For Claimed_proxy_giver to have delegated a proxy to User, User must have received at
@@ -1122,7 +1156,7 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 		await Gears.Send(Targets, f"Error: invalid choice number. See !polls info {Poll_ID}")
 		return
 
-	# If a member votes in a poll, it automatically revokes any proxy they may have given
+	# When a member votes in a poll, it automatically revokes any proxy they may have given
 	Handler_to_revoke = None
 	for Proxy_holder in Proxies:
 		for Proxy_given_to_holder in Proxies[Proxy_holder]:
@@ -1190,18 +1224,17 @@ async def Discord_polls_vote(Context, *, Arguments):
 
 # This function requires Context as an argument, so it replaces From_Discord
 async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
-	if IRC_enabled:
+	# If the command was sent on Discord, relay it on IRC
+	if IRC_enabled and Context:
 		IRC_instance = IRC_manager.GCI()
-		# If the command was sent on Discord, relay it on IRC
-		if Context:
-			if IRC_instance:
-				if Poll_ID:
-					Output = f"<\x02{User}\x02> !polls unvote {Poll_ID}\n"
-				else:
-					Output = f"<\x02{User}\x02> !polls unvote\n"
-				# No usage of Output_IRC for this function, because user related errors are sent
-				# privately
-				await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User, Output)
+		if IRC_instance:
+			if Poll_ID:
+				Output = f"<\x02{User}\x02> !polls unvote {Poll_ID}\n"
+			else:
+				Output = f"<\x02{User}\x02> !polls unvote\n"
+			# No usage of Output_IRC for this function, because user related errors are sent
+			# privately
+			await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User, Output)
 	if not Polls_enabled:
 		await Gears.Send(Targets,
 				"Error: This command requires the polls section to be enabled in the config file."
@@ -1348,7 +1381,7 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 			Proxies[Proxy_holder][Proxy] = Proxies[User][Proxy]
 			Subdelegated.append(Proxy)
 	Output += ", ".join(Subdelegated)
-	# If the limit was reached before all proxies were subdelegated
+	# When the limit was reached before all proxies were subdelegated
 	if len(Proxies[User]) > len(Subdelegated):
 		Output += ") while the following ones couldn’t ("
 		Not_subdelegated = []
@@ -1365,17 +1398,16 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 
 	global Proxies
 	Output = ""
-	if IRC_enabled:
-		IRC_instance = IRC_manager.GCI()
-		# If the command was sent on Discord, relay it on IRC
-		if Context:
-			if IRC_instance:
-				# No usage of Output_IRC for this function, because user related errors are sent
-				# privately
-				await IRC_instance.Relay_Discord_message(
-						Targets["IRC_chan"], User, f"!polls proxy {Arguments}"
-				)
 	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"""
+	# If the command was sent on Discord, relay it on IRC
+	if IRC_enabled and Context:
+		IRC_instance = IRC_manager.GCI()
+		if IRC_instance:
+			# No usage of Output_IRC for this function, because user related errors are sent
+			# privately
+			await IRC_instance.Relay_Discord_message(
+					Targets["IRC_chan"], User, f"!polls proxy {Arguments}"
+			)
 	if not Arguments:
 		await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
 		return
@@ -1481,6 +1513,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 	Number = None
 	Output = ""
 	Output_IRC = ""
+	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
 	# If the command was sent on Discord, relay it on IRC
 	if IRC_enabled and From_Discord:
 		if Arguments:
@@ -1493,7 +1526,6 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
-	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
 	if Arguments:
 		Parts = Arguments.split()
 		if len(Parts) > 2:
@@ -1506,7 +1538,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 			Status = Parts[0]
 			if len(Parts) == 2:
 				Number = Parts[1]
-		# If the first argument isn’t "active" or "closed", then it should be the number of polls
+		# When the first argument isn’t "active" or "closed", then it should be the number of polls
 		else:
 			Number = Parts[0]
 	if Number:
@@ -1518,7 +1550,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
-	# If the number of polls is not specified, display the last 3
+	# When the number of polls is not specified, display the last 3
 	if not Number:
 		Number = 3
 	if Number > 10:
@@ -1670,7 +1702,7 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 			# A not blank choice, with the same number of votes as the first choice
 			if Choice["ID"] > 0 and Choice_count == First_choice_count:
 				Choices_with_same_votes += 1
-		# If a choice is tied, but only with the blanks → this choice won the vote
+		# When a choice is tied, but only with the blanks → this choice won the vote
 		if Choices_with_same_votes == 1:
 			Result = "decided"
 	if Result == "decided":

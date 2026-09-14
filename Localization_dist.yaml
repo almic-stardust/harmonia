@@ -19,17 +19,17 @@ English:
     "The “!help” command is only available on Discord."
 
   CM_Command_is_public:
-    "Error! This command must be used in public."
+    "Error: This command must be used in public."
 
   # Commands_manager.Roll_Dice()
   CM_Roll_error_faces:
-    "Error! It's not possible to roll dice with more than 1000 faces."
+    "Error: It's not possible to roll dice with more than 1000 faces."
   CM_Roll_error_rolls:
-    "Error! It's not possible to roll more than 10000 dice at once."
+    "Error: It's not possible to roll more than 10000 dice at once."
   CM_Roll_summary:
     "Lowest die {Min} | Average value {Average:.1f} | Highest die {Max} | Total value {Total}"
   CM_Roll_help_usage:
-    "Error! The argument for this command must be XdY, with X being the number of dice, and Y being the number of faces for each die."
+    "Error: The argument for this command must be XdY, with X being the number of dice, and Y being the number of faces for each die."
 
   # Commands_manager.Straws()
   CM_Straws_invalid_subcommand:
@@ -38,9 +38,9 @@ English:
     "Check “!help straws”"
 
   # Commands_manager.Straws_current_state()
-  CM_Straws_state_display_participants:
+  CM_Straws_state_show_participants:
     "The participants from among whom straws will be drawn are:"
-  CM_Straws_state_display_words:
+  CM_Straws_state_show_words:
     "The following users provided these words:"
   CM_Straws_state_error_bag:
     "But no words for the common key."
@@ -104,17 +104,17 @@ French:
     "La commande « !help » n’est disponible que sur Discord."
 
   CM_Command_is_public:
-    "Erreur ! Cette commande doit être utilisée en public."
+    "Erreur : Cette commande doit être utilisée en public."
 
   # Commands_manager.Roll_Dice()
   CM_Roll_error_faces:
-    "Erreur ! Il n'est pas possible de lancer des dés de plus de 1000 faces."
+    "Erreur : Il n'est pas possible de lancer des dés de plus de 1000 faces."
   CM_Roll_error_rolls:
-    "Erreur ! Il n'est pas possible de lancer plus de 10000 dés d'un seul coup."
+    "Erreur : Il n'est pas possible de lancer plus de 10000 dés d'un seul coup."
   CM_Roll_summary:
     "Dé le plus bas {Min} | Valeur moyenne {Average:.1f} | Dé le plus élevé {Max} | Valeur totale {Total}"
   CM_Roll_help_usage:
-    "Erreur ! L'argument pour cette commande doit être sous la forme XdY, où X est le nombre de dés, et Y le nombre de faces de chaque dé."
+    "Erreur : L'argument pour cette commande doit être sous la forme XdY, où X est le nombre de dés, et Y le nombre de faces de chaque dé."
 
   # Commands_manager.Straws()
   CM_Straws_invalid_subcommand:
@@ -123,9 +123,9 @@ French:
     "Consultez « !help” straws »"
 
   # Commands_manager.Straws_current_state()
-  CM_Straws_state_display_participants:
+  CM_Straws_state_show_participants:
     "Les participants qui vont tirer à la courte paille sont :"
-  CM_Straws_state_display_words:
+  CM_Straws_state_show_words:
     "Les utilisateurs suivants ont fourni ces mots :"
   CM_Straws_state_error_bag:
     "Mais aucun mot pour la clé commune."
