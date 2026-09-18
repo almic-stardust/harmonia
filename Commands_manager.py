@@ -599,7 +599,7 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls members\n"
 	if not Users_enabled:
-		Output += Localized_replies["CM_Polls_members_error_config_users"]
+		Output = Localized_replies["CM_Polls_error_config_users"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -625,11 +625,11 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 			Output += Localized_replies["CM_Polls_members_error_membership_one"].format(
 					Unregistered=Unregistered_users[0]
 			)
-			Output += "\n"
 		else:
 			for Unregistered_user in Unregistered_users:
 				Output += f"{Unregistered_user} "
-			Output += Localized_replies["CM_Polls_members_error_membership_several"] + "\n"
+			Output += Localized_replies["CM_Polls_members_error_membership_several"]
+		Output += "\n"
 		if not Users_to_display:
 			if IRC_enabled:
 				Output_IRC += Output
@@ -719,7 +719,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 		return
 	Parts = Arguments.split()
 	if len(Parts) < 2 or len(Parts) > 3:
-		Output += Localized_replies["CM_Polls_adhesion_error_syntax"] + " " + Help_usage
+		Output = Localized_replies["CM_invalid_syntax"] + " " + Help_usage
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -728,7 +728,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 	Mail = Parts[1]
 	# [^@\s]+ = one or more characters that aren’t @ or space
 	if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", Mail):
-		Output += Localized_replies["CM_Polls_adhesion_error_mail"] + " " + Help_usage
+		Output = Localized_replies["CM_Polls_adhesion_error_mail"] + " " + Help_usage
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -741,7 +741,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 			# The given date is interpreted as being in Timezone
 			Date = datetime.datetime.strptime(Date, "%Y%m%d").replace(tzinfo=Timezone)
 		except ValueError:
-			Output += Localized_replies["CM_Polls_adhesion_error_date"] + " " + Help_usage
+			Output = Localized_replies["CM_Polls_adhesion_error_date"] + " " + Help_usage
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -767,7 +767,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 			Renewals.extend(Renewal)
 		if Year in Infos_user["Renewals"] and Date in Infos_user["Renewals"][Year]:
 			Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
-			Output += Localized_replies["CM_Polls_adhesion_already_renewed"].format(
+			Output = Localized_replies["CM_Polls_adhesion_already_renewed"].format(
 					Pseudo=Pseudo, Date=Date
 			)
 			if IRC_enabled:
@@ -842,7 +842,7 @@ async def Polls_create(Targets, User, Arguments, From_Discord=False):
 	if IRC_enabled and From_Discord:
 		Output_IRC = f"<\x02{User}\x02> !polls create {Arguments}\n"
 	if not Polls_enabled:
-		Output = Localized_replies["CM_Polls_create_error_config_polls"]
+		Output = Localized_replies["CM_Polls_error_config_polls"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -868,7 +868,7 @@ async def Polls_create(Targets, User, Arguments, From_Discord=False):
 				List_of_choices.append(Choice)
 		Choices = List_of_choices
 		if len(Choices) == 1:
-			Output += Localized_replies["CM_Polls_create_error_one_choice"]
+			Output = Localized_replies["CM_Polls_create_error_one_choice"]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -899,15 +899,19 @@ async def Discord_polls_create(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	if Context.guild is None:
-		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
-		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
+	if Context.guild is None:
+		Language = Gears.Determine_language(User)
+		Localized_replies = L10n[Language]
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
+		return
 	await Polls_create(Targets, User, Arguments, True)
 
 async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False):
 
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
@@ -917,7 +921,7 @@ async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls close\n"
 	if not Polls_enabled:
-		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output = Localized_replies["CM_Polls_error_config_polls"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -928,7 +932,7 @@ async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False
 	if not Arguments:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			Output += "Error: no polls in the DB."
+			Output += Localized_replies["CM_Polls_error_no_polls_in_DB"]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -941,7 +945,8 @@ async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False
 			try:
 				Polls_IDs.append(int(Poll_ID))
 			except (TypeError, ValueError):
-				Output += f"Error: {Poll_ID} is an invalid poll ID.\n"
+				Output += Localized_replies["CM_Polls_error_invalid_id"].format(Poll_ID=Poll_ID)
+				Output += "\n"
 				continue
 
 	for Poll_ID in Polls_IDs:
@@ -949,19 +954,28 @@ async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False
 		if len(Polls_IDs) > 1 or (len(Polls_IDs) == 1 and not Infos_poll):
 			Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 		if not Infos_poll:
-			Output += f"Error: poll {Poll_ID}: doesn’t exist.\n"
+			Output += Localized_replies["CM_Polls_error_not_found"].format(Poll_ID=Poll_ID)
+			Output += "\n"
 			continue
 		if not Infos_poll["Active"]:
-			Output += f"Error: poll {Poll_ID}: already closed.\n"
+			Output += Localized_replies["CM_Polls_close_error_already_closed"].format(
+					Poll_ID=Poll_ID
+			)
+			Output += "\n"
 			continue
 		# Moderators can also close polls
 		if User == Infos_poll["Author"] or Is_moderator:
 			Recorded_in_DB = False
 			Recorded_in_DB = DB_manager.Polls_close(Polls_table, Poll_ID)
 			if Recorded_in_DB:
-				Output += f"{User} closed poll {Poll_ID} ({Infos_poll['Question']})\n"
+				Output += Localized_replies["CM_Polls_close_success"].format(
+						User=User, Poll_ID=Poll_ID, Question=Infos_poll["Question"]
+				)
+				Output += "\n"
 		else:
-			Output += f"Error: poll {Poll_ID}: only the author or a moderator can close a poll.\n"
+			Output += Localized_replies["CM_Polls_close_error_unauthorized"].format(Poll_ID=Poll_ID)
+			Output += "\n"
+
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
@@ -974,11 +988,13 @@ async def Discord_polls_close(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
-	if Context.guild is None:
-		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
-		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
+	if Context.guild is None:
+		Language = Gears.Determine_language(User)
+		Localized_replies = L10n[Language]
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
+		return
 	Is_moderator = Context.author.guild_permissions.manage_messages
 	await Polls_close(Targets, User, Is_moderator, Arguments, True)
 
@@ -989,6 +1005,8 @@ async def IRC_polls_close(Targets, User, Arguments=None):
 
 async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=False):
 
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
@@ -998,7 +1016,7 @@ async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=Fals
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls delete\n"
 	if not Polls_enabled:
-		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output = Localized_replies["CM_Polls_error_config_polls"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -1009,7 +1027,7 @@ async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=Fals
 	if not Arguments:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			Output += "Error: no polls in the DB."
+			Output = Localized_replies["CM_Polls_error_no_polls_in_DB"]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -1022,7 +1040,8 @@ async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=Fals
 			try:
 				Polls_IDs.append(int(Poll_ID))
 			except (TypeError, ValueError):
-				Output += f"Error: {Poll_ID} is an invalid poll ID.\n"
+				Output += Localized_replies["CM_Polls_error_invalid_id"].format(Poll_ID=Poll_ID)
+				Output += "\n"
 				continue
 
 	for Poll_ID in Polls_IDs:
@@ -1030,16 +1049,24 @@ async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=Fals
 		if len(Polls_IDs) > 1 or (len(Polls_IDs) == 1 and not Infos_poll):
 			Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 		if not Infos_poll:
-			Output += f"Error: poll {Poll_ID}: doesn’t exist or was already deleted.\n"
+			Output += Localized_replies["CM_Polls_delete_error_already_deleted"].format(
+					Poll_ID=Poll_ID
+			)
+			Output += "\n"
 			continue
 		# Moderators can also delete polls
 		if User == Infos_poll["Author"] or Is_moderator:
 			Recorded_in_DB = False
 			Recorded_in_DB = DB_manager.Polls_delete(Polls_table, Poll_ID)
 			if Recorded_in_DB:
-				Output += f"{User} deleted poll {Poll_ID} ({Infos_poll['Question']})\n"
+				Output += Localized_replies["CM_Polls_delete_success"].format(
+					User=User, Poll_ID=Poll_ID, Question=Infos_poll["Question"]
+				)
 		else:
-			Output += f"Error: poll {Poll_ID}: only the author or a moderator can delete a poll.\n"
+			Output += Localized_replies["CM_Polls_delete_error_unauthorized"].format(
+					Poll_ID=Poll_ID
+			)
+		Output += "\n"
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
@@ -1052,11 +1079,13 @@ async def Discord_polls_delete(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
-	if Context.guild is None:
-		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
-		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
+	if Context.guild is None:
+		Language = Gears.Determine_language(User)
+		Localized_replies = L10n[Language]
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
+		return
 	Is_moderator = Context.author.guild_permissions.manage_messages
 	await Polls_delete(Targets, User, Is_moderator, Arguments, True)
 
@@ -1068,7 +1097,10 @@ async def IRC_polls_delete(Targets, User, Arguments=None):
 async def Polls_vote(Targets, User, Arguments, Context=None):
 
 	global Proxies
-	Help_usage = "Usage: !polls vote <Choice_number> [Poll_ID]"
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
+	Output = ""
+	Help_usage = Localized_replies["CM_Polls_vote_help_usage"]
 	# If the command was sent on Discord, relay it on IRC
 	if IRC_enabled and Context:
 		IRC_instance = IRC_manager.GCI()
@@ -1079,14 +1111,12 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 					f"<\x02{User}\x02> !polls vote {Arguments}"
 			)
 	if not Polls_enabled:
-		await Gears.Send(Targets,
-				"Error: This command requires the polls section to be enabled in the config file."
-		)
+		Output = Localized_replies["CM_Polls_error_config_polls"]
+		await Gears.Send(Targets, Output)
 		return
 	if not Users_enabled:
-		await Gears.Send(Targets,
-				"Error: This command requires the users section to be enabled in the config file."
-		)
+		Output = Localized_replies["CM_Polls_error_config_users"]
+		await Gears.Send(Targets, Output)
 		return
 	if not Arguments:
 		await Gears.Send(Targets, Help_usage)
@@ -1102,9 +1132,11 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 		if User in Proxies and Claimed_proxy_giver in Proxies[User]:
 			Proxy_giver = Claimed_proxy_giver
 		else:
-			await Gears.Send(Targets,
-					f"Error: {Claimed_proxy_giver} didn’t delegate a proxy to {User}."
+			Output = Localized_replies["CM_Polls_vote_error_no_delegation"].format(
+					Claimed_proxy_giver=Claimed_proxy_giver, User=User
 			)
+			await Gears.Send(Targets, Output)
+			return
 	if len(Parts) == 2 or (len(Parts) == 3 and Proxy_giver):
 		try:
 			# Consistency over intuition: the first argument is always Choice
@@ -1113,18 +1145,23 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except ValueError:
-			await Gears.Send(Targets, f"Error: invalid poll ID or choice number.\n" + Help_usage)
+			Output = Localized_replies["CM_Polls_vote_error_invalid_input"]
+			Output += "\n" + Help_usage
+			await Gears.Send(Targets, Output)
 			return
 	# Select latest poll if none specified
 	elif len(Parts) == 1:
 		try:
 			Choice = int(Parts[0])
 		except ValueError:
-			await Gears.Send(Targets, f"Error: invalid choice number.\n" + Help_usage)
+			Output = Localized_replies["CM_Polls_vote_error_invalid_choice"]
+			Output += "\n" + Help_usage
+			await Gears.Send(Targets, Output)
 			return
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			await Gears.Send(Targets, "Error: no polls in the DB.")
+			Output = Localized_replies["CM_Polls_error_no_polls_in_DB"]
+			await Gears.Send(Targets, Output)
 			return
 		Poll_ID = Infos_poll["ID"]
 	else:
@@ -1134,26 +1171,33 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 	Infos_user = {"Pseudo": User}
 	User_ID = DB_manager.Users_check_presence(Users_table, Infos_user)
 	if not User_ID:
-		await Gears.Send_DM(User, Context, "Error: you’re not registered.")
+		Output = Localized_replies["CM_Polls_error_unregistered_user"]
+		await Gears.Send_DM(User, Context, Output)
 		return
 	Users = DB_manager.Users_fetch_users(Users_table)
 	Infos_user = Users[User_ID]
 	Infos_user = Polls_voting_rights(Infos_user)
 	if not Infos_user["Can_vote"]:
-		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
+		Output = Localized_replies["CM_Polls_error_no_voting_rights"]
+		await Gears.Send_DM(User, Context, Output)
 		return
 	# Avoid a DB query, in case the lastest poll was automatically selected
 	if not Infos_poll:
 		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 	if not Infos_poll:
-		await Gears.Send(Targets, "Error: poll not found. See !polls list")
+		Output = Localized_replies["CM_Polls_error_not_found"].format(Poll_ID=Poll_ID)
+		await Gears.Send(Targets, Output)
 		return
 	if not Infos_poll["Active"]:
-		await Gears.Send(Targets, f"Error: poll {Poll_ID} is closed. See !polls list active")
+		Output = Localized_replies["CM_Polls_vote_error_closed"].format(Poll_ID=Poll_ID)
+		await Gears.Send(Targets, Output)
 		return
 	Choices = Infos_poll["Choices"]
 	if Choice < 0 or Choice > len(Choices):
-		await Gears.Send(Targets, f"Error: invalid choice number. See !polls info {Poll_ID}")
+		Output = Localized_replies["CM_Polls_vote_error_invalid_choice_for_vote"].format(
+				Poll_ID=Poll_ID
+		)
+		await Gears.Send(Targets, Output)
 		return
 
 	# When a member votes in a poll, it automatically revokes any proxy they may have given
@@ -1166,9 +1210,8 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 		del Proxies[Proxy_holder][User]
 		if len(Proxies[Proxy_holder]) == 0:
 			del Proxies[Proxy_holder]
-		await Gears.Send_DM(User, Context,
-			f"Your vote has revoked the proxy delegated to {Proxy_holder}."
-		)
+		Output += Localized_replies["CM_Polls_vote_revoked_proxy"].format(Proxy_holder=Proxy_holder)
+		await Gears.Send_DM(User, Context, Output)
 
 	Recorded_in_DB = False
 	Question = Infos_poll["Question"]
@@ -1181,18 +1224,20 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 				Polls_table, Poll_ID, Proxy_giver, Choice, User
 		)
 		if Recorded_in_DB:
-			await Gears.Send_DM(User, Context,
-					f"Poll {Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
+			Output += Localized_replies["CM_Polls_vote_success_for_proxy"].format(
+					Poll_ID=Poll_ID, Vote_text=Vote_text, Proxy_giver=Proxy_giver, Question=Question
 			)
+			await Gears.Send_DM(User, Context, Output)
 	else:
 		# {Infos_user["Pseudo"]} instead of {User}, to see user misidentifications in the results
 		Recorded_in_DB = DB_manager.Polls_vote(
 				Polls_table, Poll_ID, Infos_user["Pseudo"], Choice
 		)
 		if Recorded_in_DB:
-			await Gears.Send_DM(User, Context,
-					f"Poll {Poll_ID}: Your vote “{Vote_text}” has been registered [{Question}]"
+			Output += Localized_replies["CM_Polls_vote_success"].format(
+					Poll_ID=Poll_ID, Vote_text=Vote_text, Question=Question
 			)
+			await Gears.Send_DM(User, Context, Output)
 		# Those who have delegated a proxy vote by default as their proxy holder
 		if User in Proxies:
 			for Proxy_giver in Proxies[User]:
@@ -1201,9 +1246,11 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 						Polls_table, Poll_ID, Proxy_giver, Choice, User
 				)
 				if Recorded_in_DB:
-					await Gears.Send_DM(User, Context,
-							f"Poll {Poll_ID}: Vote “{Vote_text}” registered for {Proxy_giver} [{Question}]"
+					Output += Localized_replies["CM_Polls_vote_success_for_proxy"].format(
+							Poll_ID=Poll_ID, Vote_text=Vote_text, Proxy_giver=Proxy_giver,
+							Question=Question
 					)
+					await Gears.Send_DM(User, Context, Output)
 
 @polls.command(name="vote")
 async def Discord_polls_vote(Context, *, Arguments):
@@ -1215,15 +1262,20 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	if Context.guild is None:
-		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
-		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
+	if Context.guild is None:
+		Language = Gears.Determine_language(User)
+		Localized_replies = L10n[Language]
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
+		return
 	await Polls_vote(Targets, User, Arguments, Context)
 
 # This function requires Context as an argument, so it replaces From_Discord
 async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
+
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	# If the command was sent on Discord, relay it on IRC
 	if IRC_enabled and Context:
 		IRC_instance = IRC_manager.GCI()
@@ -1236,40 +1288,47 @@ async def Polls_unvote(Targets, User, Poll_ID=None, Context=None):
 			# privately
 			await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User, Output)
 	if not Polls_enabled:
-		await Gears.Send(Targets,
-				"Error: This command requires the polls section to be enabled in the config file."
-		)
+		Output = Localized_replies["CM_Polls_error_config_polls"]
+		await Gears.Send(Targets, Output)
 		return
+
 	if Poll_ID:
 		try:
 			Poll_ID = int(Poll_ID)
 			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except (TypeError, ValueError):
-			await Gears.Send(Targets, "Error: invalid poll ID.\nUsage: !polls unvote [Poll_ID]")
+			Output = Localized_replies["CM_Polls_error_invalid_id"].format(Poll_ID=Poll_ID)
+			Output += "\n" + Localized_replies["CM_Polls_unvote_help_usage"]
+			await Gears.Send(Targets, Output)
 			return
 	# Select latest poll if none specified
 	else:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			await Gears.Send(Targets, "Error: no polls in the DB.")
+			Output = Localized_replies["CM_Polls_error_no_polls_in_DB"]
+			await Gears.Send(Targets, Output)
 			return
 		Poll_ID = Infos_poll["ID"]
+
 	# Avoid a DB query, in case the lastest poll was automatically selected
 	if not Infos_poll:
 		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 	if not Infos_poll:
-		await Gears.Send(Targets, "Error: poll not found. See !polls list")
+		Output = Localized_replies["CM_Polls_error_not_found"].format(Poll_ID=Poll_ID)
+		await Gears.Send(Targets, Output)
 		return
 	Votes = Infos_poll["Votes"]
 	if User not in Votes:
-		await Gears.Send_DM(User, Context, "Error: you didn’t vote in this poll.")
+		Output = Localized_replies["CM_Polls_unvote_error_not_voted"]
+		await Gears.Send(Targets, Output)
 		return
 	del Votes[User]
 	Recorded_in_DB = False
 	Recorded_in_DB = DB_manager.Polls_unvote(Polls_table, Poll_ID, Votes)
 	if Recorded_in_DB:
-		await Gears.Send(Targets, f"{User}’s vote has been removed from poll {Poll_ID}.")
+		Output = Localized_replies["CM_Polls_unvote_success"].format(User=User, Poll_ID=Poll_ID)
+		await Gears.Send(Targets, Output)
 
 @polls.command(name="unvote")
 async def Discord_polls_unvote(Context, Poll_ID):
@@ -1279,37 +1338,43 @@ async def Discord_polls_unvote(Context, Poll_ID):
 	Parameters
 	----------
 	Poll_ID : str"""
-	if Context.guild is None:
-		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
-		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
+	if Context.guild is None:
+		Language = Gears.Determine_language(User)
+		Localized_replies = L10n[Language]
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
+		return
 	await Polls_unvote(Targets, User, Poll_ID, Context)
 
 async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holder, Proxy_giver):
 
 	global Proxies
 	Change_of_holder = False
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	# No self-proxy (“not Proxy_giver” in case User is a moderator)
 	if User == Proxy_holder and not Proxy_giver:
-		await Gears.Send_DM(User, Context, "Error: a member cannot delegate to themselves.")
+		Output = Localized_replies["CM_Polls_proxdeleg_error_self-delegation"]
+		await Gears.Send_DM(User, Context, Output)
 		return
 	if not Users_enabled:
-		await Gears.Send(Targets,
-				"Error: This command requires the users section to be enabled in the config file."
-		)
+		Output = Localized_replies["CM_Polls_error_config_users"]
+		await Gears.Send(Targets, Output)
 		return
 
 	# Only members with voting rights can delegate a proxy
 	User_ID = DB_manager.Users_check_presence(Users_table, {"Pseudo": User})
 	if not User_ID:
-		await Gears.Send_DM(User, Context, "Error: you’re not registered.")
+		Output = Localized_replies["CM_Polls_error_unregistered_user"]
+		await Gears.Send_DM(User, Context, Output)
 		return
 	Users = DB_manager.Users_fetch_users(Users_table)
 	Infos_user = Users[User_ID]
 	Infos_user = Polls_voting_rights(Infos_user)
 	if not Infos_user["Can_vote"]:
-		await Gears.Send_DM(User, Context, "Error: you don’t have voting rights.")
+		Output = Localized_replies["CM_Polls_error_no_voting_rights"]
+		await Gears.Send_DM(User, Context, Output)
 		return
 
 	# Only members with voting rights can receive proxies
@@ -1317,29 +1382,35 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 	Infos_holder["Pseudo"] = Proxy_holder
 	Holder_ID = DB_manager.Users_check_presence(Users_table, Infos_holder)
 	if not Holder_ID:
-		await Gears.Send_DM(User, Context, f"{Proxy_holder} isn’t registered.")
+		Output = Localized_replies["CM_Polls_proxdeleg_error_unregistered_holder"].format(
+				Proxy_holder=Proxy_holder
+		)
+		await Gears.Send_DM(User, Context, Output)
 		return
 	Infos_holder = Users[Holder_ID]
 	Infos_holder = Polls_voting_rights(Infos_holder)
 	if not Infos_holder["Can_vote"]:
-		await Gears.Send_DM(User, Context, f"{Proxy_holder} don’t have voting rights.")
+		Output = Localized_replies["CM_Polls_proxdeleg_error_holder_no_voting_rights"].format(
+				Proxy_holder=Proxy_holder
+		)
+		await Gears.Send_DM(User, Context, Output)
 		return
 
 	if Proxy_giver:
 		if Is_moderator:
 			User = Proxy_giver
 		else:
-			await Gears.Send(Targets,
-					"Error: only moderators can delegate the proxy of someone else."
-			)
+			Output = Localized_replies["CM_Polls_proxdeleg_error_unauthorized"]
+			await Gears.Send(Targets, Output)
 			return
 	Now = datetime.datetime.now(Timezone)
 	for Old_holder in Proxies:
 		if User in Proxies[Old_holder]:
 			if Old_holder == Proxy_holder:
-				await Gears.Send_DM(User, Context,
-						f"You’ve already delegated your proxy to {Proxy_holder}."
+				Output = Localized_replies["CM_Polls_proxdeleg_error_already_delegated"].format(
+						Proxy_holder=Proxy_holder
 				)
+				await Gears.Send_DM(User, Context, Output)
 				return
 			# Proxies are valid for a complete meeting (approximated to 12 hours)
 			Proxy_duration = Now - Proxies[Old_holder][User]
@@ -1352,12 +1423,19 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 		Proxies[Proxy_holder] = {}
 	# Each member can receive a proxy from a maximum of 3 members
 	if len(Proxies[Proxy_holder]) >= 3:
-		await Gears.Send(Targets, f"{Proxy_holder} already holds 3 proxies.")
+		Output = Localized_replies["CM_Polls_proxdeleg_error_number_max"].format(
+				Proxy_holder=Proxy_holder
+		)
+		await Gears.Send(Targets, Output)
 		return
 	Proxies[Proxy_holder][User] = Now
-	Output = f"{User} delegated their proxy to {Proxy_holder}"
+	Output = Localized_replies["CM_Polls_proxdeleg_success_beginning_sentence"].format(
+			User=User, Proxy_holder=Proxy_holder
+	)
 	if Change_of_holder:
-		Output += f" (previously to {Old_holder})"
+		Output += " " + Localized_replies["CM_Polls_proxdeleg_success_change_holder"].format(
+				Old_holder=Old_holder
+		)
 
 	# Simplest case: User doesn’t hold proxy to subdelegate, and Proxy_holder held up to 2 proxies.
 	# Therefore by adding the proxy of User, Proxy_holder don’t exceed the limit of 3
@@ -1367,14 +1445,17 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 		return
 	# When User holds proxies, but Proxy_holder can’t receive any of them
 	if len(Proxies[Proxy_holder]) == 3:
-		Output += f" (who now hold 3 proxies), however {User} held proxies that can’t be subdelegated ("
+		Output += " " + Localized_replies["CM_Polls_proxdeleg_success_total_unsubdelegation"].format(
+				User=User
+		)
+		Output += " ("
 		Output += ", ".join(Proxy for Proxy in Proxies[User])
 		Output += f")."
 		del Proxies[User]
 		await Gears.Send(Targets, Output)
 		return
 	# When User holds proxies, and Proxy_holder can receive at least some of them
-	Output += f", and the following proxies were subdelegated ("
+	Output += ", " + Localized_replies["CM_Polls_proxdeleg_success_subdelegation"] + " ("
 	Subdelegated = []
 	for Proxy in Proxies[User]:
 		if len(Proxies[Proxy_holder]) < 3:
@@ -1383,7 +1464,8 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 	Output += ", ".join(Subdelegated)
 	# When the limit was reached before all proxies were subdelegated
 	if len(Proxies[User]) > len(Subdelegated):
-		Output += ") while the following ones couldn’t ("
+		Output += ") " + Localized_replies["CM_Polls_proxdeleg_success_partial_unsubdelegation"]
+		Output += " ("
 		Not_subdelegated = []
 		for Proxy in Proxies[User]:
 			if Proxy not in Subdelegated:
@@ -1397,8 +1479,10 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 
 	global Proxies
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
-	Help_usage = "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"""
+	Help_usage = Localized_replies["CM_Polls_proxy_help_usage"]
 	# If the command was sent on Discord, relay it on IRC
 	if IRC_enabled and Context:
 		IRC_instance = IRC_manager.GCI()
@@ -1409,14 +1493,16 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 					Targets["IRC_chan"], User, f"!polls proxy {Arguments}"
 			)
 	if not Arguments:
-		await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
+		Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+		await Gears.Send(Targets, Output)
 		return
 	Parts = Arguments.split()
 	Action = Parts[0]
 
 	if Action == "delegate":
 		if len(Parts) < 2 or len(Parts) > 3:
-			await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
+			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+			await Gears.Send(Targets, Output)
 			return
 		Proxy_holder = Parts[1]
 		Proxy_giver = None
@@ -1427,7 +1513,8 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 
 	elif Action == "info":
 		if len(Parts) != 2:
-			await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
+			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+			await Gears.Send(Targets, Output)
 			return
 		Member = Parts[1]
 		if Member == "all":
@@ -1437,12 +1524,15 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 					Output += ", ".join(Proxy for Proxy in Proxies[Proxy_holder])
 					Output += "\n"
 			else:
-				Output += f"No one has delegated a proxy."
+				Output += Localized_replies["CM_Polls_proxinfo_error_no_proxies_delegated"]
 		elif Member in Proxies:
-			Output += f"{Member} hold the following proxies: "
+			Output += Localized_replies["CM_Polls_proxinfo_success_list"].format(Member=Member)
+			Output += " "
 			Output += ", ".join(Proxy for Proxy in Proxies[Member])
 		else:
-			Output += f"{Member} doesn’t hold any proxies."
+			Output += Localized_replies["CM_Polls_proxinfo_error_no_proxies_received"].format(
+					Member=Member
+			)
 		await Gears.Send(Targets, Output)
 
 	elif Action == "revoke":
@@ -1458,32 +1548,38 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 			if Member_revoking in Proxies[Proxy_holder]:
 				Handler_to_revoke = Proxy_holder
 		if not Handler_to_revoke:
-			await Gears.Send(Targets, "{Member_revoking} didn’t delegate a proxy to anyone.")
+			Output = Localized_replies["CM_Polls_proxrev_error_no_proxies_given"].format(
+					Member_revoking=Member_revoking
+			)
+			await Gears.Send(Targets, Output)
 			return
 		Proceed_with_revocation = False
 		if (Member_revoking == User or Handler_to_revoke == User):
 			Proceed_with_revocation = True
 		else:
 			if not Is_moderator:
-				await Gears.Send(Targets,
-						"Error: only moderators can revoke the proxy of someone else."
-				)
+				Output = Localized_replies["CM_Polls_proxrev_error_unauthorized"]
+				await Gears.Send(Targets, Output)
 				return
 			if Member_revoking == "all":
 				Proxies = {}
-				Output += f"All proxies have been revoked."
+				Output += Localized_replies["CM_Polls_proxrev_success"]
+				await Gears.Send(Targets, Output)
 			else:
 				Proceed_with_revocation = True
 		if Proceed_with_revocation:
 			del Proxies[Handler_to_revoke][Member_revoking]
 			if len(Proxies[Proxy_holder]) == 0:
 				del Proxies[Proxy_holder]
-			Output += f"{Member_revoking} no longer delegate a proxy to {Handler_to_revoke}."
+			Output += Localized_replies["CM_Polls_proxrev_success_one"].format(
+					Member_revoking=Member_revoking, Handler_to_revoke=Handler_to_revoke
+			)
 		await Gears.Send(Targets, Output)
 
 	# Action isn’t delegate, info or revoke
 	else:
-		await Gears.Send(Targets, "Error: invalid syntax.\n" + Help_usage)
+		Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+		await Gears.Send(Targets, Output)
 		return
 
 @polls.command(name="proxy")
@@ -1496,11 +1592,13 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	if Context.guild is None:
-		await Gears.Send_DM(None, Context, "Error: This command isn’t available in private.")
-		return
 	Targets = Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
+	if Context.guild is None:
+		Language = Gears.Determine_language(User)
+		Localized_replies = L10n[Language]
+		await Gears.Send_DM(None, Context, Localized_replies["CM_Command_is_public"])
+		return
 	Is_moderator = Context.author.guild_permissions.manage_messages
 	await Polls_proxy(Targets, User, Is_moderator, Arguments, Context)
 
@@ -1511,9 +1609,11 @@ async def IRC_polls_proxy(Targets, User, Arguments):
 async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 	Status = None
 	Number = None
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
 	Output_IRC = ""
-	Help_usage = "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
+	Help_usage = Localized_replies["CM_Polls_list_help_usage"]
 	# If the command was sent on Discord, relay it on IRC
 	if IRC_enabled and From_Discord:
 		if Arguments:
@@ -1521,7 +1621,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls list\n"
 	if not Polls_enabled:
-		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output = Localized_replies["CM_Polls_error_config_polls"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -1529,7 +1629,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 	if Arguments:
 		Parts = Arguments.split()
 		if len(Parts) > 2:
-			Output = "Error: invalid syntax.\n" + Help_usage
+			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Help_usage, Output_IRC)
@@ -1545,7 +1645,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 		try:
 			Number = int(Number)
 		except (TypeError, ValueError):
-			Output += "Error: invalid poll ID. " + Help_usage
+			Output = Localized_replies["CM_Polls_error_invalid_id"] + "\n" + Help_usage
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -1557,14 +1657,17 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 		Number = 10
 	Polls = DB_manager.Polls_fetch_list(Polls_table, Number, Status)
 	if not Polls:
-		Output += "Error: no polls in the DB."
+		Output = Localized_replies["CM_Polls_error_no_polls_in_DB"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	for Infos_poll in Polls:
 		Status = "active" if Infos_poll["Active"] else "closed"
-		Output += f"#{Infos_poll['ID']} ({Status}) {Infos_poll['Question']}\n"
+		Output += Localized_replies["CM_Polls_list_show"].format(
+				Poll_ID=Infos_poll["ID"], Status=Status, Question=Infos_poll["Question"]
+		)
+		Output += "\n"
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
@@ -1584,6 +1687,8 @@ async def Discord_polls_list(Context, *, Arguments=None):
 
 async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 
+	Language = Gears.Determine_language(User)
+	Localized_replies = L10n[Language]
 	Output = ""
 	Output_IRC = ""
 	# If the command was sent on Discord, relay it on IRC
@@ -1593,7 +1698,7 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 		else:
 			Output_IRC = f"<\x02{User}\x02> !polls info\n"
 	if not Polls_enabled:
-		Output = "Error: This command requires the polls section to be enabled in the config file."
+		Output = Localized_replies["CM_Polls_error_config_polls"]
 		Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
@@ -1604,7 +1709,8 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 			# To avoid a DB query in the other case, when the lastest poll is automatically selected
 			Infos_poll = None
 		except (TypeError, ValueError):
-			Output += "Error: invalid poll ID.\nUsage: !polls info [Poll_ID]"
+			Output = Localized_replies["CM_Polls_error_invalid_id"]
+			Output += "\n" + Localized_replies["CM_Polls_info_help_usage"]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -1613,7 +1719,7 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 	else:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			Output += "Error: no polls in the DB."
+			Output = Localized_replies["CM_Polls_error_no_polls_in_DB"]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -1623,7 +1729,7 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 	if not Infos_poll:
 		Infos_poll = DB_manager.Polls_fetch(Polls_table, Poll_ID)
 	if not Infos_poll:
-		Output += f"Error: poll {Poll_ID} doesn’t exist."
+		Output = Localized_replies["CM_Polls_error_not_found"].format(Poll_ID=Poll_ID)
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -1632,8 +1738,13 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 	Creation_date = Infos_poll["Creation_date"].astimezone(Timezone).strftime("%d/%m/%Y")
 	Choices = Infos_poll["Choices"]
 	# Blank votes will be displayed after the votes
-	Choices[0] = "Blank"
-	Status = "active" if Infos_poll["Active"] else "closed"
+	#Choices[0] = "Blank"
+	Choices[0] = Localized_replies["CM_Polls_info_word_for_blanks"]
+	#Status = "active" if Infos_poll["Active"] else "closed"
+	if Infos_poll["Active"]:
+		Status = Localized_replies["CM_Polls_info_word_for_active"]
+	else:
+		Status = Localized_replies["CM_Polls_info_word_for_closed"]
 	Number_of_voters = 0
 	Votes_for_each_choice = {}
 	for Choice_ID in Choices:
@@ -1642,20 +1753,22 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 		if Choice_ID in Votes_for_each_choice:
 			Votes_for_each_choice[Choice_ID].append(Voter)
 			Number_of_voters += 1
-	Output += f"Poll {Poll_ID} ({Status}) created {Creation_date} by {Infos_poll['Author']} : "
-	Output += f"{Infos_poll['Question']}\n"
+	Output += Localized_replies["CM_Polls_info_summary"].format(
+			Poll_ID=Poll_ID, Status=Status, Creation_date=Creation_date, Author=Infos_poll["Author"]
+	)
+	Output += f" = {Infos_poll['Question']}\n"
 
 	if Number_of_voters == 0:
-		if Status == "active":
-			Output += "Possible choices: "
+		if Infos_poll["Active"]:
+			Output += Localized_replies["CM_Polls_info_possible_choices"]
 			Choices_sorted = sorted(Choices.items())
 			Output += " ".join(
 					f"[#{Choice_ID} {Choice_text}]"
 					for Choice_ID, Choice_text in Choices_sorted
 			)
-			Output += "\nNo one has voted in this poll yet."
+			Output += "\n" + Localized_replies["CM_Polls_info_no_vote_active"]
 		else:
-			Output += "No one has voted in this poll."
+			Output += Localized_replies["CM_Polls_info_no_vote_closed"]
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -1706,14 +1819,15 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 		if Choices_with_same_votes == 1:
 			Result = "decided"
 	if Result == "decided":
-		Output += f"Result: {Choices_with_votes[0][1]['Text']} "
+		Output += Localized_replies["CM_Polls_info_result_decided"]
+		Output += f" {Choices_with_votes[0][1]['Text']} "
 		Output += f"({Choices_with_votes[0][0]}/{Number_of_voters})"
 	elif Result == "tied":
-		Output += f"Result: tie"
+		Output += Localized_replies["CM_Polls_info_result_tied"]
 	elif Result == "blanks":
-		Output += "Result: Blanks are in the majority"
+		Output += Localized_replies["CM_Polls_info_result_blanks"]
 	if len(Choices_without_votes) > 0:
-		Output += " § Choices without votes: "
+		Output += " § " + Localized_replies["CM_Polls_info_choices_without_votes"] + " "
 		Output += " ".join(
 				f"[#{Choice_ID} {Choice_text}]"
 				for Choice_ID, Choice_text in Choices_without_votes
