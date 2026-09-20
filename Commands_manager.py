@@ -709,7 +709,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 			IRC_instance = IRC_manager.GCI()
 			if IRC_instance:
 				await IRC_instance.Relay_Discord_message(Targets["IRC_chan"], User, Output_IRC)
-		await Gears.Send_DM(User, Context, Localized_replies["CM_Polls_adhesion_permission_denied"])
+		await Gears.Send_DM(User, Context, Localized_replies["CM_Permission_denied"])
 		return
 	if not Arguments:
 		Output = Help_usage
@@ -1063,9 +1063,7 @@ async def Polls_delete(Targets, User, Is_moderator, Arguments, From_Discord=Fals
 					User=User, Poll_ID=Poll_ID, Question=Infos_poll["Question"]
 				)
 		else:
-			Output += Localized_replies["CM_Polls_delete_error_unauthorized"].format(
-					Poll_ID=Poll_ID
-			)
+			Output += Localized_replies["CM_Polls_delete_error_unauthorized"]
 		Output += "\n"
 	if IRC_enabled:
 		Output_IRC += Output
@@ -1154,7 +1152,7 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 		try:
 			Choice = int(Parts[0])
 		except ValueError:
-			Output = Localized_replies["CM_Polls_vote_error_invalid_choice"]
+			Output = Localized_replies["CM_Polls_vote_error_invalid_choice_vote_not_specified"]
 			Output += "\n" + Help_usage
 			await Gears.Send(Targets, Output)
 			return
@@ -1194,7 +1192,7 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 		return
 	Choices = Infos_poll["Choices"]
 	if Choice < 0 or Choice > len(Choices):
-		Output = Localized_replies["CM_Polls_vote_error_invalid_choice_for_vote"].format(
+		Output = Localized_replies["CM_Polls_vote_error_invalid_choice_vote_specified"].format(
 				Poll_ID=Poll_ID
 		)
 		await Gears.Send(Targets, Output)
@@ -1437,8 +1435,8 @@ async def Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holde
 				Old_holder=Old_holder
 		)
 
-	# Simplest case: User doesn’t hold proxy to subdelegate, and Proxy_holder held up to 2 proxies.
-	# Therefore by adding the proxy of User, Proxy_holder don’t exceed the limit of 3
+	# Simplest case: User doesn’t hold proxies to subdelegate, and Proxy_holder held up to 2
+	# proxies. Therefore by adding the proxy of User, Proxy_holder don’t exceed the limit of 3
 	if not User in Proxies:
 		Output += "."
 		await Gears.Send(Targets, Output)
@@ -1663,11 +1661,11 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
 	for Infos_poll in Polls:
-		Status = "active" if Infos_poll["Active"] else "closed"
-		Output += Localized_replies["CM_Polls_list_show"].format(
-				Poll_ID=Infos_poll["ID"], Status=Status, Question=Infos_poll["Question"]
-		)
-		Output += "\n"
+		if Infos_poll["Active"]:
+			Status = Localized_replies["CM_Polls_info_word_for_active"]
+		else:
+			Status = Localized_replies["CM_Polls_info_word_for_closed"]
+		Output += f"#{Infos_poll['ID']} ({Status}) {Infos_poll['Question']}\n"
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)
@@ -1738,9 +1736,7 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 	Creation_date = Infos_poll["Creation_date"].astimezone(Timezone).strftime("%d/%m/%Y")
 	Choices = Infos_poll["Choices"]
 	# Blank votes will be displayed after the votes
-	#Choices[0] = "Blank"
 	Choices[0] = Localized_replies["CM_Polls_info_word_for_blanks"]
-	#Status = "active" if Infos_poll["Active"] else "closed"
 	if Infos_poll["Active"]:
 		Status = Localized_replies["CM_Polls_info_word_for_active"]
 	else:

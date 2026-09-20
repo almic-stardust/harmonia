@@ -10,32 +10,36 @@ English:
 
   # Commands_manager.IRC_dispatcher()
   CM_Dispatch_invalid_command:
-    "This command is invalid. Check “!help”"
+    "Invalid command. See “!help”"
   CM_Dispatch_invalid_subcommand:
-    "This subcommand is invalid. Check “!help”"
+    "Invalid subcommand. See “!help”"
+
+  CM_Command_is_public:
+    "Error: This command is not available in private."
+  CM_invalid_syntax:
+    "Syntax error."
+  CM_Permission_denied:
+    "Permission denied."
 
   # Commands_manager.No_help_for_IRC()
   CM_No_help_irc:
     "The “!help” command is only available on Discord."
 
-  CM_Command_is_public:
-    "Error: This command must be used in public."
-
   # Commands_manager.Roll_Dice()
-  CM_Roll_error_faces:
-    "Error: It's not possible to roll dice with more than 1000 faces."
-  CM_Roll_error_rolls:
-    "Error: It's not possible to roll more than 10000 dice at once."
-  CM_Roll_summary:
-    "Lowest die {Min} | Average value {Average:.1f} | Highest die {Max} | Total value {Total}"
   CM_Roll_help_usage:
     "Error: The argument for this command must be XdY, with X being the number of dice, and Y being the number of faces for each die."
+  CM_Roll_error_faces:
+    "Error: It is not possible to roll dice with more than 1000 faces."
+  CM_Roll_error_rolls:
+    "Error: It is not possible to roll more than 10000 dice at once."
+  CM_Roll_summary:
+    "Min {Min} | Average {Average:.1f} | Max {Max} | Total {Total}"
 
-  # Commands_manager.Straws()
-  CM_Straws_invalid_subcommand:
-    "This subcommand is invalid. Check “!help straws”"
+  # Commands_manager !straws
   CM_Straws_help_usage:
-    "Check “!help straws”"
+    "See “!help straws”"
+  CM_Straws_invalid_subcommand:
+    "Invalid subcommand. See “!help straws”"
 
   # Commands_manager.Straws_current_state()
   CM_Straws_state_show_participants:
@@ -51,7 +55,7 @@ English:
 
   # Commands_manager.Straws_add()
   CM_Straws_add_error:
-    "Your word couldn't be added to the common key!"
+    "Your word could not be added to the common key!"
   CM_Straws_add_result:
     "Your word “{Straw}” has been added to the common key."
   CM_Straws_join_help_usage:
@@ -60,18 +64,18 @@ English:
     "Usage: !straws contribute Word"
 
   # Commands_manager.Straws_participants()
+  CM_Straws_participants_help_usage:
+    "Usage: !straws participants Participant1 Participant2 …"
   CM_Straws_participants_too_many:
     "It is not possible to draw straws among more than 50 participants."
   CM_Straws_participants_result:
     The participants drawing straws have been selected (usernames exceeding 30 characters have been truncated).
-  CM_Straws_participants_help_usage:
-    "Usage: !straws participants Participant1 Participant2 …"
 
   # Commands_manager.Straws_draw()
   CM_Straws_draw_error_participants:
-    "There are no participants among whom to draw straws. Check “!help straws”"
+    "There are no participants among whom to draw straws. See “!help straws”"
   CM_Straws_draw_error_straws:
-    "No words for the common key. Check “!help straws”"
+    "No words for the common key. See “!help straws”"
   CM_Straws_draw_display_participants:
     "The participants who draw straws are:"
   CM_Straws_draw_display_key:
@@ -80,8 +84,186 @@ English:
     "Hash for each participant:"
   CM_Straws_draw_lucky_one:
     "And {Lucky_one} is the lucky (?) participant who pulls the shortest straw."
+
+  # Commands_manager.Straws_reset()
   CM_Straws_reset:
     "The list of participants and the common key have been deleted."
+
+  # Commands_manager !polls
+  CM_Polls_invalid_subcommand:
+    "This subcommand is invalid. Check “!help straws”"
+  CM_Polls_help_usage:
+    "Check “!help straws”"
+  CM_Polls_error_config_polls:
+    "Error: This command requires the polls section to be enabled in the config file."
+  CM_Polls_error_config_users:
+    "Error: This command requires the users section to be enabled in the config file."
+  CM_Polls_error_no_polls_in_DB:
+    "Error: There is no poll in the database."
+  CM_Polls_error_invalid_id:
+    "Error: Invalid poll ID: {Poll_ID}."
+  CM_Polls_error_not_found:
+    "Error: Poll {Poll_ID} does not exist. Check “!polls list”"
+  CM_Polls_error_unregistered_user:
+    "Error: You must be registered to vote."
+  CM_Polls_error_no_voting_rights:
+    "Error: You are registered, but your last renewal is not recent enough for you to vote."
+
+  # Commands_manager.Polls_members()
+  CM_Polls_members_error_membership_one:
+    "{Unregistered} is not a member."
+  CM_Polls_members_error_membership_several:
+    "are not members."
+  CM_Polls_members_authorized_vote:
+    "has the right to vote"
+  CM_Polls_members_not_authorized_vote:
+    "does not have the right to vote"
+  CM_Polls_members_infos_penultimate:
+    "(Last membership {Last_renewal} | Second-to-last for {Penultimate_year})"
+  CM_Polls_members_infos_registration:
+    "(Last renewal {Last_renewal} | First adhesion {Registration})"
+  CM_Polls_members_nobody_can_vote:
+    "Nobody have voting rights."
+
+  # Commands_manager.Polls_add_adhesion()
+  CM_Polls_adhesion_help_usage:
+    "Usage: !polls add_adhesion Pseudo Mail_address [YYYYMMDD]"
+  CM_Polls_adhesion_error_mail:
+    "Error: This mail address is not valid."
+  CM_Polls_adhesion_error_date:
+    "Error: This date is not valid."
+  CM_Polls_adhesion_already_renewed:
+    "Error: The membership of {Pseudo} has already been renewed for {Date}."
+  CM_Polls_adhesion_renewed:
+    "The membership of {Pseudo} has been renewed for {Date}."
+  CM_Polls_adhesion_added:
+    "{Pseudo} has been added with membership as of {Date}."
+
+  # Commands_manager.Polls_create()
+  CM_Polls_create_help_usage:
+    "Usage: !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
+  CM_Polls_create_error_one_choice:
+    "A vote is not necessary when there is only one option."
+  CM_Polls_create_summary_start:
+    "Poll {Poll_ID}: {Question}"
+  CM_Polls_create_summary_end:
+    "You can vote as follows: !polls vote <Choice_number> [{Poll_ID}]"
+
+  # Commands_manager.Polls_close()
+  CM_Polls_close_error_already_closed:
+    "Error: Poll {Poll_ID} has already ended."
+  CM_Polls_close_error_unauthorized:
+    "Error: The poll {Poll_ID} can only be ended by its author or a moderator."
+  CM_Polls_close_success:
+    "The poll {Poll_ID} was closed by {User}."
+
+  # Commands_manager.Polls_delete()
+  CM_Polls_delete_error_already_deleted:
+    "Error: Poll {Poll_ID} could not be found, it may have already been deleted.”
+  CM_Polls_delete_error_unauthorized:
+    "Error: Only the author or a moderator can delete a poll."
+  CM_Polls_delete_success:
+    "{User} deleted poll {Poll_ID} ({Question})."
+
+  # Commands_manager.Polls_vote()
+  CM_Polls_vote_help_usage:
+    "Usage: !polls vote <Choice_number> [Poll_ID]"
+  CM_Polls_vote_error_no_delegation:
+    "Error: {Claimed_proxy_giver} did not delegate a proxy to {User}."
+  CM_Polls_vote_error_invalid_input:
+    "Error: Invalid poll ID or choice number. See !polls list active"
+  CM_Polls_vote_error_invalid_choice_vote_not_specified:
+    "Error: Invalid choice number. See !polls info"
+  CM_Polls_vote_error_closed:
+    "Error: Poll {Poll_ID} is closed. See !polls list active"
+  CM_Polls_vote_error_invalid_choice_vote_specified:
+    "Error: Invalid choice number. See !polls info {Poll_ID}"
+  CM_Polls_vote_revoked_proxy:
+    "Your vote has revoked the proxy delegate to {Proxy_holder}."
+  CM_Polls_vote_success_for_proxy:
+    "Poll {Poll_ID}: You voted “{Vote_text}” with the proxy of {Proxy_giver}."
+  CM_Polls_vote_success:
+    "Vote {Poll_ID}: You voted “{Vote_text}”."
+
+  # Commands_manager.Polls_unvote()
+  CM_Polls_unvote_help_usage:
+    "Usage: !polls unvote [Poll_ID]"
+  CM_Polls_unvote_error_not_voted:
+    "Error: You can not remove a vote you did not cast."
+  CM_Polls_unvote_success:
+    "The vote of {User} has been removed from poll {Poll_ID}."
+
+  # Commands_manager.Polls_proxy_delegate()
+  CM_Polls_proxdeleg_error_self-delegation:
+    "Error: Someone cannot delegate a proxy to themselves."
+  CM_Polls_proxdeleg_error_unregistered_holder:
+    "Error: It is not possible to delegate a proxy to {Proxy_holder}, who is not registered."
+  CM_Polls_proxdeleg_error_holder_no_voting_rights:
+    "Error: It is not possible to delegate a proxy to {Proxy_holder}, who do not have voting rights."
+  CM_Polls_proxdeleg_error_unauthorized:
+    "Error: Only moderators can delegate the proxy of someone else."
+  CM_Polls_proxdeleg_error_already_delegated:
+    "You have already delegated your proxy to {Proxy_holder}."
+  CM_Polls_proxdeleg_error_number_max:
+    "One person cannot hold more than three proxies, and {Proxy_holder} has reached the limit."
+  CM_Polls_proxdeleg_success_beginning_sentence:
+    "{User} delegated their proxy to {Proxy_holder}"
+  CM_Polls_proxdeleg_success_change_holder:
+    "(previously to {Old_holder})"
+  CM_Polls_proxdeleg_success_total_unsubdelegation:
+    "however {User} had received proxies that cannot be subdelegated, because now {Proxy_holder} has reached the limit of three proxies"
+  CM_Polls_proxdeleg_success_subdelegation:
+    "and the following proxies were subdelegated"
+  CM_Polls_proxdeleg_success_partial_unsubdelegation:
+    "while the following ones could not"
+
+  # Commands_manager.Polls_proxy()
+  CM_Polls_proxy_help_usage:
+    "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"
+  CM_Polls_proxinfo_error_no_proxies_delegated:
+    "Currently, no proxy has been delegated."
+  CM_Polls_proxinfo_success_list:
+    "{Member} has received the following proxies:"
+  CM_Polls_proxinfo_error_no_proxies_received:
+    "{Member} has not received any proxies."
+  CM_Polls_proxrev_error_no_proxies_given:
+    "{Member_revoking} has not delegated their proxy."
+  CM_Polls_proxrev_error_unauthorized:
+    "Only the mandator (principal), the agent or the moderators may revoke a proxy."
+  CM_Polls_proxrev_success_all:
+    "All proxies have been revoked."
+  CM_Polls_proxrev_success_one:
+    "{Member_revoking} no longer delegate their proxy to {Handler_to_revoke}."
+
+  # Commands_manager.Polls_list()
+  CM_Polls_list_help_usage:
+    "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
+
+  # Commands_manager.Polls_info()
+  CM_Polls_info_help_usage:
+    "Usage: !polls info [Poll_ID]"
+  CM_Polls_info_word_for_blanks:
+    "Blank"
+  CM_Polls_info_word_for_active:
+    "active"
+  CM_Polls_info_word_for_closed:
+    "closed"
+  CM_Polls_info_summary:
+    "Poll {Poll_ID} ({Status}) created {Creation_date} by {Author}"
+  CM_Polls_info_possible_choices:
+    "Possible choices:"
+  CM_Polls_info_no_vote_active:
+    "Currently, no votes have been cast in this poll."
+  CM_Polls_info_no_vote_closed:
+    "No votes have been cast in this poll."
+  CM_Polls_info_result_decided:
+    "The result is"
+  CM_Polls_info_result_tied:
+    "The result is a tie"
+  CM_Polls_info_result_blanks:
+    "A majority of blank votes were cast"
+  CM_Polls_info_choices_without_votes:
+    "Choices without a vote:"
 
 
 
@@ -95,32 +277,36 @@ French:
 
   # Commands_manager.IRC_dispatcher()
   CM_Dispatch_invalid_command:
-    "Cette commande est invalide. Consultez « !help »"
+    "Commande invalide. Voir « !help »"
   CM_Dispatch_invalid_subcommand:
-    "Cette sous-commande est invalide. Consultez « !help »"
+    "Sous-commande invalide. Voir « !help »"
+
+  CM_Command_is_public:
+    "Erreur : Cette commande n'est pas disponible en privé."
+  CM_invalid_syntax:
+    "Erreur de syntaxe."
+  CM_Permission_denied:
+    "Autorisation refusée."
 
   # Commands_manager.No_help_for_IRC()
   CM_No_help_irc:
     "La commande « !help » n’est disponible que sur Discord."
 
-  CM_Command_is_public:
-    "Erreur : Cette commande doit être utilisée en public."
-
   # Commands_manager.Roll_Dice()
+  CM_Roll_help_usage:
+    "Erreur : L'argument pour cette commande doit être sous la forme XdY, où X est le nombre de dés, et Y le nombre de faces de chaque dé."
   CM_Roll_error_faces:
     "Erreur : Il n'est pas possible de lancer des dés de plus de 1000 faces."
   CM_Roll_error_rolls:
     "Erreur : Il n'est pas possible de lancer plus de 10000 dés d'un seul coup."
   CM_Roll_summary:
-    "Dé le plus bas {Min} | Valeur moyenne {Average:.1f} | Dé le plus élevé {Max} | Valeur totale {Total}"
-  CM_Roll_help_usage:
-    "Erreur : L'argument pour cette commande doit être sous la forme XdY, où X est le nombre de dés, et Y le nombre de faces de chaque dé."
+    "Min {Min} | Moyenne {Average:.1f} | Max {Max} | Total {Total}"
 
-  # Commands_manager.Straws()
-  CM_Straws_invalid_subcommand:
-    "Cette sous-commande est invalide. Consultez « !help straws »"
+  # Commands_manager !straws
   CM_Straws_help_usage:
-    "Consultez « !help” straws »"
+    "Voir « !help straws »"
+  CM_Straws_invalid_subcommand:
+    "Sous-commande invalide. Voir « !help straws »"
 
   # Commands_manager.Straws_current_state()
   CM_Straws_state_show_participants:
@@ -145,18 +331,18 @@ French:
     "Utilisation : !straws contribute Word"
 
   # Commands_manager.Straws_participants()
+  CM_Straws_participants_help_usage:
+    "Utilisation : !straws participants Participant1 Participant2 …"
   CM_Straws_participants_too_many:
     "Il n'est pas possible de tirer à la courte paille entre plus de 50 participants."
   CM_Straws_participants_result:
     "Les participants au tirage au sort ont été sélectionnés (les noms d'utilisateur dépassant 30 caractères ont été tronqués)."
-  CM_Straws_participants_help_usage:
-    "Utilisation : !straws participants Participant1 Participant2 …"
 
   # Commands_manager.Straws_draw()
   CM_Straws_draw_error_participants:
-    "Il n'y a pas de participants parmi lesquels tirer à la courte paille. Consultez « !help straws »"
+    "Il n'y a pas de participants parmi lesquels tirer à la courte paille. Voir « !help straws »"
   CM_Straws_draw_error_straws:
-    "Mais aucun mot pour la clé commune. Consultez « !help straws »"
+    "Aucun mot pour la clé commune. Voir « !help straws »"
   CM_Straws_draw_display_participants:
     "Les participants qui tirent à la courte paille sont :"
   CM_Straws_draw_display_key:
@@ -164,6 +350,184 @@ French:
   CM_Straws_draw_announce_hashes:
     "Hash pour chaque participant :"
   CM_Straws_draw_lucky_one:
-    Et {Lucky_one} a la chance (?) de tirer la courte paille.
+    "Et {Lucky_one} a la chance (?) de tirer la courte paille."
+
+  # Commands_manager.Straws_reset()
   CM_Straws_reset:
     "La liste des participants et la clé commune ont été supprimées."
+
+  # Commands_manager !polls
+  CM_Polls_invalid_subcommand:
+    "Cette sous-commande est invalide. Consultez « !help straws »"
+  CM_Polls_help_usage:
+    "Consultez « !help” straws »"
+  CM_Polls_error_config_polls:
+    "Erreur : Cette commande nécessite que la section des votes soit activée dans le fichier de configuration."
+  CM_Polls_error_config_users:
+    "Erreur : Cette commande nécessite que la gection des utilisateurs soit activée dans le fichier de configuration."
+  CM_Polls_error_no_polls_in_DB:
+    "Erreur : Il n'y a aucun vote dans la base de données."
+  CM_Polls_error_invalid_id:
+    "Erreur : L'ID de ce vote est invalide : {Poll_ID}."
+  CM_Polls_error_not_found:
+    "Erreur : Le vote {Poll_ID} n'existe pas. Consultez « !polls list »"
+  CM_Polls_error_unregistered_user:
+    "Erreur : Vous devez être inscrit pour pouvoir voter."
+  CM_Polls_error_no_voting_rights:
+    "Erreur : Vous êtes inscrit, mais votre dernier renouvellement n'est pas assez récent pour que vous puissiez voter."
+
+  # Commands_manager.Polls_members()
+  CM_Polls_members_error_membership_one:
+    "{Unregistered} n'est pas membre."
+  CM_Polls_members_error_membership_several:
+    "ne sont pas membres."
+  CM_Polls_members_authorized_vote:
+    "a le droit de vote"
+  CM_Polls_members_not_authorized_vote:
+    "n'a pas le droit de vote"
+  CM_Polls_members_infos_penultimate:
+    "(Dernier renouvellement {Last_renewal} | Avant-dernier pour {Penultimate_year})"
+  CM_Polls_members_infos_registration:
+    "(Dernier renouvellement {Last_renewal} | Première adhésion {Registration})"
+  CM_Polls_members_nobody_can_vote:
+    "Personne n'a le droit de vote."
+
+  # Commands_manager.Polls_add_adhesion()
+  CM_Polls_adhesion_help_usage:
+    "Utilisation : !polls add_adhesion Pseudo Mail_address [YYYYMMDD]"
+  CM_Polls_adhesion_error_mail:
+    "Erreur : Cette adresse mail n'est pas valide."
+  CM_Polls_adhesion_error_date:
+    "Erreur : Cette date n'est pas valide."
+  CM_Polls_adhesion_already_renewed:
+    "Erreur : L'adhésion de {Pseudo} a été déjà renouvelée pour {Date}."
+  CM_Polls_adhesion_renewed:
+    "L'adhésion de {Pseudo} est renouvelée pour {Date}."
+  CM_Polls_adhesion_added:
+    "{Pseudo} a été ajouté avec une date d'adhésion au {Date}."
+
+  # Commands_manager.Polls_create()
+  CM_Polls_create_help_usage:
+    "Utilisation : !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
+  CM_Polls_create_error_one_choice:
+    "Un vote n'est pas nécessaire quand il n'y a qu'une seule option."
+  CM_Polls_create_summary_start:
+    "Vote {Poll_ID}: {Question}"
+  CM_Polls_create_summary_end:
+    "Vous pouvez voter ainsi : !polls vote <Choice_number> [{Poll_ID}]"
+
+  # Commands_manager.Polls_close()
+  CM_Polls_close_error_already_closed:
+    "Erreur : Le vote {Poll_ID} est déjà terminé."
+  CM_Polls_close_error_unauthorized:
+    "Erreur : Le vote {Poll_ID} ne peut être terminé que par son auteur ou un modérateur."
+  CM_Polls_close_success:
+    "Le vote {Poll_ID} a été clôturé par {User}."
+
+  # Commands_manager.Polls_delete()
+  CM_Polls_delete_error_already_deleted:
+    "Erreur : Le vote {Poll_ID} est introuvable ; il a peut-être déjà été supprimé."
+  CM_Polls_delete_error_unauthorized:
+    "Erreur : Seul l'auteur ou un modérateur peut supprimer un vote."
+  CM_Polls_delete_success:
+    "{User} a supprimé le vote {Poll_ID} ({Question})."
+
+  # Commands_manager.Polls_vote()
+  CM_Polls_vote_help_usage:
+    "Utilisation : !polls vote <Choice_number> [Poll_ID]"
+  CM_Polls_vote_error_no_delegation:
+    "Erreur : {Claimed_proxy_giver} n'a pas délégué sa procuration à {User}."
+  CM_Polls_vote_error_invalid_input:
+    "Erreur : Cet ID de vote or numéro de choix est invalide. Voir !polls list active"
+  CM_Polls_vote_error_invalid_choice_vote_not_specified:
+    "Erreur : Ce numéro de choix est invalide. Voir !polls info"
+  CM_Polls_vote_error_closed:
+    "Erreur : Le sondage {Poll_ID} est fermé. Voir !polls list active"
+  CM_Polls_vote_error_invalid_choice_vote_specified:
+    "Erreur : Ce numéro de choix est invalide. Voir !polls info {Poll_ID}"
+  CM_Polls_vote_revoked_proxy:
+    "Votre vote a révoqué la procuration déléguée à {Proxy_holder}."
+  CM_Polls_vote_success_for_proxy:
+    "Vote {Poll_ID} : Vous avez voté « {Vote_text} » avec la procuration de {Proxy_giver}."
+  CM_Polls_vote_success:
+    "Vote {Poll_ID} : Vous avez voté « {Vote_text} »."
+
+  # Commands_manager.Polls_unvote()
+  CM_Polls_unvote_help_usage:
+    "Utilisation : !polls unvote [Poll_ID]"
+  CM_Polls_unvote_error_not_voted:
+    "Erreur : Vous ne pouvez pas retirer un vote que vous n'avez pas exprimé."
+  CM_Polls_unvote_success:
+    "Le vote de {User} a été retiré du vote {Poll_ID}."
+
+  # Commands_manager.Polls_proxy_delegate()
+  CM_Polls_proxdeleg_error_self-delegation:
+    "Erreur : Quelqu'un ne peut pas déléguer une procuration à lui-même."
+  CM_Polls_proxdeleg_error_unregistered_holder:
+    "Erreur : Il n'est pas possible de déléguer une procuration à {Proxy_holder}, qui n'est pas inscrit."
+  CM_Polls_proxdeleg_error_holder_no_voting_rights:
+    "Erreur : Il n'est pas possible de déléguer une procuration à {Proxy_holder}, qui n'a pas le droit de vote."
+  CM_Polls_proxdeleg_error_unauthorized:
+    "Erreur : Seuls les modérateurs peuvent déléguer la procuration d'une autre personne."
+  CM_Polls_proxdeleg_error_already_delegated:
+    "Vous avez déjà délégué votre procuration à {Proxy_holder}."
+  CM_Polls_proxdeleg_error_number_max:
+    "Une personne ne peut avoir plus de trois procurations, et {Proxy_holder} a atteint la limite."
+  CM_Polls_proxdeleg_success_beginning_sentence:
+    "{User} a délégué sa procuration à {Proxy_holder}"
+  CM_Polls_proxdeleg_success_change_holder:
+    "(précédemment à {Old_holder})"
+  CM_Polls_proxdeleg_success_total_unsubdelegation:
+    "cependant {User} avait reçu des procurations qui ne peuvent pas être subdéléguées, car désormais {Proxy_holder} a atteint la limite de trois procurations"
+  CM_Polls_proxdeleg_success_subdelegation:
+    "et les procurations suivantes ont été subdéléguées"
+  CM_Polls_proxdeleg_success_partial_unsubdelegation:
+    "tandis que les suivantes n'ont pas pu l'être"
+
+  # Commands_manager.Polls_proxy()
+  CM_Polls_proxy_help_usage:
+    "Utilisation : !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"
+  CM_Polls_proxinfo_error_no_proxies_delegated:
+    "Pour l'instant, aucune procuration n'a été déléguée."
+  CM_Polls_proxinfo_success_list:
+    "{Member} a reçu les procurations suivantes :"
+  CM_Polls_proxinfo_error_no_proxies_received:
+    "{Member} n'a reçu aucune procuration."
+  CM_Polls_proxrev_error_no_proxies_given:
+    "{Member_revoking} n'a pas délégué sa procuration."
+  CM_Polls_proxrev_error_unauthorized:
+    "Seuls le mandant, le mandataire ou les modérateurs peuvent révoquer une procuration."
+  CM_Polls_proxrev_success_all:
+    "Toutes les procurations ont été révoquées."
+  CM_Polls_proxrev_success_one:
+    "{Member_revoking} ne délègue plus sa procuration à {Handler_to_revoke}."
+
+  # Commands_manager.Polls_list()
+  CM_Polls_list_help_usage:
+    "Utilisation : !polls list [Number] | !polls list [active/closed] [Number]"
+
+  # Commands_manager.Polls_info()
+  CM_Polls_info_help_usage:
+    "Utilisation : !polls info [Poll_ID]"
+  CM_Polls_info_word_for_blanks:
+    "Blanc"
+  CM_Polls_info_word_for_active:
+    "en cours"
+  CM_Polls_info_word_for_closed:
+    "terminé"
+  CM_Polls_info_summary:
+    "Vote {Poll_ID} ({Status}) créé le {Creation_date} par {Author}"
+  CM_Polls_info_possible_choices:
+    "Choix possibles :"
+  CM_Polls_info_no_vote_active:
+    "Pour l'instant, aucune voix n'a été exprimée pour ce vote."
+  CM_Polls_info_no_vote_closed:
+    "Aucune voix n'a été exprimée lors de ce vote."
+  CM_Polls_info_result_decided:
+    "Le résultat est"
+  CM_Polls_info_result_tied:
+    "Le résultat est une égalité"
+  CM_Polls_info_result_blanks:
+    "Une majorité de votes blancs a été exprimée"
+  CM_Polls_info_choices_without_votes:
+    "Choix sans vote :"
