@@ -108,6 +108,8 @@ English:
     "Error: You must be registered to vote."
   CM_Polls_error_no_voting_rights:
     "Error: You are registered, but your last renewal is not recent enough for you to vote."
+  CM_Polls_word_for_blanks:
+    "Blank"
 
   # Commands_manager.Polls_members()
   CM_Polls_members_error_membership_one:
@@ -144,6 +146,10 @@ English:
     "Usage: !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
   CM_Polls_create_error_one_choice:
     "A vote is not necessary when there is only one option."
+  CM_Polls_create_default_choice_yes:
+    "Yes"
+  CM_Polls_create_default_choice_no:
+    "No"
   CM_Polls_create_summary_start:
     "Poll {Poll_ID}: {Question}"
   CM_Polls_create_summary_end:
@@ -242,8 +248,6 @@ English:
   # Commands_manager.Polls_info()
   CM_Polls_info_help_usage:
     "Usage: !polls info [Poll_ID]"
-  CM_Polls_info_word_for_blanks:
-    "Blank"
   CM_Polls_info_word_for_active:
     "active"
   CM_Polls_info_word_for_closed:
@@ -375,6 +379,8 @@ French:
     "Erreur : Vous devez être inscrit pour pouvoir voter."
   CM_Polls_error_no_voting_rights:
     "Erreur : Vous êtes inscrit, mais votre dernier renouvellement n'est pas assez récent pour que vous puissiez voter."
+  CM_Polls_word_for_blanks:
+    "Blanc"
 
   # Commands_manager.Polls_members()
   CM_Polls_members_error_membership_one:
@@ -411,6 +417,10 @@ French:
     "Utilisation : !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
   CM_Polls_create_error_one_choice:
     "Un vote n'est pas nécessaire quand il n'y a qu'une seule option."
+  CM_Polls_create_default_choice_yes:
+    "Oui"
+  CM_Polls_create_default_choice_no:
+    "Non"
   CM_Polls_create_summary_start:
     "Vote {Poll_ID}: {Question}"
   CM_Polls_create_summary_end:
@@ -509,8 +519,6 @@ French:
   # Commands_manager.Polls_info()
   CM_Polls_info_help_usage:
     "Utilisation : !polls info [Poll_ID]"
-  CM_Polls_info_word_for_blanks:
-    "Blanc"
   CM_Polls_info_word_for_active:
     "en cours"
   CM_Polls_info_word_for_closed:

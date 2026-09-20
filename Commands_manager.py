@@ -853,13 +853,13 @@ async def Polls_create(Targets, User, Arguments, From_Discord=False):
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
+	Default_choices = [
+			Localized_replies["CM_Polls_create_default_choice_yes"],
+			Localized_replies["CM_Polls_create_default_choice_no"]
+	]
 	if "§" in Arguments:
 		Question, Choices = Arguments.split("§", 1)
 		Question = Question.strip()
-	else:
-		Question = Arguments
-		Choices = None
-	if Choices and ";" in Choices:
 		List_of_choices = []
 		Choices = Choices.split(";")
 		for Choice in Choices:
@@ -873,13 +873,16 @@ async def Polls_create(Targets, User, Arguments, From_Discord=False):
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
+		if not Choices:
+			Choices = Default_choices
 	else:
-		Choices = ["Yes", "No"]
+		Question = Arguments
+		Choices = Default_choices
 	Poll_ID = DB_manager.Polls_create(Polls_table, User, Question, Choices)
 	Output += Localized_replies["CM_Polls_create_summary_start"].format(
 			Poll_ID=Poll_ID, Question=Question
 	)
-	Output += "\n[#0 Blank] ["
+	Output += "\n[#0 " + Localized_replies["CM_Polls_word_for_blanks"] + "] ["
 	for Index, Choice in enumerate(Choices):
 		Output += f"#{Index + 1} {Choice}"
 		if Index + 1 < len(Choices):
@@ -1214,7 +1217,7 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 	Recorded_in_DB = False
 	Question = Infos_poll["Question"]
 	if Choice == 0:
-		Vote_text = "Blank"
+		Vote_text = Localized_replies["CM_Polls_word_for_blanks"]
 	else:
 		Vote_text = Choices[Choice]
 	if Proxy_giver:
@@ -1736,7 +1739,7 @@ async def Polls_info(Targets, User, Poll_ID=None, From_Discord=False):
 	Creation_date = Infos_poll["Creation_date"].astimezone(Timezone).strftime("%d/%m/%Y")
 	Choices = Infos_poll["Choices"]
 	# Blank votes will be displayed after the votes
-	Choices[0] = Localized_replies["CM_Polls_info_word_for_blanks"]
+	Choices[0] = Localized_replies["CM_Polls_word_for_blanks"]
 	if Infos_poll["Active"]:
 		Status = Localized_replies["CM_Polls_info_word_for_active"]
 	else:
