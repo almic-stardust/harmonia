@@ -71,18 +71,19 @@ async def on_command(Context):
 async def on_error(event, *args, **kwargs):
 	traceback.print_exc()
 
-# Global command error handler, so that errors are visible instead of being silently ignored
+# Global command error handler
 @bot.event
 async def on_command_error(Context, Error):
-	# Send the error to Discord
-	await Context.send(f"Command error: {Error}")
-	# If is was an unexpected exception, print the traceback on the console
 	Expected_command_errors = (
 			commands.CommandNotFound, commands.CommandOnCooldown, commands.CheckFailure,
 			commands.MissingPermissions, commands.BotMissingPermissions,
 			commands.MissingRequiredArgument, commands.BadArgument
 	)
-	if not isinstance(Error, Expected_command_errors):
+	# Expected errors are send to Discord, so that they’re visible instead of being silently ignored
+	if isinstance(Error, Expected_command_errors):
+		await Context.send(f"Command error: {Error}")
+	# For unexpected exception, print the traceback on the console
+	else:
 		print(f"[Discord_m] Unexpected command error:")
 		traceback.print_exception(type(Error), Error, Error.__traceback__)
 	# Relay the error to IRC
@@ -165,6 +166,7 @@ async def Delete_expired_IRC_messages_from_Discord():
 			Date_creation = Row["creation_date"].replace(tzinfo=UTC)
 			Message_duration = Now - Date_creation
 			if Message_duration > datetime.timedelta(days=Expiration_period):
+				# See comment in Gears.Get_target_chans()
 				Chan = bot.get_channel(Row["chan_id"])
 				if not Chan:
 					Chan = await bot.fetch_channel(Row["chan_id"])
@@ -291,8 +293,6 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 			if IRC_instance:
 				await IRC_instance.Relay_Discord_message(Bridge["IRC_chan"], Author_name, Message)
 	else:
-		# get_channel() gets the channel object from the bot’s cache. fetch_channel() gets it from
-		# Discord, meaning a network request
 		Chan = bot.get_channel(Bridge["Discord_chan"])
 		if not Chan:
 			Chan = await bot.fetch_channel(Bridge["Discord_chan"])

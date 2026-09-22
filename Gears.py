@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import discord
 import asyncio
 import os
 import re
@@ -166,12 +167,21 @@ def Determine_language(User):
 # Chans
 ###############################################################################
 
-def Get_target_chans(Discord_chan):
-	Targets = {}
-	Targets["Discord_chan"] = Discord_chan
-	Bridge = Discord_manager.Get_bridge_by_Discord_chan(Discord_chan)
-	if Bridge:
-		Targets["IRC_chan"] = Bridge["IRC_chan"]
+async def Get_target_chans(Discord_chan_ID):
+	Targets = {
+			"Discord_chan": None,
+			"IRC_chan": None
+	}
+	# get_channel() gets the channel object from the bot’s cache. fetch_channel() gets it from
+	# Discord, meaning a network request
+	Targets["Discord_chan"] = Discord_manager.bot.get_channel(Discord_chan_ID)
+	if not Targets["Discord_chan"]:
+		Targets["Discord_chan"] = await Discord_manager.bot.fetch_channel(Discord_chan_ID)
+	# Only look for an IRC chan if it’s not a Discord DM
+	if IRC_enabled and not isinstance(Targets["Discord_chan"], discord.DMChannel):
+		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Discord_chan_ID)
+		if Bridge:
+			Targets["IRC_chan"] = Bridge["IRC_chan"]
 	return Targets
 
 ###############################################################################
@@ -180,15 +190,11 @@ def Get_target_chans(Discord_chan):
 
 async def Send(Targets, Message, Message_IRC=None):
 	"""Send a message both on Discord and IRC (if enabled)"""
-
 	if not Targets["Discord_chan"]:
 		print(f"[Gears] Error for Send(): no Discord chan to send to.")
-	Discord_chan = Discord_manager.bot.get_channel(Targets["Discord_chan"])
-	if not Discord_chan:
-		Discord_chan = await Discord_manager.bot.fetch_channel(Targets["Discord_chan"])
+		return
 	for Fragment in Discord_manager.Split_message(Message):
-		await Discord_chan.send(Fragment)
-
+		await Targets["Discord_chan"].send(Fragment)
 	if IRC_enabled and Targets["IRC_chan"]:
 		IRC_instance = IRC_manager.GCI()
 		if IRC_instance:

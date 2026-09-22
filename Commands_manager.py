@@ -200,7 +200,7 @@ async def roll(Context, Dice):
 	Parameters
 	----------
 	Dice : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Roll_Dice(Targets, User, Dice, True)
 
@@ -259,7 +259,7 @@ async def Straws_current_state(Targets, User, From_Discord=False):
 async def straws(Context):
 	"""Draw straws among a group, with a reproducible pseudo-randomness."""
 	if Context.invoked_subcommand is None:
-		Targets = Gears.Get_target_chans(Context.channel.id)
+		Targets = await Gears.Get_target_chans(Context.channel.id)
 		User = Context.author.display_name
 		# When there’s something after “!straws” that hasn’t been handled by the command processor,
 		# it means it’s not a valid subcommand
@@ -290,7 +290,7 @@ async def Straws_help(Targets, User, From_Discord=False):
 @straws.command(name="help")
 async def Discord_straws_help(Context):
 	"""Placeholder redirecting towards !help straws"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Straws_help(Targets, User, True)
 
@@ -343,7 +343,7 @@ async def Discord_straws_join(Context, *, Word):
 	----------
 	Word : str"""
 	# A straw is a word, or several that will be concatenated, in both cases up to 30 letters
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Straws_add(Targets, User, "join", Word, Context)
 
@@ -363,7 +363,7 @@ async def Discord_straws_contribute(Context, *, Word):
 	Parameters
 	----------
 	Word : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Straws_add(Targets, User, "contribute", Word, Context)
 
@@ -405,7 +405,7 @@ async def Discord_straws_participants(Context, *, Participants):
 	Parameters
 	----------
 	Participants : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -468,7 +468,7 @@ async def Straws_draw(Targets, User, From_Discord=False):
 @straws.command(name="draw")
 async def Discord_straws_draw(Context):
 	"""Pull a straw from the bag."""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -495,7 +495,7 @@ async def Straws_reset(Targets, User, From_Discord=False):
 @straws.command(name="reset")
 async def Discord_straws_reset(Context):
 	"""Reset the draw (delete participants and straws)."""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -512,7 +512,7 @@ async def Discord_straws_reset(Context):
 async def polls(Context):
 	"""Organize votes and participate in them."""
 	if Context.invoked_subcommand is None:
-		Targets = Gears.Get_target_chans(Context.channel.id)
+		Targets = await Gears.Get_target_chans(Context.channel.id)
 		User = Context.author.display_name
 		# When there’s something after “!polls” that hasn’t been handled by the command processor,
 		# it means it’s not a valid subcommand
@@ -547,7 +547,7 @@ async def Polls_help(Targets, User, From_Discord=False):
 @polls.command(name="help")
 async def Discord_polls_help(Context):
 	"""Placeholder redirecting towards !help polls"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Polls_help(Targets, User, True)
 
@@ -683,7 +683,7 @@ async def Discord_polls_members(Context, *, List_of_users=None):
 	Parameters
 	----------
 	List_of_users : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Polls_members(Targets, User, List_of_users, True)
 
@@ -824,7 +824,7 @@ async def Discord_polls_adhesion(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -902,7 +902,7 @@ async def Discord_polls_create(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -991,7 +991,7 @@ async def Discord_polls_close(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -1080,7 +1080,7 @@ async def Discord_polls_delete(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : int"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -1263,7 +1263,7 @@ async def Discord_polls_vote(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -1339,7 +1339,7 @@ async def Discord_polls_unvote(Context, Poll_ID):
 	Parameters
 	----------
 	Poll_ID : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -1593,7 +1593,7 @@ async def Discord_polls_proxy(Context, *, Arguments):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	if Context.guild is None:
 		Language = Gears.Determine_language(User)
@@ -1682,7 +1682,7 @@ async def Discord_polls_list(Context, *, Arguments=None):
 	Parameters
 	----------
 	Arguments : str"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Polls_list(Targets, User, Arguments, True)
 
@@ -1847,6 +1847,6 @@ async def Discord_polls_info(Context, Poll_ID=None):
 	Parameters
 	----------
 	Poll_ID : int"""
-	Targets = Gears.Get_target_chans(Context.channel.id)
+	Targets = await Gears.Get_target_chans(Context.channel.id)
 	User = Context.author.display_name
 	await Polls_info(Targets, User, Poll_ID, True)
