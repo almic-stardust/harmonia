@@ -58,6 +58,10 @@ async def Init_webhooks():
 async def on_ready():
 	await Gears.Start_bot()
 
+@bot.event
+async def on_command(Context):
+	print(f"Running command: {Context.command}")
+
 # Exceptions in the event handlers of discord.py are swallowed, unless explicitly logged.
 # As Discord bots are long-running services, it wouldn’t be acceptable for one exception in one
 # event to crash or disconnect the bot, or require it to be restarted. That’s why discord.py
@@ -67,20 +71,27 @@ async def on_ready():
 async def on_error(event, *args, **kwargs):
 	traceback.print_exc()
 
-@bot.event
-async def on_command(Context):
-	print(f"Running command: {Context.command}")
-
 # Global command error handler, so that errors are visible instead of being silently ignored
 @bot.event
 async def on_command_error(Context, Error):
+	# Send the error to Discord
 	await Context.send(f"Command error: {Error}")
+	# If is was an unexpected exception, print the traceback on the console
+	Expected_command_errors = (
+			commands.CommandNotFound, commands.CommandOnCooldown, commands.CheckFailure,
+			commands.MissingPermissions, commands.BotMissingPermissions,
+			commands.MissingRequiredArgument, commands.BadArgument
+	)
+	if not isinstance(Error, Expected_command_errors):
+		print(f"[Discord_m] Unexpected command error:")
+		traceback.print_exception(type(Error), Error, Error.__traceback__)
+	# Relay the error to IRC
 	if not IRC_enabled:
 		return
 	Bridge = Get_bridge_by_Discord_chan(Context.channel.id)
 	if not Bridge:
 		return
-	IRC_chan = Bridge["IRC_chan"]
+	IRC_chan = Bridge.get("IRC_chan")
 	if not IRC_chan:
 		return
 	IRC_instance = IRC_manager.GCI()
