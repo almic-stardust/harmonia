@@ -155,12 +155,13 @@ def Get_Discord_pseudo(User):
 	return Author_name
 
 def Determine_language(User):
-	Language = Config["Users"]["Default_language"]
+	Language = Config["Localization"]["Default_language"]
 	if Users_enabled:
 		# Don’t add non-essential circular dependencies to this module
 		from DB_manager import Users_check_presence
 		User_ID = Users_check_presence(Users_table, {"Pseudo": User})
-		Language = Users[User_ID]["Language"]
+		if User_ID and Users[User_ID]["Language"] in Config["Localization"]["Available_languages"]:
+			Language = Users[User_ID]["Language"]
 	return Language
 
 ###############################################################################

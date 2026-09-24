@@ -52,7 +52,10 @@ Optional = {
 	),
 	"Users": (
 		"DB_table",
+	),
+	"Localization": (
 		"Default_language",
+		"Available_languages",
 	),
 	"Polls": (
 		"DB_table",

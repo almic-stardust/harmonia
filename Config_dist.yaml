@@ -26,15 +26,20 @@ Mail:
 
 History:
   Enable:                 True/False
+  # When the bot is added to a new server, it saves the existing history
+  Sync_old:               True/False
   DB_table:               "project_history"
   Storage_folder:         "/path/to/bot_files"
   Storage_url:            "https://domain.tld/bot_files"
-  # When the bot is added to a new server, it saves the existing history
-  Sync_old:               True/False
 
 Users:
   DB_table:               "project_users"
-  Default_language:       "French"
+
+Localization:
+  Default_language: "English"
+  Available_languages:
+    - English
+    - French
 
 Polls:
   DB_table:               "project_polls"

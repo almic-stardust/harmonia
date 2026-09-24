@@ -692,7 +692,7 @@ def Users_manage_user(Table, Action, Infos_user):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	if "Language" not in Infos_user:
-		Infos_user["Language"] = Config["Users"]["Default_language"]
+		Infos_user["Language"] = Config["Localization"]["Default_language"]
 	Dates = {}
 	for Year, Dates_for_year in Infos_user["Renewals"].items():
 		Dates[Year] = []
