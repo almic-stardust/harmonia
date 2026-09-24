@@ -208,7 +208,11 @@ async def Reconcile_downloaded_files():
 			return
 		if not os.path.exists(Other_sources_folder):
 			print(f"[Discord_m] Creating the folder for other sources attachments.")
-			os.makedirs(Other_sources_folder)
+			try:
+				os.makedirs(Other_sources_folder, exist_ok=True)
+			except OSError as Error:
+				print(f"[Discord_m] Error: Failed to create {Other_sources_folder}: {Error}")
+				sys.exit(1)
 		# list() prevents runtime modification errors
 		for Attachment_id, Filenames_map in list(Map_pending_downloads.items()):
 			if not Filenames_map or "Original_filename" not in Filenames_map \
@@ -410,7 +414,11 @@ def Register_destination_in_MPD(Attachment_id, Destination_filename):
 async def Get_avatar_filename(Author_name, Discord_ID=None):
 	Avatars_folder = os.path.join(Config["History"].get("Storage_folder"), "avatars")
 	if not os.path.exists(Avatars_folder):
-		os.makedirs(Avatars_folder)
+		try:
+			os.makedirs(Avatars_folder, exist_ok=True)
+		except OSError as Error:
+			print(f"[Discord_m] Error: Failed to create {Avatars_folder}: {Error}")
+			sys.exit(1)
 	Filename = f"{Author_name}.png"
 	Avatar_path = os.path.join(Avatars_folder, Filename)
 	if os.path.exists(Avatar_path):

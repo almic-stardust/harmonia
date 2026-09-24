@@ -33,7 +33,11 @@ async def Download_files(Table, Storage_folder, Files_to_download, Max_size, Che
 	Downloaded_filenames = []
 	Oversized_files = []
 	if not os.path.exists(Storage_folder):
-		os.makedirs(Storage_folder)
+		try:
+			os.makedirs(Storage_folder, exist_ok=True)
+		except OSError as Error:
+			print(f"[Discord_m] Error: Failed to create {Storage_folder}: {Error}")
+			sys.exit(1)
 	async with aiohttp.ClientSession() as Session:
 		for File_to_download in Files_to_download:
 			try:
