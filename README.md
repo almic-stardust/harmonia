@@ -6,31 +6,31 @@ A Discord bot that saves history, display it on a website, and provides a bridge
 
 The different sections of the bot are separated into modules.
 
-Harmonia.py  
-The script used to start the bot.
+Commands\_manager.py  
+Manages commands issued by users.
 
 Config\_manager.py  
 Loads the configuration and localizations.
 
-Gears.py  
-A set of functions, either core to the bot’s operations, or used by multiple modules.
-
-Discord\_related.py  
-Functions specific to Discord, like handling events concerning sent/deleted messages (on\_message/on\_raw\_message\_delete).
-
 DB\_manager.py  
 Manages database-related operations.
 
-History.py  
-Manages history-related operations.
+Discord\_manager.py  
+Functions specific to Discord, like handling events concerning sent/deleted messages (on\_message/on\_raw\_message\_delete).
 
 display\_history/  
 Everything related to the web display of the history.
 
-Commands\_manager.py  
-Manages commands issued by users.
+Gears.py  
+A set of functions, either core to the bot’s operations, or used by multiple modules.
 
-IRC\_related.py  
+Harmonia.py  
+The script used to start the bot.
+
+History.py  
+Manages history-related operations.
+
+IRC\_manager.py  
 Functions specific to IRC, using pydle.
 
 # Installation
@@ -129,7 +129,6 @@ For performance, create composite indexes in the DB:
 
 	CREATE INDEX Index_newest_messages ON history_sync (server_id, chan_id, newest_message_id);
 
-
 #### Last steps
 
 	% git https://github.com/almic-stardust/harmonia
@@ -140,8 +139,10 @@ Adjust the configuration to your needs:
 Config\_dist.yaml  
 Example of configuration file to modify. Rename it as Config.yaml
 
+The features are optional. If you do not need history, IRC, users or polls management, simply remove these sections from your Config.yaml
+
 Localization\_dist.yaml  
-Example of localization file. You can adjust it, then rename it as Localization.yaml
+Example of localization file, to be adapted if necessary. Rename it as Localization.yaml
 
 Finally, you can start the bot:
 

@@ -24,6 +24,12 @@ Mail:
   Server:                 ""
   Bot_address:            ""
 
+Localization:
+  Default_language: "English"
+  Available_languages:
+    - English
+    - French
+
 History:
   Enable:                 True/False
   # When the bot is added to a new server, it saves the existing history
@@ -34,12 +40,6 @@ History:
 
 Users:
   DB_table:               "project_users"
-
-Localization:
-  Default_language: "English"
-  Available_languages:
-    - English
-    - French
 
 Polls:
   DB_table:               "project_polls"
