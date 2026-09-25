@@ -185,7 +185,7 @@ English:
   CM_Polls_vote_error_invalid_choice_vote_specified:
     "Error: Invalid choice number. See !polls info {Poll_ID}"
   CM_Polls_vote_revoked_proxy:
-    "Your vote has revoked the proxy delegate to {Proxy_holder}."
+    "Your vote has revoked the proxy delegate to {Handler_to_revoke}."
   CM_Polls_vote_success_for_proxy:
     "Poll {Poll_ID}: You voted “{Vote_text}” with the proxy of {Proxy_giver}."
   CM_Polls_vote_success:
@@ -456,7 +456,7 @@ French:
   CM_Polls_vote_error_invalid_choice_vote_specified:
     "Erreur : Ce numéro de choix est invalide. Voir !polls info {Poll_ID}"
   CM_Polls_vote_revoked_proxy:
-    "Votre vote a révoqué la procuration déléguée à {Proxy_holder}."
+    "Votre vote a révoqué la procuration déléguée à {Handler_to_revoke}."
   CM_Polls_vote_success_for_proxy:
     "Vote {Poll_ID} : Vous avez voté « {Vote_text} » avec la procuration de {Proxy_giver}."
   CM_Polls_vote_success:

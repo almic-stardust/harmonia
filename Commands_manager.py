@@ -853,31 +853,28 @@ async def Polls_create(Targets, User, Arguments, From_Discord=False):
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
 		return
-	Default_choices = [
+	Choices = [
 			Localized_replies["CM_Polls_create_default_choice_yes"],
 			Localized_replies["CM_Polls_create_default_choice_no"]
 	]
 	if "§" in Arguments:
-		Question, Choices = Arguments.split("§", 1)
+		Question, Choices_from_arguments = Arguments.split("§", 1)
 		Question = Question.strip()
-		List_of_choices = []
-		Choices = Choices.split(";")
-		for Choice in Choices:
+		Parsed_choices = []
+		for Choice in Choices_from_arguments.split(";"):
 			Choice = Choice.strip()
 			if Choice:
-				List_of_choices.append(Choice)
-		Choices = List_of_choices
-		if len(Choices) == 1:
+				Parsed_choices.append(Choice)
+		if len(Parsed_choices) == 1:
 			Output = Localized_replies["CM_Polls_create_error_one_choice"]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
-		if not Choices:
-			Choices = Default_choices
+		if Parsed_choices:
+			Choices = Parsed_choices
 	else:
 		Question = Arguments
-		Choices = Default_choices
 	Poll_ID = DB_manager.Polls_create(Polls_table, User, Question, Choices)
 	Output += Localized_replies["CM_Polls_create_summary_start"].format(
 			Poll_ID=Poll_ID, Question=Question
@@ -1208,10 +1205,12 @@ async def Polls_vote(Targets, User, Arguments, Context=None):
 			if Proxy_given_to_holder == User:
 				Handler_to_revoke = Proxy_holder
 	if Handler_to_revoke:
-		del Proxies[Proxy_holder][User]
-		if len(Proxies[Proxy_holder]) == 0:
-			del Proxies[Proxy_holder]
-		Output += Localized_replies["CM_Polls_vote_revoked_proxy"].format(Proxy_holder=Proxy_holder)
+		del Proxies[Handler_to_revoke][User]
+		if len(Proxies[Handler_to_revoke]) == 0:
+			del Proxies[Handler_to_revoke]
+		Output += Localized_replies["CM_Polls_vote_revoked_proxy"].format(
+				Handler_to_revoke=Handler_to_revoke
+		)
 		await Gears.Send_DM(User, Context, Output)
 
 	Recorded_in_DB = False
