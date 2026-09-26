@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import discord
+from discord.ext import tasks
 import asyncio
 import os
 import re
@@ -19,9 +20,6 @@ if History_enabled:
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
-	# Don’t add non-essential circular dependencies to this module
-	from DB_manager import Users_fetch_users
-	Users = Users_fetch_users(Users_table)
 
 ###############################################################################
 # Startup
@@ -42,18 +40,21 @@ async def Start_bot():
 		if IRC_task is None or IRC_task.done():
 			IRC_task = asyncio.create_task(IRC_manager.Run_IRC_loop())
 	# Start background tasks
-	if IRC_enabled:
-		if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
-			if History_enabled and Users_enabled:
-				Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
 	if History_enabled:
-		if not Discord_manager.Reconcile_downloaded_files.is_running():
+		if IRC_enabled and not Discord_manager.Reconcile_downloaded_files.is_running():
 			Discord_manager.Reconcile_downloaded_files.start()
 		if Config["History"]["Sync_old"]:
 			# Don’t add non-essential circular dependencies to this module
 			from History import Synchronization
 			if not Synchronization.is_running():
 				Synchronization.start(History_table)
+	if Users_enabled:
+		if not Synchronize_users.is_running():
+			Synchronize_users.start()
+	if IRC_enabled:
+		if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
+			if History_enabled and Users_enabled:
+				Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
 
 ###############################################################################
 # Shutdown
@@ -68,7 +69,7 @@ async def Stop_bot():
 
 	# Stop background tasks
 	if History_enabled:
-		if Discord_manager.Reconcile_downloaded_files.is_running():
+		if IRC_enabled and Discord_manager.Reconcile_downloaded_files.is_running():
 			Discord_manager.Reconcile_downloaded_files.cancel()
 			try:
 				await Discord_manager.Reconcile_downloaded_files.get_task()
@@ -87,6 +88,15 @@ async def Stop_bot():
 					pass
 				except Exception as Error:
 					print(f"Error while stopping history synchronization: {Error}")
+	if Users_enabled:
+		if Synchronize_users.is_running():
+			Synchronize_users.cancel()
+			try:
+				await Synchronize_users.get_task()
+			except asyncio.CancelledError:
+				pass
+			except Exception as Error:
+				print(f"Error while stopping users synchronization: {Error}")
 	if IRC_enabled:
 		if Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
 			Discord_manager.Delete_expired_IRC_messages_from_Discord.cancel()
@@ -96,23 +106,21 @@ async def Stop_bot():
 				pass
 			except Exception as Error:
 				print(f"Error while stopping Delete_expired_IRC_messages_from_Discord(): {Error}")
-
-	# Stop IRC loop
-	if IRC_enabled:
-		global IRC_task
-		# Disconnect from IRC
-		IRC_instance = IRC_manager.Get_instance()
-		if IRC_instance:
-			try:
-				await IRC_instance.Shutdown_IRC()
-			except Exception as Error:
-				print(f"[IRC] Error during shutdown: {Error}")
-		# Wait for the IRC loop to exit cleanly
-		if IRC_task:
-			try:
-				await IRC_task
-			except Exception as Error:
-				print(f"[IRC] Error during task loop exit: {Error}")
+		# Stop IRC loop
+			global IRC_task
+			# Disconnect from IRC
+			IRC_instance = IRC_manager.Get_instance()
+			if IRC_instance:
+				try:
+					await IRC_instance.Shutdown_IRC()
+				except Exception as Error:
+					print(f"[IRC] Error during shutdown: {Error}")
+			# Wait for the IRC loop to exit cleanly
+			if IRC_task:
+				try:
+					await IRC_task
+				except Exception as Error:
+					print(f"[IRC] Error during task loop exit: {Error}")
 
 	# Finally, disconnect from Discord
 	await Discord_manager.Shutdown_Discord()
@@ -135,6 +143,15 @@ async def Wait_for_events(*Events):
 ###############################################################################
 # Users
 ###############################################################################
+
+# Prevent Get_Discord_pseudo() and Determine_language() from becoming out of sync with the DB
+@tasks.loop(hours=24)
+async def Synchronize_users():
+	global Users
+	# Don’t add non-essential circular dependencies to this module
+	from DB_manager import Users_fetch_users
+	Users = await asyncio.to_thread(Users_fetch_users, Users_table)
+	print("[Gears] Users dictionary synchronized.")
 
 def Get_Discord_pseudo(User):
 	# The bot is replying to someone, or saying something on its own
