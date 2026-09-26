@@ -79,13 +79,14 @@ async def IRC_dispatcher(Bridge, User, Text):
 			"polls":	(Infos_polls,					True),
 	}
 
+	Targets = await Gears.Get_target_chans(Bridge["Discord_chan"])
 	Language = Gears.Determine_language(User)
 	Localized_replies = L10n[Language]
 	Parts = Text.split(maxsplit=1)
 	Command = Parts[0].replace("!", "")
 	Remainder = Parts[1] if len(Parts) > 1 else None
 	if Command not in Commands:
-		await Gears.Send(Bridge, Localized_replies["CM_Dispatch_invalid_command"])
+		await Gears.Send(Targets, Localized_replies["CM_Dispatch_invalid_command"])
 		return
 	Infos_command, With_args = Commands[Command]
 	# Commands without subcommands
@@ -96,20 +97,20 @@ async def IRC_dispatcher(Bridge, User, Text):
 		# Command that accepts subcommands, but was called without one this time
 		if not Remainder:
 			Function = Infos_command["Direct_call"]
-			await Function(Bridge, User)
+			await Function(Targets, User)
 			return
 		Infos_subcommands = Infos_command["Subcommands"]
 		Parts = Remainder.split(maxsplit=1)
 		Subcommand_called = Parts[0]
 		Arguments = Parts[1] if len(Parts) > 1 else None
 		if Subcommand_called not in Infos_subcommands:
-			await Gears.Send(Bridge, Localized_replies["CM_Dispatch_invalid_subcommand"])
+			await Gears.Send(Targets, Localized_replies["CM_Dispatch_invalid_subcommand"])
 			return
 		Function, With_args = Infos_subcommands[Subcommand_called]
 	if With_args:
-		await Function(Bridge, User, Arguments)
+		await Function(Targets, User, Arguments)
 	else:
-		await Function(Bridge, User)
+		await Function(Targets, User)
 
 ###############################################################################
 # Misc
