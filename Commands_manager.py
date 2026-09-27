@@ -1513,27 +1513,32 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 		await Polls_proxy_delegate(Targets, Context, User, Is_moderator, Proxy_holder, Proxy_giver)
 
 	elif Action == "info":
-		if len(Parts) != 2:
-			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
-			await Gears.Send(Targets, Output)
-			return
-		Member = Parts[1]
-		if Member == "all":
+		# “!polls proxy info” displays all proxies
+		if len(Parts) == 1:
 			if len(Proxies) > 0:
 				for Proxy_holder in Proxies:
-					Output += f"{Proxy_holder} ← "
+					Output += f"• {Proxy_holder} ← "
 					Output += ", ".join(Proxy for Proxy in Proxies[Proxy_holder])
 					Output += "\n"
 			else:
 				Output += Localized_replies["CM_Polls_proxinfo_error_no_proxies_delegated"]
-		elif Member in Proxies:
-			Output += Localized_replies["CM_Polls_proxinfo_success_list"].format(Member=Member)
-			Output += " "
-			Output += ", ".join(Proxy for Proxy in Proxies[Member])
+		# “!polls proxy info Member1 Member2 …”
 		else:
-			Output += Localized_replies["CM_Polls_proxinfo_error_no_proxies_received"].format(
-					Member=Member
-			)
+			Members = Parts[1:]
+			for Member in Members:
+				if Member in Proxies:
+					Output += "• "
+					Output += Localized_replies["CM_Polls_proxinfo_success_list"].format(
+							Member=Member
+					)
+					Output += " "
+					Output += ", ".join(Proxy for Proxy in Proxies[Member])
+				else:
+					Output += "• "
+					Output += Localized_replies["CM_Polls_proxinfo_error_no_proxies_received"].format(
+							Member=Member
+					)
+				Output += "\n"
 		await Gears.Send(Targets, Output)
 
 	elif Action == "revoke":
