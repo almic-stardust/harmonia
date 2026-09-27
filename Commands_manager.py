@@ -1541,40 +1541,47 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 		# Handle “!proxy revoke”
 		if len(Parts) == 1:
 			Member_revoking = User
-		# Handle “!proxy revoke Member|all”
-		if len(Parts) == 2:
+		# Handle “!proxy revoke Member”
+		elif len(Parts) == 2 and Parts[1] != "all":
 			Member_revoking = Parts[1]
+		# Handle "!proxy revoke all"
+		elif len(Parts) == 2 and Parts[1] == "all":
+			# Only moderators may revoke all proxies.
+			if not Is_moderator:
+				Output = Localized_replies["CM_Polls_proxrev_error_unauthorized"]
+				await Gears.Send(Targets, Output)
+				return
+			Proxies = {}
+			Output += Localized_replies["CM_Polls_proxrev_success_all"]
+			await Gears.Send(Targets, Output)
+			return
+		else:
+			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+			await Gears.Send(Targets, Output)
+			return
 		Handler_to_revoke = None
+		# Find the proxy holder who currently holds the proxy
 		for Proxy_holder in Proxies:
 			if Member_revoking in Proxies[Proxy_holder]:
 				Handler_to_revoke = Proxy_holder
+				break
 		if not Handler_to_revoke:
 			Output = Localized_replies["CM_Polls_proxrev_error_no_proxies_given"].format(
 					Member_revoking=Member_revoking
 			)
 			await Gears.Send(Targets, Output)
 			return
-		Proceed_with_revocation = False
-		if (Member_revoking == User or Handler_to_revoke == User):
-			Proceed_with_revocation = True
-		else:
-			if not Is_moderator:
-				Output = Localized_replies["CM_Polls_proxrev_error_unauthorized"]
-				await Gears.Send(Targets, Output)
-				return
-			if Member_revoking == "all":
-				Proxies = {}
-				Output += Localized_replies["CM_Polls_proxrev_success"]
-				await Gears.Send(Targets, Output)
-			else:
-				Proceed_with_revocation = True
-		if Proceed_with_revocation:
-			del Proxies[Handler_to_revoke][Member_revoking]
-			if len(Proxies[Proxy_holder]) == 0:
-				del Proxies[Proxy_holder]
-			Output += Localized_replies["CM_Polls_proxrev_success_one"].format(
-					Member_revoking=Member_revoking, Handler_to_revoke=Handler_to_revoke
-			)
+		if Member_revoking != User and Handler_to_revoke != User and not Is_moderator:
+			Output = Localized_replies["CM_Polls_proxrev_error_unauthorized"]
+			await Gears.Send(Targets, Output)
+			return
+		del Proxies[Handler_to_revoke][Member_revoking]
+		# If the holder no longer hold any proxies, remove them
+		if len(Proxies[Handler_to_revoke]) == 0:
+			del Proxies[Handler_to_revoke]
+		Output += Localized_replies["CM_Polls_proxrev_success_one"].format(
+				Member_revoking=Member_revoking, Handler_to_revoke=Handler_to_revoke
+		)
 		await Gears.Send(Targets, Output)
 
 	# Action isn’t delegate, info or revoke
