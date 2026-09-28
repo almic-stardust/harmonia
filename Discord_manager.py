@@ -84,7 +84,7 @@ async def on_command_error(Context, Error):
 		await Context.send(f"Command error: {Error}")
 	# For unexpected exception, print the traceback on the console
 	else:
-		print(f"[Discord_m] Unexpected command error:")
+		print(f"[Discord] Unexpected command error:")
 		traceback.print_exception(type(Error), Error, Error.__traceback__)
 	# Relay the error to IRC
 	if not IRC_enabled:

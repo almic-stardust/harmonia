@@ -554,6 +554,9 @@ async def Discord_polls_help(Context):
 
 def Polls_voting_rights(Infos_user):
 	Infos_user["Can_vote"] = False
+	Infos_user["Registration"] = None
+	Infos_user["Last_renewal"] = None
+	Infos_user["Penultimate_year"] = None
 	if not Infos_user["Renewals"]:
 		return Infos_user
 	Renewals_years = []
@@ -565,7 +568,6 @@ def Polls_voting_rights(Infos_user):
 	Renewals_dates.sort()
 	Infos_user["Registration"] = Renewals_dates[0]
 	Infos_user["Last_renewal"] = Renewals_dates[-1]
-	Infos_user["Penultimate_year"] = None
 	if len(Renewals_years) >= 2:
 		Penultimate_year = Renewals_years[-2]
 		# A datetime representing January 1st of the penultimate year, in UTC
@@ -653,17 +655,19 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 		else:
 			Output += f"• {Infos_user['Pseudo']} "
 			Output += Localized_replies["CM_Polls_members_not_authorized_vote"] + " "
-		Registration = Infos_user["Registration"].astimezone(Timezone).strftime("%d/%m/%Y")
-		Last_renewal = Infos_user["Last_renewal"].astimezone(Timezone).strftime("%d/%m/%Y")
-		if Infos_user["Penultimate_year"]:
-			Output += Localized_replies["CM_Polls_members_infos_penultimate"].format(
+		if Infos_user["Registration"] is not None:
+			Registration = Infos_user["Registration"].astimezone(Timezone).strftime("%d/%m/%Y")
+			Last_renewal = Infos_user["Last_renewal"].astimezone(Timezone).strftime("%d/%m/%Y")
+			if Infos_user["Penultimate_year"]:
+				Output += Localized_replies["CM_Polls_members_infos_penultimate"].format(
 					Last_renewal=Last_renewal,
 					Penultimate_year=Infos_user["Penultimate_year"].strftime("%Y")
-			)
-		else:
-			Output += Localized_replies["CM_Polls_members_infos_registration"].format(
-					Last_renewal=Last_renewal, Registration=Registration
-			)
+				)
+			else:
+				Output += Localized_replies["CM_Polls_members_infos_registration"].format(
+					Last_renewal=Last_renewal,
+					Registration=Registration
+				)
 		Output += "\n"
 
 	if not List_of_users_from_argument:
