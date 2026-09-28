@@ -97,7 +97,7 @@ extraction.
 	    forum_pseudo                VARCHAR(255) NULL,
 	    discord_username            VARCHAR(255) NULL,
 	    pseudo_displayed_on_discord VARCHAR(255) NULL,
-	    discord_expiration_for_irc  INT NOT NULL,
+	    discord_expiration_for_irc  INT NULL,
 	    history_keep_all            BOOLEAN NULL,
 	    avatar_url                  VARCHAR(1024) NULL,
 	    renewals                    JSON NULL,

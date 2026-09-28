@@ -2,6 +2,8 @@
 
 import discord
 from discord.ext import tasks
+import datetime
+from zoneinfo import ZoneInfo
 import asyncio
 import os
 import re
@@ -20,6 +22,10 @@ if History_enabled:
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
+	# Don’t add non-essential circular dependencies to this module
+	from DB_manager import Users_fetch_users
+	Users = Users_fetch_users(Users_table)
+
 
 ###############################################################################
 # Startup
@@ -145,11 +151,11 @@ async def Wait_for_events(*Events):
 ###############################################################################
 
 # Prevent Get_Discord_pseudo() and Determine_language() from becoming out of sync with the DB
-@tasks.loop(hours=24)
+@tasks.loop(time=datetime.time(
+		hour=12, minute=0, second=0, tzinfo=ZoneInfo(Config["Server_timezone"])
+))
 async def Synchronize_users():
 	global Users
-	# Don’t add non-essential circular dependencies to this module
-	from DB_manager import Users_fetch_users
 	Users = await asyncio.to_thread(Users_fetch_users, Users_table)
 	print("[Gears] Users dictionary synchronized.")
 
