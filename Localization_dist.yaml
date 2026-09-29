@@ -75,16 +75,16 @@ CM_Straws_add_result:
   English: "Your word “{Straw}” has been added to the common key."
   French: "Votre mot « {Straw} » a été ajoutée à la clé commune."
 CM_Straws_join_help_usage:
-  English: "Usage: !straws join Word"
-  French: "Utilisation : !straws join Word"
+  English: "Usage: “!straws join Word”"
+  French: "Utilisation : « !straws join Word »"
 CM_Straws_contribute_help_usage:
-  English: "Usage: !straws contribute Word"
-  French: "Utilisation : !straws contribute Word"
+  English: "Usage: “!straws contribute Word”"
+  French: "Utilisation : « !straws contribute Word »"
 
 # Commands_manager.Straws_participants()
 CM_Straws_participants_help_usage:
-  English: "Usage: !straws participants Participant1 Participant2 …"
-  French: "Utilisation : !straws participants Participant1 Participant2 …"
+  English: "Usage: “!straws participants Participant1 Participant2 …”"
+  French: "Utilisation : « !straws participants Participant1 Participant2 … »"
 CM_Straws_participants_too_many:
   English: "It is not possible to draw straws among more than 50 participants."
   French: "Il n'est pas possible de tirer à la courte paille entre plus de 50 participants."
@@ -174,8 +174,8 @@ CM_Polls_members_nobody_can_vote:
 
 # Commands_manager.Polls_add_adhesion()
 CM_Polls_adhesion_help_usage:
-  English: "Usage: !polls add_adhesion Pseudo Mail_address [YYYYMMDD]"
-  French: "Utilisation : !polls add_adhesion Pseudo Mail_address [YYYYMMDD]"
+  English: "Usage: “!polls add_adhesion Pseudo Mail_address [YYYYMMDD]”"
+  French: "Utilisation : « !polls add_adhesion Pseudo Mail_address [YYYYMMDD] »"
 CM_Polls_adhesion_error_mail:
   English: "Error: This mail address is not valid."
   French: "Erreur : Cette adresse mail n'est pas valide."
@@ -194,8 +194,8 @@ CM_Polls_adhesion_added:
 
 # Commands_manager.Polls_create()
 CM_Polls_create_help_usage:
-  English: "Usage: !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
-  French: "Utilisation : !polls create Subject [§ Choice 1 ; Choice 2 ; …]"
+  English: "Usage: “!polls create Subject [§ Choice 1 ; Choice 2 ; …]”"
+  French: "Utilisation : « !polls create Subject [§ Choice 1 ; Choice 2 ; …] »"
 CM_Polls_create_error_one_choice:
   English: "A vote is not necessary when there is only one option."
   French: "Un vote n'est pas nécessaire quand il n'y a qu'une seule option."
@@ -209,8 +209,8 @@ CM_Polls_create_summary_start:
   English: "Poll {Poll_ID}: {Question}"
   French: "Vote {Poll_ID} : {Question}"
 CM_Polls_create_summary_end:
-  English: "You can vote as follows: !polls vote <Choice_number> [{Poll_ID}]"
-  French: "Vous pouvez voter ainsi : !polls vote <Choice_number> [{Poll_ID}]"
+  English: "You can vote as follows: “!polls vote <Choice_number> [{Poll_ID}]”"
+  French: "Vous pouvez voter ainsi : « !polls vote <Choice_number> [{Poll_ID}] »"
 
 # Commands_manager.Polls_close()
 CM_Polls_close_error_already_closed:
@@ -236,23 +236,23 @@ CM_Polls_delete_success:
 
 # Commands_manager.Polls_vote()
 CM_Polls_vote_help_usage:
-  English: "Usage: !polls vote <Choice_number> [Poll_ID]"
-  French: "Utilisation : !polls vote <Choice_number> [Poll_ID]"
+  English: "Usage: “!polls vote <Choice_number> [Poll_ID]”"
+  French: "Utilisation : « !polls vote <Choice_number> [Poll_ID] »"
 CM_Polls_vote_error_no_delegation:
   English: "Error: {Claimed_proxy_giver} did not delegate a proxy to {User}."
   French: "Erreur : {Claimed_proxy_giver} n'a pas délégué sa procuration à {User}."
 CM_Polls_vote_error_invalid_input:
-  English: "Error: Invalid poll ID or choice number. See !polls list active"
-  French: "Erreur : Cet ID de vote or numéro de choix est invalide. Voir !polls list active"
+  English: "Error: Invalid poll ID or choice number. See “!polls list active”"
+  French: "Erreur : Cet ID de vote or numéro de choix est invalide. Voir « !polls list active »"
 CM_Polls_vote_error_invalid_choice_vote_not_specified:
-  English: "Error: Invalid choice number. See !polls info"
-  French: "Erreur : Ce numéro de choix est invalide. Voir !polls info"
+  English: "Error: Invalid choice number. See “!polls info”"
+  French: "Erreur : Ce numéro de choix est invalide. Voir « !polls info »"
 CM_Polls_vote_error_closed:
-  English: "Error: Poll {Poll_ID} is closed. See !polls list active"
-  French: "Erreur : Le sondage {Poll_ID} est fermé. Voir !polls list active"
+  English: "Error: Poll {Poll_ID} is closed. See “!polls list active”"
+  French: "Erreur : Le sondage {Poll_ID} est fermé. Voir « !polls list active »"
 CM_Polls_vote_error_invalid_choice_vote_specified:
-  English: "Error: Invalid choice number. See !polls info {Poll_ID}"
-  French: "Erreur : Ce numéro de choix est invalide. Voir !polls info {Poll_ID}"
+  English: "Error: Invalid choice number. See “!polls info {Poll_ID}”"
+  French: "Erreur : Ce numéro de choix est invalide. Voir « !polls info {Poll_ID} »"
 CM_Polls_vote_revoked_proxy:
   English: "Your vote has revoked the proxy delegate to {Handler_to_revoke}."
   French: "Votre vote a révoqué la procuration déléguée à {Handler_to_revoke}."
@@ -265,8 +265,8 @@ CM_Polls_vote_success:
 
 # Commands_manager.Polls_unvote()
 CM_Polls_unvote_help_usage:
-  English: "Usage: !polls unvote [Poll_ID]"
-  French: "Utilisation : !polls unvote [Poll_ID]"
+  English: "Usage: “!polls unvote [Poll_ID]”"
+  French: "Utilisation : « !polls unvote [Poll_ID] »"
 CM_Polls_unvote_error_not_voted:
   French: "Erreur : Vous ne pouvez pas retirer un vote que vous n'avez pas exprimé."
   English: "Error: You can not remove a vote you did not cast."
@@ -311,8 +311,8 @@ CM_Polls_proxdeleg_success_partial_unsubdelegation:
 
 # Commands_manager.Polls_proxy()
 CM_Polls_proxy_help_usage:
-  English: "Usage: !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"
-  French: "Utilisation : !polls proxy delegate Proxy_holder [Member] | !polls proxy info Member|all | !polls proxy revoke [Member|all]"
+  English: "Usage: “!polls proxy delegate Proxy_holder [Member]” | “!polls proxy info Member|all” | “!polls proxy revoke [Member|all]”"
+  French: "Utilisation : « !polls proxy delegate Proxy_holder [Member] » | « !polls proxy info Member|all » | « !polls proxy revoke [Member|all] »"
 CM_Polls_proxinfo_error_no_proxies_delegated:
   English: "Currently, no proxy has been delegated."
   French: "Pour l'instant, aucune procuration n'a été déléguée."
@@ -337,13 +337,13 @@ CM_Polls_proxrev_success_one:
 
 # Commands_manager.Polls_list()
 CM_Polls_list_help_usage:
-  English: "Usage: !polls list [Number] | !polls list [active/closed] [Number]"
-  French: "Utilisation : !polls list [Number] | !polls list [active/closed] [Number]"
+  English: "Usage: “!polls list [Number]” | “!polls list [active/closed] [Number]”"
+  French: "Utilisation : « !polls list [Number] » | « !polls list [active/closed] [Number] »"
 
 # Commands_manager.Polls_info()
 CM_Polls_info_help_usage:
-  English: "Usage: !polls info [Poll_ID]"
-  French: "Utilisation : !polls info [Poll_ID]"
+  English: "Usage: “!polls info [Poll_ID]”"
+  French: "Utilisation : « !polls info [Poll_ID] »"
 CM_Polls_info_word_for_active:
   English: "active"
   French: "en cours"
