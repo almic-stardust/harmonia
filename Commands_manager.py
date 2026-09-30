@@ -724,7 +724,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 		return
 	Parts = Arguments.split()
 	if len(Parts) < 2 or len(Parts) > 3:
-		Output = Localized_replies["CM_invalid_syntax"] + " " + Help_usage
+		Output = Localized_replies["CM_Invalid_syntax"] + " " + Help_usage
 		if IRC_enabled:
 			Output_IRC += Output
 		await Gears.Send(Targets, Output, Output_IRC)
@@ -772,7 +772,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 			Renewals.extend(Renewal)
 		if Year in Infos_user["Renewals"] and Date in Infos_user["Renewals"][Year]:
 			Date = Date.astimezone(Timezone).strftime("%d/%m/%Y")
-			Output = Localized_replies["CM_Polls_adhesion_already_renewed"].format(
+			Output = Localized_replies["CM_Polls_adhesion_error_already_renewed"].format(
 					Pseudo=Pseudo, Date=Date
 			)
 			if IRC_enabled:
@@ -1498,7 +1498,7 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 					Targets["IRC_chan"], User, f"!polls proxy {Arguments}"
 			)
 	if not Arguments:
-		Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+		Output = Localized_replies["CM_Invalid_syntax"] + "\n" + Help_usage
 		await Gears.Send(Targets, Output)
 		return
 	Parts = Arguments.split()
@@ -1506,7 +1506,7 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 
 	if Action == "delegate":
 		if len(Parts) < 2 or len(Parts) > 3:
-			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+			Output = Localized_replies["CM_Invalid_syntax"] + "\n" + Help_usage
 			await Gears.Send(Targets, Output)
 			return
 		Proxy_holder = Parts[1]
@@ -1565,7 +1565,7 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 			await Gears.Send(Targets, Output)
 			return
 		else:
-			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+			Output = Localized_replies["CM_Invalid_syntax"] + "\n" + Help_usage
 			await Gears.Send(Targets, Output)
 			return
 		Handler_to_revoke = None
@@ -1595,7 +1595,7 @@ async def Polls_proxy(Targets, User, Is_moderator, Arguments, Context=None):
 
 	# Action isn’t delegate, info or revoke
 	else:
-		Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+		Output = Localized_replies["CM_Invalid_syntax"] + "\n" + Help_usage
 		await Gears.Send(Targets, Output)
 		return
 
@@ -1646,7 +1646,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 	if Arguments:
 		Parts = Arguments.split()
 		if len(Parts) > 2:
-			Output = Localized_replies["CM_invalid_syntax"] + "\n" + Help_usage
+			Output = Localized_replies["CM_Invalid_syntax"] + "\n" + Help_usage
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Help_usage, Output_IRC)

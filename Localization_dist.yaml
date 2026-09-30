@@ -2,31 +2,32 @@
 
 # Discord_manager
 DM_Too_many_messages:
-  English: "What you sent would result in too much to relay on IRC in a short time. So nothing was forwarded."
-  French: "Ce que vous avez envoyé résulterait trop de messages à relayer sur IRC sur une courte durée.  Donc rien n'a été transmis."
+  English: "Error: What you sent would result in too much to relay on IRC in a short time. So nothing was forwarded."
+  French: "Erreur : Ce que vous avez envoyé résulterait trop de messages à relayer sur IRC sur une courte durée. Donc rien n'a été transmis."
 
-# Commands_manager.IRC_dispatcher()
-CM_Dispatch_invalid_command:
-  English: "Invalid command. See “!help”"
-  French: "Commande invalide. Voir « !help »"
-CM_Dispatch_invalid_subcommand:
-  English: "Invalid subcommand. See “!help”"
-  French: "Sous-commande invalide. Voir « !help »"
-
+# Commands_manager
 CM_Command_is_public:
   English: "Error: This command is not available in private."
   French: "Erreur : Cette commande n'est pas disponible en privé."
-CM_invalid_syntax:
+CM_Invalid_syntax:
   English: "Syntax error."
   French: "Erreur de syntaxe."
 CM_Permission_denied:
-  English: "Permission denied."
-  French: "Autorisation refusée."
+  English: "Error: Permission denied."
+  French: "Erreur : Autorisation refusée."
+
+# Commands_manager.IRC_dispatcher()
+CM_Dispatch_invalid_command:
+  English: "Error: Invalid command. See “!help”"
+  French: "Erreur : Commande invalide. Voir « !help »"
+CM_Dispatch_invalid_subcommand:
+  English: "Error: Invalid subcommand. See “!help”"
+  French: "Erreur : Sous-commande invalide. Voir « !help »"
 
 # Commands_manager.No_help_for_IRC()
 CM_No_help_irc:
-  English: "The “!help” command is only available on Discord."
-  French: "La commande « !help » n’est disponible que sur Discord."
+  English: "Error: The “!help” command is only available on Discord."
+  French: "Erreur : La commande « !help » n'est disponible que sur Discord."
 
 # Commands_manager.Roll_Dice()
 CM_Roll_help_usage:
@@ -47,8 +48,8 @@ CM_Straws_help_usage:
   English: "See “!help straws”"
   French: "Voir « !help straws »"
 CM_Straws_invalid_subcommand:
-  English: "Invalid subcommand. See “!help straws”"
-  French: "Sous-commande invalide. Voir « !help straws »"
+  English: "Error: Invalid subcommand. See “!help straws”"
+  French: "Erreur : Sous-commande invalide. Voir « !help straws »"
 
 # Commands_manager.Straws_current_state()
 CM_Straws_state_show_participants:
@@ -69,8 +70,8 @@ CM_Straws_state_error_participants:
 
 # Commands_manager.Straws_add()
 CM_Straws_add_error:
-  English: "Your word could not be added to the common key!"
-  French: "Votre mot n'a pas pu être ajoutée à la clé commune !"
+  English: "Error: Your word could not be added to the common key!"
+  French: "Erreur : Votre mot n'a pas pu être ajoutée à la clé commune !"
 CM_Straws_add_result:
   English: "Your word “{Straw}” has been added to the common key."
   French: "Votre mot « {Straw} » a été ajoutée à la clé commune."
@@ -89,16 +90,16 @@ CM_Straws_participants_too_many:
   English: "It is not possible to draw straws among more than 50 participants."
   French: "Il n'est pas possible de tirer à la courte paille entre plus de 50 participants."
 CM_Straws_participants_result:
-  English: The participants drawing straws have been selected (usernames exceeding 30 characters have been truncated).
+  English: "The participants drawing straws have been selected (usernames exceeding 30 characters have been truncated)."
   French: "Les participants au tirage au sort ont été sélectionnés (les noms d'utilisateur dépassant 30 caractères ont été tronqués)."
 
 # Commands_manager.Straws_draw()
 CM_Straws_draw_error_participants:
-  English: "There are no participants among whom to draw straws. See “!help straws”"
-  French: "Il n'y a pas de participants parmi lesquels tirer à la courte paille. Voir « !help straws »"
+  English: "Error: There are no participants among whom to draw straws. See “!help straws”"
+  French: "Erreur : Il n'y a pas de participants parmi lesquels tirer à la courte paille. Voir « !help straws »"
 CM_Straws_draw_error_straws:
-  English: "No words for the common key. See “!help straws”"
-  French: "Aucun mot pour la clé commune. Voir « !help straws »"
+  English: "Error: No words for the common key. See “!help straws”"
+  French: "Erreur : Aucun mot pour la clé commune. Voir « !help straws »"
 CM_Straws_draw_display_participants:
   English: "The participants who draw straws are:"
   French: "Les participants qui tirent à la courte paille sont :"
@@ -119,11 +120,11 @@ CM_Straws_reset:
 
 # Commands_manager !polls
 CM_Polls_invalid_subcommand:
-  English: "This subcommand is invalid. Check “!help straws”"
-  French: "Cette sous-commande est invalide. Consultez « !help straws »"
+  English: "Error: This subcommand is invalid. Check “!help straws”"
+  French: "Erreur : Cette sous-commande est invalide. Consultez « !help straws »"
 CM_Polls_help_usage:
   English: "Check “!help straws”"
-  French: "Consultez « !help” straws »"
+  French: "Consultez « !help straws »"
 CM_Polls_error_config_polls:
   English: "Error: This command requires the polls section to be enabled in the config file."
   French: "Erreur : Cette commande nécessite que la section des votes soit activée dans le fichier de configuration."
@@ -182,7 +183,7 @@ CM_Polls_adhesion_error_mail:
 CM_Polls_adhesion_error_date:
   English: "Error: This date is not valid."
   French: "Erreur : Cette date n'est pas valide."
-CM_Polls_adhesion_already_renewed:
+CM_Polls_adhesion_error_already_renewed:
   English: "Error: The membership of {Pseudo} has already been renewed for {Date}."
   French: "Erreur : L'adhésion de {Pseudo} a été déjà renouvelée pour {Date}."
 CM_Polls_adhesion_renewed:
@@ -197,8 +198,8 @@ CM_Polls_create_help_usage:
   English: "Usage: “!polls create Subject [§ Choice 1 ; Choice 2 ; …]”"
   French: "Utilisation : « !polls create Subject [§ Choice 1 ; Choice 2 ; …] »"
 CM_Polls_create_error_one_choice:
-  English: "A vote is not necessary when there is only one option."
-  French: "Un vote n'est pas nécessaire quand il n'y a qu'une seule option."
+  English: "Error: A vote is not necessary when there is only one option."
+  French: "Erreur : Un vote n'est pas nécessaire quand il n'y a qu'une seule option."
 CM_Polls_create_default_choice_yes:
   English: "Yes"
   French: "Oui"
@@ -268,8 +269,8 @@ CM_Polls_unvote_help_usage:
   English: "Usage: “!polls unvote [Poll_ID]”"
   French: "Utilisation : « !polls unvote [Poll_ID] »"
 CM_Polls_unvote_error_not_voted:
-  French: "Erreur : Vous ne pouvez pas retirer un vote que vous n'avez pas exprimé."
   English: "Error: You can not remove a vote you did not cast."
+  French: "Erreur : Vous ne pouvez pas retirer un vote que vous n'avez pas exprimé."
 CM_Polls_unvote_success:
   English: "The vote of {User} has been removed from poll {Poll_ID}."
   French: "Le vote de {User} a été retiré du vote {Poll_ID}."
@@ -288,11 +289,11 @@ CM_Polls_proxdeleg_error_unauthorized:
   English: "Error: Only moderators can delegate the proxy of someone else."
   French: "Erreur : Seuls les modérateurs peuvent déléguer la procuration d'une autre personne."
 CM_Polls_proxdeleg_error_already_delegated:
-  English: "You have already delegated your proxy to {Proxy_holder}."
-  French: "Vous avez déjà délégué votre procuration à {Proxy_holder}."
+  English: "Error : You have already delegated your proxy to {Proxy_holder}."
+  French: "Erreur : Vous avez déjà délégué votre procuration à {Proxy_holder}."
 CM_Polls_proxdeleg_error_number_max:
-  English: "One person cannot hold more than three proxies, and {Proxy_holder} has reached the limit."
-  French: "Une personne ne peut avoir plus de trois procurations, et {Proxy_holder} a atteint la limite."
+  English: "Error: One person cannot hold more than three proxies, and {Proxy_holder} has reached the limit."
+  French: "Erreur : Une personne ne peut avoir plus de trois procurations, et {Proxy_holder} a atteint la limite."
 CM_Polls_proxdeleg_success_beginning_sentence:
   English: "{User} delegated their proxy to {Proxy_holder}"
   French: "{User} a délégué sa procuration à {Proxy_holder}"
@@ -314,20 +315,20 @@ CM_Polls_proxy_help_usage:
   English: "Usage: “!polls proxy delegate Proxy_holder [Member]” | “!polls proxy info Member|all” | “!polls proxy revoke [Member|all]”"
   French: "Utilisation : « !polls proxy delegate Proxy_holder [Member] » | « !polls proxy info Member|all » | « !polls proxy revoke [Member|all] »"
 CM_Polls_proxinfo_error_no_proxies_delegated:
-  English: "Currently, no proxy has been delegated."
-  French: "Pour l'instant, aucune procuration n'a été déléguée."
+  English: "Error: Currently, no proxy has been delegated."
+  French: "Erreur : Pour l'instant, aucune procuration n'a été déléguée."
 CM_Polls_proxinfo_success_list:
   English: "{Member} has received the following proxies:"
   French: "{Member} a reçu les procurations suivantes :"
 CM_Polls_proxinfo_error_no_proxies_received:
-  English: "{Member} has not received any proxies."
-  French: "{Member} n'a reçu aucune procuration."
+  English: "Error: {Member} has not received any proxies."
+  French: "Erreur : {Member} n'a reçu aucune procuration."
 CM_Polls_proxrev_error_no_proxies_given:
-  English: "{Member_revoking} has not delegated their proxy."
-  French: "{Member_revoking} n'a pas délégué sa procuration."
+  English: "Error: {Member_revoking} has not delegated their proxy."
+  French: "Erreur : {Member_revoking} n'a pas délégué sa procuration."
 CM_Polls_proxrev_error_unauthorized:
-  English: "Only the mandator (principal), the agent or the moderators may revoke a proxy."
-  French: "Seuls le mandant, le mandataire ou les modérateurs peuvent révoquer une procuration."
+  English: "Error: Only the mandator (principal), the agent or the moderators may revoke a proxy."
+  French: "Erreur : Seuls le mandant, le mandataire ou les modérateurs peuvent révoquer une procuration."
 CM_Polls_proxrev_success_all:
   English: "All proxies have been revoked."
   French: "Toutes les procurations ont été révoquées."
