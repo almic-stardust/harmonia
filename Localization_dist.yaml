@@ -340,6 +340,9 @@ CM_Polls_proxrev_success_one:
 CM_Polls_list_help_usage:
   English: "Usage: “!polls list [Number]” | “!polls list [active/closed] [Number]”"
   French: "Utilisation : « !polls list [Number] » | « !polls list [active/closed] [Number] »"
+CM_Polls_list_pruned_number:
+  English: "The maximum number of polls that can be displayed is limited to 10."
+  French: "Le nombre maximum de vote qui peut être affiché est limité à 10."
 
 # Commands_manager.Polls_info()
 CM_Polls_info_help_usage:

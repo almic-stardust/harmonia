@@ -605,10 +605,13 @@ async def Polls_members(Targets, User, List_of_users, From_Discord=False):
 				Unregistered_users.append(Pseudo)
 	if len(Unregistered_users) > 0:
 		if len(Unregistered_users) == 1:
-			Output += L10n["CM_Polls_members_error_membership_one"][Language].format(
+			# Place a dot before the user’s nick even when there is only one, to avoid unwanted
+			# highlights on IRC
+			Output += "• " + L10n["CM_Polls_members_error_membership_one"][Language].format(
 					Unregistered=Unregistered_users[0]
 			)
 		else:
+			Output += "• "
 			for Unregistered_user in Unregistered_users:
 				Output += f"{Unregistered_user} "
 			Output += L10n["CM_Polls_members_error_membership_several"][Language]
@@ -1625,6 +1628,7 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 		Number = 3
 	if Number > 10:
 		Number = 10
+		Output += L10n["CM_Polls_list_pruned_number"][Language] + "\n"
 	Polls = DB_manager.Polls_fetch_list(Polls_table, Number, Status)
 	if not Polls:
 		Output = L10n["CM_Polls_error_no_polls_in_DB"][Language]
