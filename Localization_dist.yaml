@@ -1,18 +1,18 @@
 # You must restart the bot if you modify this file.
 
 # Discord_manager
-DM_Too_many_messages:
+DM_Error_too_many_messages:
   English: "Error: What you sent would result in too much to relay on IRC in a short time. So nothing was forwarded."
   French: "Erreur : Ce que vous avez envoyé résulterait trop de messages à relayer sur IRC sur une courte durée. Donc rien n'a été transmis."
 
 # Commands_manager
-CM_Command_is_public:
+CM_Error_command_is_public:
   English: "Error: This command is not available in private."
   French: "Erreur : Cette commande n'est pas disponible en privé."
-CM_Invalid_syntax:
+CM_Error_invalid_syntax:
   English: "Syntax error."
   French: "Erreur de syntaxe."
-CM_Permission_denied:
+CM_Error_permission_denied:
   English: "Error: Permission denied."
   French: "Erreur : Autorisation refusée."
 
