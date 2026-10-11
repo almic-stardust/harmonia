@@ -184,11 +184,11 @@ CM_Polls_adhesion_error_date:
   English: "Error: This date is not valid."
   French: "Erreur : Cette date n'est pas valide."
 CM_Polls_adhesion_error_already_renewed:
-  English: "Error: The membership of {Pseudo} has already been renewed for {Date}."
-  French: "Erreur : L'adhésion de {Pseudo} a été déjà renouvelée pour {Date}."
+  English: "Error: The membership of {Pseudo} has already been registered for {Date}."
+  French: "Erreur : L'adhésion de {Pseudo} a été déjà enregistrée pour le {Date}."
 CM_Polls_adhesion_renewed:
-  English: "The membership of {Pseudo} has been renewed for {Date}."
-  French: "L'adhésion de {Pseudo} est renouvelée pour {Date}."
+  English: "The membership for {Pseudo} has been registered for {Date}."
+  French: "L'adhésion de {Pseudo} est enregistrée pour le {Date}."
 CM_Polls_adhesion_added:
   English: "{Pseudo} has been added with membership as of {Date}."
   French: "{Pseudo} a été ajouté avec une date d'adhésion au {Date}."
@@ -312,8 +312,8 @@ CM_Polls_proxdeleg_success_partial_unsubdelegation:
 
 # Commands_manager.Polls_proxy()
 CM_Polls_proxy_help_usage:
-  English: "Usage: “!polls proxy delegate Proxy_holder [Member]” | “!polls proxy info Member|all” | “!polls proxy revoke [Member|all]”"
-  French: "Utilisation : « !polls proxy delegate Proxy_holder [Member] » | « !polls proxy info Member|all » | « !polls proxy revoke [Member|all] »"
+  English: "Usage: “!polls proxy delegate Proxy_holder [Member]” | “!polls proxy revoke [Member|all]” | “!polls proxy info [Member]”"
+  French: "Utilisation : « !polls proxy delegate Proxy_holder [Member] » | « !polls proxy revoke [Member|all] » | « !polls proxy info [Member] »"
 CM_Polls_proxinfo_error_no_proxies_delegated:
   English: "Error: Currently, no proxy has been delegated."
   French: "Erreur : Pour l'instant, aucune procuration n'a été déléguée."
