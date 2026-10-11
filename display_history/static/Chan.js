@@ -144,6 +144,39 @@ function Normalize_content(Text){
 	return Safe
 }
 
+function Get_content_history_text(Content_history){
+	if (!Content_history)
+		return "";
+	// Support the legacy plain-text format
+	if (typeof Content_history === "string"){
+		try{
+			Content_history = JSON.parse(Content_history);
+		}catch(Error){
+			return Normalize_content(Content_history);
+		}
+	}
+	// Extract text from the timestamp-keyed format
+	if (typeof Content_history === "object" && !Array.isArray(Content_history)){
+		const Entries = Object.entries(Content_history);
+		// Sort entries by timestamp
+		Entries.sort(([Timestamp_A], [Timestamp_B]) =>
+			Timestamp_A.localeCompare(Timestamp_B)
+		);
+		// Extract text from each entry
+		const Texts = Entries.map(([, Entry]) => {
+			if (typeof Entry === "string")
+				return Entry;
+			return Entry?.Text ?? "";
+		});
+		// Remove empty entries
+		const Non_empty_texts = Texts.filter(Text => Text !== "");
+		// Join all text segments
+		const Text = Non_empty_texts.join("\n");
+		return Normalize_content(Text);
+	}
+	return "";
+}
+
 function Is_file_an_image(Path){
 	if (!Path)
 		return false;
@@ -241,7 +274,7 @@ function Create_message_element(Message, Date_object){
 			<span class="user">${Escape_HTML(Message.user)}</span>
 		</div>
 		<div class="content_block">
-			<span class="content">${Normalize_content(Message.content_history || "")}</span>
+			<span class="content">${Get_content_history_text(Message.content_history)}</span>
 			${HTML_attachments}
 		</div>
 	`;
@@ -337,8 +370,8 @@ async function Load_messages(Initial=false){
 
 // When the user scrolls near the top, load older messages
 function On_scroll() {
-    if (Messages_container.scrollTop <= 5)
-        Load_messages();
+	if (Messages_container.scrollTop <= 5)
+		Load_messages();
 }
 Messages_container.addEventListener("scroll", On_scroll);
 
