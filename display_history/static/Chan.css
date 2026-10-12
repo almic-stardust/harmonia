@@ -129,6 +129,16 @@ body.no_scroll {
 	object-fit: cover;				/* fill up container, maintain ratio by cropping */
 	cursor: pointer;
 }
+.message_edited_label {
+	color: #808080;
+	font-size: 0.5em;
+}
+.message_previous_version {
+	display: block;
+	color: #808080;
+	margin-top: 6px;
+}
+
 #lightbox {
 	position: fixed;
 	top: 0;

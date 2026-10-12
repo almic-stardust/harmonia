@@ -147,6 +147,7 @@ function Normalize_content(Text){
 function Get_content_history_text(Content_history){
 	if (!Content_history)
 		return "";
+
 	// Support the legacy plain-text format
 	if (typeof Content_history === "string"){
 		try{
@@ -155,26 +156,64 @@ function Get_content_history_text(Content_history){
 			return Normalize_content(Content_history);
 		}
 	}
-	// Extract text from the timestamp-keyed format
-	if (typeof Content_history === "object" && !Array.isArray(Content_history)){
-		const Entries = Object.entries(Content_history);
-		// Sort entries by timestamp
-		Entries.sort(([Timestamp_A], [Timestamp_B]) =>
-			Timestamp_A.localeCompare(Timestamp_B)
-		);
-		// Extract text from each entry
-		const Texts = Entries.map(([, Entry]) => {
-			if (typeof Entry === "string")
-				return Entry;
-			return Entry?.Text ?? "";
-		});
-		// Remove empty entries
-		const Non_empty_texts = Texts.filter(Text => Text !== "");
-		// Join all text segments
-		const Text = Non_empty_texts.join("\n");
-		return Normalize_content(Text);
+
+	if (typeof Content_history !== "object" || Array.isArray(Content_history))
+		return "";
+	const Entries = Object.entries(Content_history);
+	// Sort entries by timestamp, newest first
+	Entries.sort(([Timestamp_A], [Timestamp_B]) =>
+		Timestamp_B.localeCompare(Timestamp_A)
+	);
+	if (!Entries.length)
+		return "";
+
+	// Extract text from an entry
+	function Extract_entry_text(Entry){
+		if (typeof Entry === "string")
+			return Entry;
+		return Entry?.Text ?? "";
 	}
-	return "";
+
+	// Format the last edit timestamp as DD/MM/YY HH:MM:SS 
+	function Format_edit_time(Timestamp){
+		const Date_object = new Date(DB_to_local_time(Timestamp));
+		if (isNaN(Date_object.getTime()))
+			return "";
+		const Day = String(Date_object.getDate()).padStart(2, "0");
+		const Month = String(Date_object.getMonth() + 1).padStart(2, "0");
+		const Year = Date_object.getFullYear();
+		const Hours = String(Date_object.getHours()).padStart(2, "0");
+		const Minutes = String(Date_object.getMinutes()).padStart(2, "0");
+		const Seconds = String(Date_object.getSeconds()).padStart(2, "0");
+		return `${Day}/${Month}/${Year} ${Hours}:${Minutes}:${Seconds}`;
+	}
+
+	// Display the original message in full
+	let HTML = Normalize_content(Extract_entry_text(Entries[0][1]));
+
+	// If the message was edited append the last edit date, and display previous versions
+	if (Entries.length > 1){
+		const Last_timestamp = Entries[0][0];
+		const Edit_time = Format_edit_time(Last_timestamp);
+		if (Edit_time)
+			HTML += ` <span class="message_edited_label">(edited ${Edit_time})</span>`;
+		// Display older versions below, newest to oldest
+		for (let Index = 1; Index < Entries.length; Index++){
+			const [Timestamp, Entry] = Entries[Index];
+			const Entry_text = Extract_entry_text(Entry);
+			const Edit_time = Format_edit_time(Timestamp);
+			HTML += `<span class="message_previous_version">`;
+			HTML += `${Entries.length - Index}: ${Normalize_content(Entry_text)}`;
+			if (Edit_time)
+				if (Index == Entries.length-1)
+					HTML += ` <span class="message_edited_label">(posted ${Edit_time})</span>`;
+				else
+					HTML += ` <span class="message_edited_label">(edited ${Edit_time})</span>`;
+			HTML += `</span>`;
+		}
+	}
+
+	return HTML;
 }
 
 function Is_file_an_image(Path){
