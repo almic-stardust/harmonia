@@ -451,18 +451,20 @@ def Get_chans_for_server(Table, Server_ID):
 				(Server_ID,)
 		)
 		Result = Cursor.fetchall()
-		if Result:
-			List_chans = []
-			IRC_bridges = Config.get("irc_bridges", {})
-			for Row in Result:
-				Chan_ID = Row[0]
-				for IRC_chan in IRC_bridges:
-					if IRC_bridges[IRC_chan]["discord_chan"] == Chan_ID:
-						Chan_name = IRC_bridges[IRC_chan]["irc_chan"]
-				List_chans.append({
-						"id": str(Chan_ID),
-						"name": Chan_name,
-				})
+		List_chans = []
+		for Row in Result:
+			Chan_ID = int(Row[0])
+			from Discord_manager import bot
+			Discord_chan = bot.get_channel(Chan_ID)
+			if Discord_chan is not None:
+				Chan_name = Discord_chan.name
+			else:
+				# Fallback if the channel is not in the client's cache.
+				Chan_name = str(Chan_ID)
+			List_chans.append({
+					"id": str(Chan_ID),
+					"name": Chan_name,
+			})
 		return List_chans
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
