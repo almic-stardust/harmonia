@@ -66,15 +66,15 @@ When you’ll upgrade your Linux distribution, the Python version will change an
 #### Database
 
 Create a base according to your Config.yaml, then create these tables. The creation\_date field of
-the project\_history table prevents the SQL requests of some functions from requiring a JSON
+the bot\_server\_history table prevents the SQL requests of some functions from requiring a JSON
 extraction.
 
-	CREATE TABLE project_history (
+	CREATE TABLE bot_server_history (
 	    creation_date               TIMESTAMP NOT NULL,
-	    server_id                   BIGINT NOT NULL,
-	    chan_id                     BIGINT NOT NULL,
-	    message_id                  BIGINT NOT NULL PRIMARY KEY,
-	    reply_to                    BIGINT NULL,
+	    server_id                   BIGINT UNSIGNED NOT NULL,
+	    chan_id                     BIGINT UNSIGNED NOT NULL,
+	    message_id                  BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+	    reply_to                    BIGINT UNSIGNED NULL,
 	    user                        VARCHAR(32) NOT NULL,
 	    content_history             TEXT NOT NULL,
 	    attachments                 JSON NULL,
@@ -84,9 +84,23 @@ extraction.
 	    deletion_date               TIMESTAMP NULL
 	);
 
-	CREATE TABLE project_users (
+	CREATE TABLE bot_server_chans (
+	    id                          BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+	    name                        VARCHAR(100) NOT NULL
+	);
+
+	CREATE TABLE history_sync (
+	    server_id                   BIGINT UNSIGNED NOT NULL,
+	    chan_id                     BIGINT UNSIGNED NOT NULL,
+	    oldest_message_id           BIGINT UNSIGNED NOT NULL,
+	    newest_message_id           BIGINT UNSIGNED NOT NULL,
+	    complete_backlog            BOOLEAN NOT NULL DEFAULT FALSE,
+	    PRIMARY KEY                 (server_id, chan_id)
+	);
+
+	CREATE TABLE bot_server_users (
 	    pseudo                      VARCHAR(255) NULL,
-	    id                          INT AUTO_INCREMENT PRIMARY KEY,
+	    id                          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	    mail                        VARCHAR(255) NOT NULL,
 	    first_name                  VARCHAR(255) NULL,
 	    last_name                   VARCHAR(255) NULL,
@@ -97,7 +111,7 @@ extraction.
 	    forum_pseudo                VARCHAR(255) NULL,
 	    discord_username            VARCHAR(255) NULL,
 	    pseudo_displayed_on_discord VARCHAR(255) NULL,
-	    discord_expiration_for_irc  INT NULL,
+	    discord_expiration_for_irc  INT UNSIGNED NULL,
 	    history_keep_all            BOOLEAN NULL,
 	    avatar_url                  VARCHAR(1024) NULL,
 	    renewals                    JSON NULL,
@@ -105,8 +119,8 @@ extraction.
 	    last_medium                 VARCHAR(255) NULL
 	);
 
-	CREATE TABLE project_polls (
-	    id                          INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	CREATE TABLE bot_server_polls (
+	    id                          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	    creation_date               TIMESTAMP NOT NULL DEFAULT current_timestamp(),
 	    user                        VARCHAR(255) NOT NULL,
 	    question                    TEXT NOT NULL,
@@ -114,15 +128,6 @@ extraction.
 	    votes                       JSON NULL,
 	    proxies                     JSON NULL,
 	    active                      BOOLEAN NOT NULL DEFAULT TRUE
-	);
-
-	CREATE TABLE history_sync (
-	    server_id                   BIGINT NOT NULL,
-	    chan_id                     BIGINT NOT NULL,
-	    oldest_message_id           BIGINT NOT NULL,
-	    newest_message_id           BIGINT NOT NULL,
-	    complete_backlog            BOOLEAN NOT NULL DEFAULT FALSE,
-	    PRIMARY KEY                 (server_id, chan_id)
 	);
 
 For performance, create composite indexes in the DB:
@@ -157,10 +162,10 @@ Here is the procedure to set up this feature.
 
 For performance, create composite indexes in the DB:
 
-	CREATE INDEX Index_messages ON project_history (server_id, chan_id, creation_date);
-	CREATE INDEX Index_replies ON project_history (reply_to);
-	CREATE INDEX Index_deletions ON project_history (server_id, chan_id, deletion_date);
-	CREATE INDEX Index_expiration ON project_history (relayed, expired, creation_date);
+	CREATE INDEX Index_messages ON bot_server_history (server_id, chan_id, creation_date);
+	CREATE INDEX Index_replies ON bot_server_history (reply_to);
+	CREATE INDEX Index_deletions ON bot_server_history (server_id, chan_id, deletion_date);
+	CREATE INDEX Index_expiration ON bot_server_history (relayed, expired, creation_date);
 
 The ASGI server I use is Uvicorn. On the system where you want to run it:
 
