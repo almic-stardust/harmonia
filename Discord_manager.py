@@ -335,6 +335,11 @@ async def on_message(Message):
 			Text = Match.group(2)
 
 	if History_enabled:
+		# Ignore DMs
+		if Message.guild is not None:
+			DB_manager.Register_Discord_chan(
+					Config["History"]["DB_table_chans"], Discord_chan, Message.channel.name
+			)
 		await History.Message_added(History_table,
 				Author_name, Discord_chan, Message, Text, Relayed_message
 		)
