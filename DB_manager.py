@@ -438,6 +438,22 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 		Cursor.close()
 		Connection.close()
 
+def Get_registered_Discord_chans(Table):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: invalid table name.")
+		Cursor.execute(f"SELECT id, name FROM {Table}")
+		Result = Cursor.fetchall()
+		return {int(ID): Name for ID, Name in Result}
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
 def Register_Discord_chan(Table, ID, Chan_name):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()

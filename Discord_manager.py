@@ -34,6 +34,8 @@ if IRC_enabled:
 History_enabled = Config["Enabled_sections"]["History"]
 if History_enabled:
 	History_table = Config["History"]["DB_table"]
+	History_table_chans = Config["History"]["DB_table_chans"]
+	Discord_chans = DB_manager.Get_registered_Discord_chans(History_table_chans)
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["DB_table"]
@@ -337,9 +339,11 @@ async def on_message(Message):
 	if History_enabled:
 		# Ignore DMs
 		if Message.guild is not None:
-			DB_manager.Register_Discord_chan(
-					Config["History"]["DB_table_chans"], Discord_chan, Message.channel.name
-			)
+			if Discord_chan not in Discord_chans:
+				DB_manager.Register_Discord_chan(
+						History_table_chans, Discord_chan, Message.channel.name
+				)
+				Discord_chans[Discord_chan] = Message.channel.name
 		await History.Message_added(History_table,
 				Author_name, Discord_chan, Message, Text, Relayed_message
 		)
