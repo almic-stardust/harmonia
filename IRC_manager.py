@@ -75,9 +75,9 @@ def Translate_Discord_formatting_to_IRC(Message):
 	return Message
 
 def Split_into_IRC_messages(Message):
-	# IRC has a variable message length: 512 - (control bytes + len(nick+user+host+channel))
+	# IRC has a variable message length: 512 - (control bytes + len(nick+user+host+chan))
 	# Control bytes = 14 | Safety buffer in case of unexpected syntax added by a server = 10
-	# Worst case scenario for the variable parts: nick = 20 | user = 20 | host = 63 | channel = 32
+	# Worst case scenario for the variable parts: nick = 20 | user = 20 | host = 63 | chan = 32
 	# Source https://ircv3.net/specs/extensions/multiline
 	# Maximum allowed message length: 512 - (14+10+20+20+63+32) = 353
 	IRC_message_limit = 353

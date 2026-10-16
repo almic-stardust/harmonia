@@ -51,14 +51,14 @@ Optional = {
 		"Bot_address",
 	),
 	"Users": (
-		"DB_table",
+		"Table",
 	),
 	"Localization": (
 		"Default_language",
 		"Available_languages",
 	),
 	"Polls": (
-		"DB_table",
+		"Table",
 	),
 }
 
@@ -82,7 +82,7 @@ for Section, Keys in Optional.items():
 Config["Enabled_sections"]["History"] = False
 if "History" in Config and Config["History"].get("Enable"):
 	Config["Enabled_sections"]["History"] = True
-	for Key in ("Sync_old", "DB_table", "DB_table_chans", "Storage_folder", "Storage_url"):
+	for Key in ("Sync_old", "Table", "Chans_table", "Storage_folder", "Storage_url"):
 		if Key not in Config["History"] or Config["History"][Key] in (None, ""):
 			print(f"[Config] Error: the history is enabled, but key \"{Key}\" is missing or empty.")
 			sys.exit(1)

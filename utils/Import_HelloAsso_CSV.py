@@ -60,7 +60,7 @@ def Parse_contribution(Value):
 
 with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 
-	Users_table = Config["Users"]["DB_table"]
+	Users_table = Config["Users"]["Table"]
 	Users = DB_manager.Users_fetch_users(Users_table)
 	CSV_content = csv.DictReader(CSV_file, delimiter=";")
 	Output = ""

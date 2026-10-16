@@ -33,12 +33,12 @@ if IRC_enabled:
 	import IRC_manager
 History_enabled = Config["Enabled_sections"]["History"]
 if History_enabled:
-	History_table = Config["History"]["DB_table"]
-	History_table_chans = Config["History"]["DB_table_chans"]
-	Discord_chans = DB_manager.Get_registered_Discord_chans(History_table_chans)
+	History_table = Config["History"]["Table"]
+	History_chans_table = Config["History"]["Chans_table"]
+	Discord_chans = DB_manager.Get_registered_Discord_chans(History_chans_table)
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
-	Users_table = Config["Users"]["DB_table"]
+	Users_table = Config["Users"]["Table"]
 # Times stored in the DB are in UTC
 UTC = datetime.timezone.utc
 # Timezone used when interpreting user input or displaying dates
@@ -341,7 +341,7 @@ async def on_message(Message):
 		if Message.guild is not None:
 			if Discord_chan not in Discord_chans:
 				DB_manager.Register_Discord_chan(
-						History_table_chans, Discord_chan, Message.channel.name
+						History_chans_table, Discord_chan, Message.channel.name
 				)
 				Discord_chans[Discord_chan] = Message.channel.name
 		await History.Message_added(History_table,

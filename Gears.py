@@ -18,10 +18,10 @@ if IRC_enabled:
 	IRC_task = None
 History_enabled = Config["Enabled_sections"]["History"]
 if History_enabled:
-	History_table = Config["History"]["DB_table"]
+	History_table = Config["History"]["Table"]
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
-	Users_table = Config["Users"]["DB_table"]
+	Users_table = Config["Users"]["Table"]
 	# Don’t add non-essential circular dependencies to this module
 	from DB_manager import Users_fetch_users
 	Users = Users_fetch_users(Users_table)

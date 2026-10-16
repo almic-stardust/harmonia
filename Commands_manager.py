@@ -21,10 +21,10 @@ if IRC_enabled:
 	import IRC_manager
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
-	Users_table = Config["Users"]["DB_table"]
+	Users_table = Config["Users"]["Table"]
 Polls_enabled = Config["Enabled_sections"]["Polls"]
 if Polls_enabled:
-	Polls_table = Config["Polls"]["DB_table"]
+	Polls_table = Config["Polls"]["Table"]
 # Times stored in the DB are in UTC
 UTC = datetime.timezone.utc
 # Timezone used when interpreting user input or displaying dates

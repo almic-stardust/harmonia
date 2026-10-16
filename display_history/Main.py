@@ -8,10 +8,10 @@ from Config_manager import Config
 import DB_manager
 
 Display_history = FastAPI()
-History_table = Config["History"]["DB_table"]
+History_table = Config["History"]["Table"]
 
 @Display_history.get("/api/server/{Server_ID}/chans")
-def API_channels(Server_ID: str):
+def API_chans(Server_ID: str):
 	Chans = DB_manager.Get_chans_for_server(History_table, Server_ID)
 	return {"Chans": Chans}
 

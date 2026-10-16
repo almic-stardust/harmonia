@@ -17,7 +17,7 @@ import Gears
 
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
-	Users_table = Config["Users"]["DB_table"]
+	Users_table = Config["Users"]["Table"]
 # Times stored in the DB are in UTC
 UTC = datetime.timezone.utc
 # Timezone used when interpreting user input or displaying dates
@@ -370,17 +370,17 @@ def Message_deleted(Table, Message_ID):
 async def Synchronization(Table):
 	from Discord_manager import bot
 	Server = bot.get_guild(Config["Discord"]["Server"])
-	for Channel in Server.text_channels:
+	for Chan in Server.text_channels:
 		# Find one gap that still needs synchronization
-		Gap = DB_manager.Sync_history_find_next_gap(Server.id, Channel.id)
+		Gap = DB_manager.Sync_history_find_next_gap(Server.id, Chan.id)
 		if Gap is None:
 			continue
 		if Gap["Oldest"] is None:
 			# Get the 10 most recent messages
-			History = Channel.history(limit=10, oldest_first=False)
+			History = Chan.history(limit=10, oldest_first=False)
 		else:
 			ID_oldest_message = discord.Object(id=Gap["Oldest"])
-			History = Channel.history(before=ID_oldest_message, limit=10, oldest_first=False)
+			History = Chan.history(before=ID_oldest_message, limit=10, oldest_first=False)
 		Newest = None
 		# History is an asynchronous iterator
 		async for Message in History:
@@ -391,7 +391,7 @@ async def Synchronization(Table):
 			Oldest = Message.id
 			Author_name = Gears.Get_Discord_pseudo(Message.author)
 			await Message_added(Table,
-				Author_name, Channel.id, Message, Message.content, Relayed=False
+				Author_name, Chan.id, Message, Message.content, Relayed=False
 			)
 		if Oldest is not None:
-			DB_manager.Sync_history_add_period(Server.id, Channel.id, Oldest, Newest)
+			DB_manager.Sync_history_add_period(Server.id, Chan.id, Oldest, Newest)

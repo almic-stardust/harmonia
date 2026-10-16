@@ -34,16 +34,16 @@ History:
   Enable:                 True/False
   # When the bot is added to a new server, it saves the existing history
   Sync_old:               True/False
-  DB_table:               "bot_server_history"
-  DB_table_chans:         "bot_server_chans"
+  Table:                  "bot_server_history"
+  Chans_table:            "bot_server_chans"
   Storage_folder:         "/path/to/bot_files"
   Storage_url:            "https://domain.tld/bot_files"
 
 Users:
-  DB_table:               "project_users"
+  Table:                  "project_users"
 
 Polls:
-  DB_table:               "project_polls"
+  Table:                  "project_polls"
 
 IRC:
   Bot_owner:              ""

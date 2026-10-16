@@ -252,7 +252,7 @@ def Sync_history_add_period(Server_ID, Chan_ID, Oldest, Newest):
 				WHERE server_id=%s AND chan_id=%s
 		""", (Server_ID, Chan_ID))
 		Period = Cursor.fetchone()
-		# First synchronization of this channel
+		# First synchronization of this chan
 		if Period is None:
 			Cursor.execute("""
 					INSERT INTO history_sync (
@@ -488,7 +488,7 @@ def Get_chans_for_server(Table, Server_ID):
 				(Server_ID,)
 		)
 		Result = Cursor.fetchall()
-		Registered_chans = Get_registered_Discord_chans(Config["History"]["DB_table_chans"])
+		Registered_chans = Get_registered_Discord_chans(Config["History"]["Chans_table"])
 		List_chans = []
 		for Row in Result:
 			Chan_ID = int(Row[0])
