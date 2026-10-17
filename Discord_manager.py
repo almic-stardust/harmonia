@@ -362,14 +362,15 @@ async def on_message(Message):
 	# If the command was !quit, no need to continue
 	if Gears.Shutdown_in_progress.is_set():
 		return
-	# After this point, the bot ignores its own messages
-	if Author == bot.user:
+	# If IRC is disabled, or if the message comes from a Discord chan that doesn’t have a bridge to
+	# an IRC chan
+	if not Bridge:
 		return
 	# Don’t relay on IRC what’s already coming from IRC
 	if Relayed_message:
 		return
-	# The message comes from a Discord chan that doesn’t have a bridge to an IRC chan
-	if not Bridge:
+	# After this point, the bot ignores its own messages
+	if Author == bot.user:
 		return
 	if User_join:
 		return
