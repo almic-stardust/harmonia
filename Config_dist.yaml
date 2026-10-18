@@ -1,65 +1,63 @@
 # You must restart the bot if you modify this file. If you use the web display of the history, don’t
 # forget Hypercorn and/or Uvicorn.
 
-Server_timezone:          "Europe/Paris"
+Server_timezone:             "Europe/Paris"
 
 Discord:
-  Bot_owner:              ""
+  Bot_owner:                 ""
   # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
-  Token:                  ""
-  Bot_name:               "name for the bot to display in the history"
-  Server:                 id_server
+  Token:                     ""
+  Bot_name:                  "name for the bot to display in the history"
+  Server:                    id_server
 
 # In lowercase, so that it can be used as-is by the package mysqlclient
 mysqlclient:
-  host:                   ""
-  user:                   ""
-  password:               ""
-  database:               ""
-  charset:                "utf8mb4"
+  host:                      ""
+  user:                      ""
+  password:                  ""
+  database:                  ""
+  charset:                   "utf8mb4"
   # Guarantee UTC regardless of server configuration
-  init_command:           "SET time_zone = '+00:00'"
+  init_command:              "SET time_zone = '+00:00'"
 
 Mail:
-  Server:                 ""
-  Bot_address:            ""
+  Server:                    ""
+  Bot_address:               ""
 
 Localization:
-  Default_language: "English"
+  Default_language:          "English"
   Available_languages:
     - English
     - French
 
 History:
-  Enable:                 True/False
-  # When the bot is added to a new server, it saves the existing history
-  Sync_old:               True/False
-  Table:                  "bot_server_history"
-  Chans_table:            "bot_server_chans"
-  Storage_folder:         "/path/to/bot_files"
-  Storage_url:            "https://domain.tld/bot_files"
+  Sync_old:                  True/False
+  Table:                     "bot_server_history"
+  Chans_table:               "bot_server_chans"
+  Storage_folder:            "/path/to/bot_files"
+  Storage_url:               "https://domain.tld/bot_files"
 
 Users:
-  Table:                  "project_users"
+  Table:                     "project_users"
 
 Polls:
-  Table:                  "project_polls"
+  Table:                     "project_polls"
 
 IRC:
-  Bot_owner:              ""
-  Server:                 "irc.libera.chat"
-  Nick:                   "MyBot"
-  Username:               "my_bot"
-  Real_name:              "My Bot"
-  Password:               ""
-  Quit_message:           "That’s the end of the beans"
+  Bot_owner:                 ""
+  Server:                    "irc.libera.chat"
+  Nick:                      "MyBot"
+  Username:                  "my_bot"
+  Real_name:                 "My Bot"
+  Password:                  ""
+  Quit_message:              "That’s the end of the beans"
 
 IRC_bridges:
   chan1:
-    Discord_chan:         id_chan
+    Discord_chan:            ID_chan1
     # If you want messages on Discord displayed as coming from the users instead of the bot.
     # See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
     Webhook: ""
   chan2:
-    Discord_chan:         id_chan
+    Discord_chan:            ID_chan2
     Webhook: ""
