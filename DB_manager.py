@@ -41,7 +41,8 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Content_history = json.loads(Content_history)
 		Modified = False
 		for Entry in Content_history:
-			# Avoid adding a dependency on Gears and Discord_manager modules for display_history
+			# Local import, to avoid adding a dependency on the Gears modules (and therefore on
+			# Discord_manager and History too) for display_history
 			from Gears import Is_URL
 			if "Attachments" in Content_history[Entry]:
 				for Index, Filename in enumerate(Content_history[Entry]["Attachments"]):
@@ -76,7 +77,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Cursor.close()
 		Connection.close()
 
-def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_message_ID, Discord_username, Text, Attachments, Relayed):
+def History_addition(Table, Date, Chan_ID, Message_ID, Replied_message_ID, Discord_username, Text, Attachments, Relayed):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -103,14 +104,12 @@ def History_addition(Table, Date, Server_ID, Chan_ID, Message_ID, Replied_messag
 		Cursor.execute(f"""
 				INSERT INTO {Table} (
 					creation_date,
-					server_id, chan_id, message_id,
-					reply_to,
+					chan_id, message_id, reply_to,
 					user, content_history, relayed)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+				VALUES (%s, %s, %s, %s, %s, %s, %s)""",
 				(
 					Date,
-					Server_ID, Chan_ID, Message_ID,
-					Replied_message_ID,
+					Chan_ID, Message_ID, Replied_message_ID,
 					Discord_username, Content_history, Relayed
 				)
 		)
@@ -327,7 +326,6 @@ def History_fetch_message(Table, Message_ID):
 		Cursor.execute(f"""
 				SELECT
 					creation_date,
-					server_id,
 					chan_id,
 					message_id,
 					reply_to,
@@ -379,7 +377,6 @@ def History_fetch_message(Table, Message_ID):
 
 			Infos_message = {
 					"Creation_date":		Result["creation_date"],
-					"Server_ID":			Result["server_id"],
 					"Chan_ID":				Result["chan_id"],
 					"Message_ID":			Result["message_id"],
 					"Reply_to":				Result["reply_to"] if Result["reply_to"] else None,
@@ -403,7 +400,7 @@ def History_fetch_message(Table, Message_ID):
 		Cursor.close()
 		Connection.close()
 
-def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50):
+def History_messages_to_display(Table, Chan_ID, Before=None, Limit=50):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
@@ -419,10 +416,9 @@ def History_messages_to_display(Table, Server_ID, Chan_ID, Before=None, Limit=50
 				creation_date,
 				deletion_date
 			FROM {Table}
-			WHERE server_id = %s
-			AND chan_id = %s
+			WHERE chan_id = %s
 			AND deletion_date IS NULL"""
-		Values = [Server_ID, Chan_ID]
+		Values = [Chan_ID]
 		if Before is not None:
 			Query += " AND creation_date < %s"
 			Values.append(Before)
@@ -475,20 +471,15 @@ def Register_Discord_chan(Table, ID, Chan_name):
 		Cursor.close()
 		Connection.close()
 
-def Get_chans_for_server(Table, Server_ID):
+def Get_chans_for_server(History_table, History_chans_table):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
-		if not Table.isidentifier():
+		if not History_table.isidentifier():
 			raise ValueError("[DB] Error: invalid table name.")
-		Cursor.execute(f"""
-				SELECT DISTINCT chan_id FROM {Table}
-				WHERE server_id = %s
-				ORDER BY chan_id""",
-				(Server_ID,)
-		)
+		Cursor.execute(f"SELECT DISTINCT chan_id FROM {History_table} ORDER BY chan_id")
 		Result = Cursor.fetchall()
-		Registered_chans = Get_registered_Discord_chans(Config["History"]["Chans_table"])
+		Registered_chans = Get_registered_Discord_chans(History_chans_table)
 		List_chans = []
 		for Row in Result:
 			Chan_ID = int(Row[0])

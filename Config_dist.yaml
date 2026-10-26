@@ -1,5 +1,5 @@
-# You must restart the bot if you modify this file. If you use the web display of the history, don’t
-# forget Hypercorn and/or Uvicorn.
+# You must restart the bot if you modify this file. And if you use the web display of the history,
+# don’t forget Uvicorn.
 
 Server_timezone:             "Europe/Paris"
 
@@ -8,7 +8,6 @@ Discord:
   # Your Discord token. See https://discordpy.readthedocs.io/en/stable/discord.html
   Token:                     ""
   Bot_name:                  "name for the bot to display in the history"
-  Server:                    id_server
 
 # In lowercase, so that it can be used as-is by the package mysqlclient
 mysqlclient:
@@ -30,12 +29,27 @@ Localization:
     - English
     - French
 
-History:
-  Sync_old:                  True/False
-  Table:                     "bot_server_history"
-  Chans_table:               "bot_server_chans"
-  Storage_folder:            "/path/to/bot_files"
-  Storage_url:               "https://domain.tld/bot_files"
+Projects:
+  - Name:                    "project1"
+    Discord_server:          ID_server1
+    History:
+      Enable:                True/False
+      # When the bot is added to a new server, should it save the existing history?
+      Sync_old:              True/False
+      Table:                 "bot_server1_history"
+      Chans_table:           "bot_server1_chans"
+      Storage_folder:        "/path/to/bot_files/server1"
+      Storage_url:           "https://domain.tld/bot_files/server1"
+
+  - Name:                    "project2"
+    Discord_server:          ID_server2
+    History:
+      Enable:                True/False
+      Sync_old:              True/False
+      Table:                 "bot_server2_history"
+      Chans_table:           "bot_server2_chans"
+      Storage_folder:        "/path/to/bot_files/server2"
+      Storage_url:           "https://domain.tld/bot_files/server2"
 
 Users:
   Table:                     "project_users"
@@ -57,7 +71,7 @@ IRC_bridges:
     Discord_chan:            ID_chan1
     # If you want messages on Discord displayed as coming from the users instead of the bot.
     # See https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
-    Webhook: ""
+    Webhook:                 ""
   chan2:
     Discord_chan:            ID_chan2
-    Webhook: ""
+    Webhook:                 ""

@@ -71,7 +71,6 @@ extraction.
 
 	CREATE TABLE bot_server_history (
 	    creation_date               TIMESTAMP NOT NULL,
-	    server_id                   BIGINT UNSIGNED NOT NULL,
 	    chan_id                     BIGINT UNSIGNED NOT NULL,
 	    message_id                  BIGINT UNSIGNED NOT NULL PRIMARY KEY,
 	    reply_to                    BIGINT UNSIGNED NULL,

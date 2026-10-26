@@ -16,16 +16,21 @@ IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
 	IRC_task = None
-History_enabled = Config["Enabled_sections"]["History"]
-if History_enabled:
-	History_table = Config["History"]["Table"]
+Projects_by_server = {
+		int(Project["Discord_server"]): Project
+		for Project in Config["Projects"]
+}
+History_projects = [
+		Project for Project in Config["Projects"]
+		if Project["History"].get("Enable", False)
+]
+History_sync_tasks = {}
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
 	Users_table = Config["Users"]["Table"]
 	# Don’t add non-essential circular dependencies to this module
 	from DB_manager import Users_fetch_users
 	Users = Users_fetch_users(Users_table)
-
 
 ###############################################################################
 # Startup
@@ -40,27 +45,30 @@ async def Start_bot():
 		await Stop_bot()
 		return
 	print(f"[Discord] Logged in as {Discord_manager.bot.user}")
+	# Start background tasks
+	for Project in History_projects:
+		if Project["History"].get("Sync_old", False):
+			Name = Project["Name"]
+			Task = History_sync_tasks.get(Name)
+			if Task is None or Task.done():
+				History_sync_tasks[Name] = asyncio.create_task(
+						Synchronize_project_history(Project), name=f"HistorySynchronization:{Name}"
+				)
+		# TODO: make it compatible with multi-projects
+		#if IRC_enabled and not Discord_manager.Reconcile_downloaded_files.is_running():
+		#	Discord_manager.Reconcile_downloaded_files.start()
+	if Users_enabled:
+		if not Synchronize_users.is_running():
+			Synchronize_users.start()
 	if IRC_enabled:
 		global IRC_task
 		# Start IRC loop only once
 		if IRC_task is None or IRC_task.done():
 			IRC_task = asyncio.create_task(IRC_manager.Run_IRC_loop())
-	# Start background tasks
-	if History_enabled:
-		if IRC_enabled and not Discord_manager.Reconcile_downloaded_files.is_running():
-			Discord_manager.Reconcile_downloaded_files.start()
-		if Config["History"]["Sync_old"]:
-			# Don’t add non-essential circular dependencies to this module
-			from History import Synchronization
-			if not Synchronization.is_running():
-				Synchronization.start(History_table)
-	if Users_enabled:
-		if not Synchronize_users.is_running():
-			Synchronize_users.start()
-	if IRC_enabled:
-		if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
-			if History_enabled and Users_enabled:
-				Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
+		# TODO: make it compatible with multi-projects
+		#if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
+		#	if History_enabled and Users_enabled:
+		#		Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
 
 ###############################################################################
 # Shutdown
@@ -70,30 +78,31 @@ async def Stop_bot():
 
 	if Shutdown_in_progress.is_set():
 		return
+	global History_sync_tasks
 	print("Shutdown initiated…")
 	Shutdown_in_progress.set()
 
 	# Stop background tasks
-	if History_enabled:
-		if IRC_enabled and Discord_manager.Reconcile_downloaded_files.is_running():
-			Discord_manager.Reconcile_downloaded_files.cancel()
-			try:
-				await Discord_manager.Reconcile_downloaded_files.get_task()
-			except asyncio.CancelledError:
-				pass
-			except Exception as Error:
-				print(f"Error while stopping Reconcile_downloaded_files(): {Error}")
-		if Config["History"]["Sync_old"]:
-			# Don’t add non-essential circular dependencies to this module
-			from History import Synchronization
-			if Synchronization.is_running():
-				Synchronization.cancel()
+	if len(History_sync_tasks) > 0:
+		for Name, Task in list(History_sync_tasks.items()):
+			if not Task.done():
+				Task.cancel()
 				try:
-					await Synchronization.get_task()
+					await Task
 				except asyncio.CancelledError:
 					pass
 				except Exception as Error:
-					print(f"Error while stopping history synchronization: {Error}")
+					print(f"Error while stopping history synchronization for “{Name}”: {Error}")
+		History_sync_tasks.clear()
+		# TODO: desactivate it project by project
+		#if IRC_enabled and Discord_manager.Reconcile_downloaded_files.is_running():
+		#	Discord_manager.Reconcile_downloaded_files.cancel()
+		#	try:
+		#		await Discord_manager.Reconcile_downloaded_files.get_task()
+		#	except asyncio.CancelledError:
+		#		pass
+		#	except Exception as Error:
+		#		print(f"Error while stopping Reconcile_downloaded_files(): {Error}")
 	if Users_enabled:
 		if Synchronize_users.is_running():
 			Synchronize_users.cancel()
@@ -145,6 +154,36 @@ async def Wait_for_events(*Events):
 			Tasks.append(asyncio.create_task(Event))
 	First_done, Pending_tasks = await asyncio.wait(Tasks, return_when=asyncio.FIRST_COMPLETED)
 	return First_done, Pending_tasks
+
+###############################################################################
+# History synchronization
+###############################################################################
+
+async def Synchronize_project_history(Project):
+	# Don’t add non-essential circular dependencies to this module
+	from History import Synchronization
+	Table = Project["History"]["Table"]
+	Server_ID = Project["Discord_server"]
+	while True:
+		try:
+			await Synchronization.coro(Table, Server_ID)
+		except asyncio.CancelledError:
+			raise
+		except Exception as Error:
+			print(f"[History] Synchronization failed for project “{Project['Name']}”: {Error}")
+		await asyncio.sleep(3600)
+
+###############################################################################
+# Projects
+###############################################################################
+
+def Get_project_from_Discord_server(Server_ID):
+	if Server_ID is None:
+		return None
+	try:
+		return Projects_by_server.get(int(Server_ID))
+	except (TypeError, ValueError):
+		return None
 
 ###############################################################################
 # Users
@@ -201,7 +240,7 @@ async def Get_target_chans(Discord_chan_ID):
 	Targets["Discord_chan"] = Discord_manager.bot.get_channel(Discord_chan_ID)
 	if not Targets["Discord_chan"]:
 		Targets["Discord_chan"] = await Discord_manager.bot.fetch_channel(Discord_chan_ID)
-	# Only look for an IRC chan if it’s not a Discord DM
+	# Only look for an IRC chan when, on Discord’s side, it’s not a DM
 	if IRC_enabled and not isinstance(Targets["Discord_chan"], discord.DMChannel):
 		Bridge = Discord_manager.Get_bridge_by_Discord_chan(Discord_chan_ID)
 		if Bridge:

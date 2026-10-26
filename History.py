@@ -166,9 +166,8 @@ def Determine_filenames(Table, Storage_folder, Date, Attachments):
 
 	return Assignments
 
-async def Download_from_Discord(Table, Message):
+async def Download_from_Discord(Table, Storage_folder, Message):
 	from Discord_manager import Register_destination_in_MPD
-	Storage_folder = Config["History"].get("Storage_folder")
 	Other_source_folder = os.path.join(Storage_folder, "other_sources")
 	Date = Message.created_at.astimezone(Timezone).strftime("%Y%m%d")
 	Attachments = []
@@ -213,9 +212,8 @@ async def Download_from_Discord(Table, Message):
 		Downloaded_filenames.extend(Temp_list)
 	return Downloaded_filenames
 
-def Delete_attachments(Keep, Attachments):
+def Delete_attachments(Keep, Storage_folder, Attachments):
 	Deleted_filenames = []
-	Storage_folder = Config["History"].get("Storage_folder")
 	if not os.path.exists(Storage_folder):
 		print("[History] Warning: The folder for the attachments isn’t accessible.")
 		return
@@ -250,7 +248,7 @@ def Delete_attachments(Keep, Attachments):
 # Handling messages
 ###############################################################################
 
-async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
+async def Message_added(Table, Storage_folder, Author_name, Chan_ID, Message, Text, Relayed):
 	# An UTC timestamp, used for the creation_date field, and for the index of the dictionary in the
 	# content_history field.
 	# The creation_date is redundant, but useful for efficient date comparisons in SQL, avoiding
@@ -259,22 +257,20 @@ async def Message_added(Table, Author_name, Chan_ID, Message, Text, Relayed):
 	# The creation_field cannot be automatically created by MariaDB, because the bot might be
 	# retrieving old messages.
 	Date = Message.created_at.astimezone(UTC).replace(tzinfo=None)
-	# Set 0 if it’s a DM
-	Server_ID = Message.guild.id if Message.guild else 0
 	Replied_message_ID = 0
 	if Message.reference and Message.reference.resolved:
 		Replied_message_ID = Message.reference.resolved.id
 	if len(Message.attachments) > 0:
-		Attachments_filenames = await Download_from_Discord(Table, Message)
+		Attachments_filenames = await Download_from_Discord(Table, Storage_folder, Message)
 	else:
 		Attachments_filenames = []
 	DB_manager.History_addition(Table,
-			Date, Server_ID, Chan_ID, Message.id,
-			Replied_message_ID,
+			Date,
+			Chan_ID, Message.id, Replied_message_ID,
 			Author_name, Text, Attachments_filenames, Relayed
 	)
 
-def Message_edited(Table, Message_ID, Payload):
+def Message_edited(Table, Storage_folder, Message_ID, Payload):
 
 	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
 	if not Infos_message:
@@ -330,7 +326,7 @@ def Message_edited(Table, Message_ID, Payload):
 			Original_filename = Gears.Retrieve_original_filename(Stored_filename)
 			if Original_filename not in Discord_filenames:
 				# Delete_attachments() returns a list, but in this case it processes only one file
-				New_filename = Delete_attachments(Keep, Stored_filename)[0]
+				New_filename = Delete_attachments(Keep, Storage_folder, Stored_filename)[0]
 				Deleted_filenames.append({
 						"Old_filename": Stored_filename,
 						"New_filename": New_filename,
@@ -341,7 +337,7 @@ def Message_edited(Table, Message_ID, Payload):
 		return
 	DB_manager.History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames)
 
-def Message_deleted(Table, Message_ID):
+def Message_deleted(Table, Storage_folder, Message_ID):
 	# Times stored in the DB are in UTC
 	Date = datetime.datetime.now(UTC).replace(tzinfo=None)
 	Infos_message = DB_manager.History_fetch_message(Table, Message_ID)
@@ -359,7 +355,7 @@ def Message_deleted(Table, Message_ID):
 	Deleted_filenames = []
 	Stored_filenames = Infos_message["Attachments"]
 	if Stored_filenames:
-		Deleted_filenames = Delete_attachments(Keep, Stored_filenames)
+		Deleted_filenames = Delete_attachments(Keep, Storage_folder, Stored_filenames)
 	DB_manager.History_deletion(Table, Keep, Message_ID, Date, Deleted_filenames)
 
 ###############################################################################
