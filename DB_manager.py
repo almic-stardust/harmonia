@@ -24,8 +24,9 @@ def History_update_filename(Table, Old_filename, New_filename):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
+		# Validate table name before incorporating it into an SQL query
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		# Check if there is an entry with Old_filename in its content_history field
 		Cursor.execute(f"""
 				SELECT message_id, content_history
@@ -82,7 +83,7 @@ def History_addition(Table, Date, Chan_ID, Message_ID, Replied_message_ID, Disco
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
 				SELECT message_id FROM {Table}
@@ -127,7 +128,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
 				SELECT content_history FROM {Table}
@@ -188,7 +189,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		# Retrieve the necessary informations from the DB
 		Cursor.execute(f"""
 				SELECT content_history FROM {Table}
@@ -322,7 +323,7 @@ def History_fetch_message(Table, Message_ID):
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				SELECT
 					creation_date,
@@ -405,7 +406,7 @@ def History_messages_to_display(Table, Chan_ID, Before=None, Limit=50):
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Query = f"""
 			SELECT
 				message_id,
@@ -434,28 +435,12 @@ def History_messages_to_display(Table, Chan_ID, Before=None, Limit=50):
 		Cursor.close()
 		Connection.close()
 
-def Get_registered_Discord_chans(Table):
-	Connection = Connect_DB()
-	Cursor = Connection.cursor()
-	try:
-		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
-		Cursor.execute(f"SELECT id, name FROM {Table}")
-		Result = Cursor.fetchall()
-		return {int(ID): Name for ID, Name in Result}
-	except MySQLdb.Error as Error:
-		print(f"[DB] Error: {Error}")
-		sys.exit(1)
-	finally:
-		Cursor.close()
-		Connection.close()
-
 def Register_Discord_chan(Table, ID, Chan_name):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				INSERT INTO {Table} (id, name)
 				VALUES (%s, %s)
@@ -471,12 +456,29 @@ def Register_Discord_chan(Table, ID, Chan_name):
 		Cursor.close()
 		Connection.close()
 
+def Get_registered_Discord_chans(Table):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
+		Cursor.execute(f"SELECT id, name FROM {Table}")
+		Result = Cursor.fetchall()
+		return {int(ID): Name for ID, Name in Result}
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
 def Get_chans_for_server(History_table, History_chans_table):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
-		if not History_table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+		for Table in (History_table, Chans_table):
+			if not Table.isidentifier():
+				raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"SELECT DISTINCT chan_id FROM {History_table} ORDER BY chan_id")
 		Result = Cursor.fetchall()
 		Registered_chans = Get_registered_Discord_chans(History_chans_table)
@@ -509,7 +511,7 @@ def Messages_potentially_expired(Table):
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Messages = []
 		Cursor.execute(f"""
 				SELECT creation_date, chan_id, message_id, user FROM {Table}
@@ -540,7 +542,7 @@ def Mark_message_expired(Table, Message_ID):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				UPDATE {Table} SET expired = TRUE
 				WHERE message_id = %s""",
@@ -583,7 +585,7 @@ def Users_check_presence(Table, Infos_user):
 
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Other_identifiers = {}
 		for Column in Fields:
 			if not Fields[Column]:
@@ -662,7 +664,7 @@ def Users_fetch_users(Table):
 	Users = {}
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"SELECT * FROM {Table}")
 		Results = Cursor.fetchall()
 		for Result in Results:
@@ -798,7 +800,7 @@ def Users_manage_user(Table, Action, Infos_user):
 	]
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(Query, Values)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -813,7 +815,7 @@ def Polls_create(Table, User, Question, Choices):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				INSERT INTO {Table} (user, question, choices)
 				VALUES (%s, %s, %s)""",
@@ -833,7 +835,7 @@ def Polls_close(Table, Poll_ID):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				UPDATE {Table} SET active = FALSE
 				WHERE id = %s""",
@@ -855,7 +857,7 @@ def Polls_delete(Table, Poll_ID):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				DELETE FROM {Table}
 				WHERE id = %s""",
@@ -877,7 +879,7 @@ def Polls_fetch(Table, Poll_ID):
 	Cursor = Connection.cursor(MySQLdb.cursors.DictCursor)
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				SELECT * FROM {Table}
 				WHERE id = %s""",
@@ -915,7 +917,7 @@ def Polls_fetch_list(Table, Number, Status=None):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Query = f"SELECT id FROM {Table} "
 		# If the latest poll is requested, return it whether it’s active or not
 		if Status == "latest":
@@ -949,7 +951,7 @@ def Polls_vote(Table, Poll_ID, Pseudo, Choice_index, Proxy_holder=None):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Infos_poll = Polls_fetch(Table, Poll_ID)
 		if not Infos_poll:
 			return False
@@ -978,7 +980,7 @@ def Polls_unvote(Table, Poll_ID, Votes):
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
-			raise ValueError("[DB] Error: invalid table name.")
+			raise ValueError("[DB] Error: {Table} is an invalid table name.")
 		Query = f"UPDATE {Table} SET votes = %s WHERE id = {Poll_ID}"
 		Values = [json.dumps(Votes)]
 		Cursor.execute(Query, Values)
