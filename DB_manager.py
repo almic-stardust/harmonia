@@ -443,7 +443,7 @@ def Register_Discord_chan(Table, ID, Position, Name):
 			raise ValueError(f"[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
 				INSERT INTO {Table} (id, position, name)
-                VALUES (%s, %s, %s)
+				VALUES (%s, %s, %s)
 				ON DUPLICATE KEY UPDATE
 					position = VALUES(position),
 					name = VALUES(name)""",

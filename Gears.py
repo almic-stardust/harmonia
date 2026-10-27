@@ -37,14 +37,27 @@ if Users_enabled:
 ###############################################################################
 
 async def Start_bot():
+
 	# Ensure async errors are visible (by default, discord.py silently drop task errors)
 	Loop = asyncio.get_running_loop()
 	Loop.set_exception_handler(lambda loop, context: print("ASYNC ERROR:", context))
+
 	if len(Discord_manager.bot.guilds) == 0:
 		print("[Discord] Bot is not yet in any server.")
 		await Stop_bot()
 		return
 	print(f"[Discord] Logged in as {Discord_manager.bot.user}")
+
+	# Synchronize all chans, so the DB can recover from missed events or temporary disconnections
+	# Don’t add non-essential circular dependencies to this module
+	from DB_manager import Register_Discord_chan
+	for Connected_server in Discord_manager.bot.guilds:
+		Project = Get_project_from_Discord_server(Connected_server.id)
+		if Project in History_projects:
+			Chans_table = Project["History"]["Chans_table"]
+			for Chan in Connected_server.channels:
+				Register_Discord_chan(Chans_table, Chan.id, Chan.position, Chan.name)
+
 	# Start background tasks
 	for Project in History_projects:
 		if Project["History"].get("Sync_old", False):

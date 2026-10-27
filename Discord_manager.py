@@ -129,6 +129,17 @@ def Get_bridge_by_IRC_chan(IRC_chan):
 	# If IRC_chan doesn’t exist in Config["IRC_bridges"] → returns None
 	return Config["IRC_bridges"].get(IRC_chan.lstrip("#"))
 
+@bot.event
+async def on_guild_channel_update(Before, After):
+	Project = Gears.Get_project_from_Discord_server(After.guild.id)
+	if not Project or not Project["History"]["Enable"]:
+		return
+	# Ignore changes unrelated to what is stored in the DB
+	if Before.position == After.position and Before.name == After.name:
+		return
+	Chans_table = Project["History"]["Chans_table"]
+	DB_manager.Register_Discord_chan(Chans_table, After.id, After.position, After.name)
+
 ###############################################################################
 # Handling users
 ###############################################################################
