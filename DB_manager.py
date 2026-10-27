@@ -435,18 +435,19 @@ def History_messages_to_display(Table, Chan_ID, Before=None, Limit=50):
 		Cursor.close()
 		Connection.close()
 
-def Register_Discord_chan(Table, ID, Chan_name):
+def Register_Discord_chan(Table, ID, Position, Name):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
 		if not Table.isidentifier():
 			raise ValueError(f"[DB] Error: {Table} is an invalid table name.")
 		Cursor.execute(f"""
-				INSERT INTO {Table} (id, name)
-				VALUES (%s, %s)
+				INSERT INTO {Table} (id, position, name)
+                VALUES (%s, %s, %s)
 				ON DUPLICATE KEY UPDATE
+					position = VALUES(position),
 					name = VALUES(name)""",
-				(ID, Chan_name)
+				(ID, Position, Name)
 		)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -462,41 +463,9 @@ def Get_registered_Discord_chans(Table):
 	try:
 		if not Table.isidentifier():
 			raise ValueError(f"[DB] Error: {Table} is an invalid table name.")
-		Cursor.execute(f"SELECT id, name FROM {Table}")
+		Cursor.execute(f"SELECT id, position, name FROM {Table} ORDER BY position")
 		Result = Cursor.fetchall()
-		return {int(ID): Name for ID, Name in Result}
-	except MySQLdb.Error as Error:
-		print(f"[DB] Error: {Error}")
-		sys.exit(1)
-	finally:
-		Cursor.close()
-		Connection.close()
-
-def Get_chans_for_server(History_table, History_chans_table):
-	Connection = Connect_DB()
-	Cursor = Connection.cursor()
-	try:
-		for Table in (History_table, History_chans_table):
-			if not Table.isidentifier():
-				raise ValueError(f"[DB] Error: {Table} is an invalid table name.")
-		Cursor.execute(f"SELECT DISTINCT chan_id FROM {History_table} ORDER BY chan_id")
-		Result = Cursor.fetchall()
-		Registered_chans = Get_registered_Discord_chans(History_chans_table)
-		List_chans = []
-		for Row in Result:
-			Chan_ID = int(Row[0])
-			Chan_name = Registered_chans.get(Chan_ID)
-			Chan_ID = str(Chan_ID)
-			if Chan_name:
-				Chan_name = f"#{Chan_name}"
-			else:
-				# If a chan isn’t registered in the DB, use its ID as the fallback name
-				Chan_name = Chan_ID
-			List_chans.append({
-					"id": Chan_ID,
-					"name": Chan_name,
-			})
-		return List_chans
+		return {int(ID): [Position, Name] for ID, Position, Name in Result}
 	except MySQLdb.Error as Error:
 		print(f"[DB] Error: {Error}")
 		sys.exit(1)

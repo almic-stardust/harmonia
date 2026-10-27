@@ -313,6 +313,8 @@ async def on_message(Message):
 	if Message.guild is not None:
 		Project = Gears.Get_project_from_Discord_server(Message.guild.id)
 	History_enabled = Project and Project["History"]["Enable"]
+	# TODO: make this cache compatible with multi-projects
+	#global Discord_chans
 	Discord_chan = Message.channel.id
 	Bridge = None
 	if IRC_enabled:
@@ -340,14 +342,14 @@ async def on_message(Message):
 	if History_enabled:
 		# Ignore DMs
 		if Message.guild is not None:
-			Discord_chans = DB_manager.Get_registered_Discord_chans(
-					Project["History"]["Chans_table"]
-			)
+			Chans_table = Project["History"]["Chans_table"]
+			Discord_chans = DB_manager.Get_registered_Discord_chans(Chans_table)
 			if Discord_chan not in Discord_chans:
-				DB_manager.Register_Discord_chan(
-						Project["History"]["Chans_table"], Discord_chan, Message.channel.name
+				DB_manager.Register_Discord_chan(Chans_table,
+						Discord_chan, Message.channel.position, Message.channel.name
 				)
-				Discord_chans[Discord_chan] = Message.channel.name
+				# TODO: make this cache compatible with multi-projects
+				#Discord_chans[Discord_chan] = [Message.channel.position, Message.channel.name]
 		await History.Message_added(
 				Project["History"]["Table"], Project["History"]["Storage_folder"],
 				Author_name, Discord_chan, Message, Text, Relayed_message

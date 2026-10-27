@@ -85,6 +85,7 @@ extraction.
 
 	CREATE TABLE bot_server_chans (
 	    id                          BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+	    position                    INT UNSIGNED NOT NULL,
 	    name                        VARCHAR(100) NOT NULL
 	);
 

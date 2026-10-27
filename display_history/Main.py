@@ -34,8 +34,22 @@ def Get_history_tables(Server_ID):
 
 @Display_history.get("/api/server/{Server_ID}/chans")
 def API_chans(Server_ID: str):
-	History_table, History_chans_table = Get_history_tables(Server_ID)
-	Chans = DB_manager.Get_chans_for_server(History_table, History_chans_table)
+	_, History_chans_table = Get_history_tables(Server_ID)
+	Registered_chans = DB_manager.Get_registered_Discord_chans(History_chans_table)
+	Chans = []
+	for Chan_ID, Infos_chan in Registered_chans.items():
+		# Infos_chan[0] = position | Infos_chan[1] = name
+		Chan_name = Infos_chan[1]
+		Chan_ID = str(Chan_ID)
+		if Chan_name:
+			Chan_name = f"#{Chan_name}"
+		else:
+			# If a chan isn’t registered in the DB, use its ID as the fallback name
+			Chan_name = Chan_ID
+		Chans.append({
+				"id": Chan_ID,
+				"name": Chan_name,
+		})
 	return {"Chans": Chans}
 
 # Server_ID and Chan_ID are 19-digit Discord identifiers. Their size conflits with Pydantic (used by
