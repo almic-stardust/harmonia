@@ -915,7 +915,7 @@ async def Polls_close(Targets, User, Is_moderator, Arguments, From_Discord=False
 	if not Arguments:
 		Infos_poll = DB_manager.Polls_fetch_list(Polls_table, 1, "latest")[0]
 		if not Infos_poll:
-			Output += L10n["CM_Polls_error_no_polls_in_DB"][Language]
+			Output = L10n["CM_Polls_error_no_polls_in_DB"][Language]
 			if IRC_enabled:
 				Output_IRC += Output
 			await Gears.Send(Targets, Output, Output_IRC)
@@ -1624,9 +1624,15 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 			await Gears.Send(Targets, Output, Output_IRC)
 			return
 	# When the number of polls is not specified, display the last 3
-	if not Number:
+	else:
 		Number = 3
-	if Number > 10:
+	if Number < 1:
+		Output = L10n["CM_Polls_error_invalid_number"][Language] + "\n" + Help_usage
+		if IRC_enabled:
+			Output_IRC += Output
+		await Gears.Send(Targets, Output, Output_IRC)
+		return
+	elif Number > 10:
 		Number = 10
 		Output += L10n["CM_Polls_list_pruned_number"][Language] + "\n"
 	Polls = DB_manager.Polls_fetch_list(Polls_table, Number, Status)
@@ -1638,10 +1644,10 @@ async def Polls_list(Targets, User, Arguments=None, From_Discord=False):
 		return
 	for Infos_poll in Polls:
 		if Infos_poll["Active"]:
-			Status = L10n["CM_Polls_info_word_for_active"][Language]
+			Info_status = L10n["CM_Polls_info_word_for_active"][Language]
 		else:
-			Status = L10n["CM_Polls_info_word_for_closed"][Language]
-		Output += f"#{Infos_poll['ID']} ({Status}) {Infos_poll['Question']}\n"
+			Info_status = L10n["CM_Polls_info_word_for_closed"][Language]
+		Output += f"#{Infos_poll['ID']} ({Info_status}) {Infos_poll['Question']}\n"
 	if IRC_enabled:
 		Output_IRC += Output
 	await Gears.Send(Targets, Output, Output_IRC)

@@ -137,6 +137,9 @@ CM_Polls_error_no_polls_in_DB:
 CM_Polls_error_invalid_id:
   English: "Error: Invalid poll ID: {Poll_ID}."
   French: "Erreur : L'ID de ce vote est invalide : {Poll_ID}."
+CM_Polls_error_invalid_number:
+  English: "The number of polls to list must be positive!"
+  French: "Le nombre de sondages à lister doit être positif!"
 CM_Polls_error_not_found:
   English: "Error: Poll {Poll_ID} does not exist. Check “!polls list”"
   French: "Erreur : Le vote {Poll_ID} n'existe pas. Consultez « !polls list »"

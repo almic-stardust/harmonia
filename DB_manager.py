@@ -64,8 +64,8 @@ def History_update_filename(Table, Old_filename, New_filename):
 			return
 		Cursor.execute(f"""
 				UPDATE {Table} SET content_history = %s
-				WHERE message_id = {Message_ID}""",
-				(json.dumps(Content_history),)
+				WHERE message_id = %s""",
+				(json.dumps(Content_history), Message_ID)
 		)
 		# Autocommit could leave the DB in a partially updated state: a batch of related updates
 		# could be only partially applied, because one of them raised an exception. Therefore, it’s
@@ -172,8 +172,8 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames):
 					)
 
 		Content_history = json.dumps(Content_history)
-		Query = f"UPDATE {Table} SET content_history = %s WHERE message_id = {Message_ID}"
-		Values = [Content_history]
+		Query = f"UPDATE {Table} SET content_history = %s WHERE message_id = %s"
+		Values = [Content_history, Message_ID]
 		Cursor.execute(Query, Values)
 		Connection.commit()
 
@@ -224,7 +224,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 				Content_history = json.dumps(Content_history)
 				Query += ", content_history = %s"
 				Values.append(Content_history)
-			Query += f" WHERE message_id = %s"
+			Query += " WHERE message_id = %s"
 			Values.append(Message_ID)
 		else:
 			Query = f"DELETE FROM {Table} WHERE message_id = %s"
@@ -249,8 +249,8 @@ def Sync_history_add_period(Server_ID, Chan_ID, Oldest, Newest):
 		Cursor.execute("""
 				SELECT oldest_message_id, newest_message_id
 				FROM history_sync
-				WHERE server_id=%s AND chan_id=%s
-		""", (Server_ID, Chan_ID))
+				WHERE server_id=%s AND chan_id=%s""",
+				(Server_ID, Chan_ID))
 		Period = Cursor.fetchone()
 		# First synchronization of this chan
 		if Period is None:
@@ -744,7 +744,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					renewals = %s,
 					contributions = %s,
 					last_medium = %s
-				WHERE id = {User_ID}"""
+				WHERE id = %s"""
 	# Avoid directly inserting JSON into a SQL query, since it could break if the JSON contains
 	# quotes. Using %s instead, in combination with this Values list, allows mysqlclient to escape
 	# JSON strings, thus avoiding the risk of SQL syntax errors
@@ -767,6 +767,8 @@ def Users_manage_user(Table, Action, Infos_user):
 			Contributions,
 			Infos_user["Last_medium"]
 	]
+	if Action == "Update":
+		Values.append(User_ID)
 	try:
 		if not Table.isidentifier():
 			raise ValueError(f"[DB] Error: {Table} is an invalid table name.")
@@ -881,7 +883,7 @@ def Polls_fetch(Table, Poll_ID):
 		Cursor.close()
 		Connection.close()
 
-def Polls_fetch_list(Table, Number, Status=None):
+def Polls_fetch_list(Table, Number, Status):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
 	try:
@@ -890,14 +892,15 @@ def Polls_fetch_list(Table, Number, Status=None):
 		Query = f"SELECT id FROM {Table} "
 		# If the latest poll is requested, return it whether it’s active or not
 		if Status == "latest":
-			Query += f"ORDER BY id DESC LIMIT {Number}"
+			Query += "ORDER BY id DESC LIMIT %s"
 		else:
 			if Status == "active":
 				Query += "WHERE active = TRUE "
 			elif Status == "closed":
 				Query += "WHERE active = FALSE "
-			Query += f"ORDER BY active DESC, id DESC LIMIT {Number}"
-		Cursor.execute(Query)
+			Query += "ORDER BY active DESC, id DESC LIMIT %s"
+		Values = [Number]
+		Cursor.execute(Query, Values)
 		Results = Cursor.fetchall()
 		Polls = []
 		for Result in Results:
@@ -933,7 +936,8 @@ def Polls_vote(Table, Poll_ID, Pseudo, Choice_index, Proxy_holder=None):
 			Proxies[Pseudo] = Proxy_holder
 			Query += ", proxies = %s"
 			Values.append(json.dumps(Proxies))
-		Query += f" WHERE id = {Poll_ID}"
+		Query += " WHERE id = %s"
+		Values.append(Poll_ID)
 		Cursor.execute(Query, Values)
 		Connection.commit()
 		return True
@@ -950,8 +954,8 @@ def Polls_unvote(Table, Poll_ID, Votes):
 	try:
 		if not Table.isidentifier():
 			raise ValueError(f"[DB] Error: {Table} is an invalid table name.")
-		Query = f"UPDATE {Table} SET votes = %s WHERE id = {Poll_ID}"
-		Values = [json.dumps(Votes)]
+		Query = f"UPDATE {Table} SET votes = %s WHERE id = %s"
+		Values = [json.dumps(Votes), Poll_ID]
 		Cursor.execute(Query, Values)
 		Connection.commit()
 		return True

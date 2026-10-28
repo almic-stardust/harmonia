@@ -44,9 +44,9 @@ async def Start_bot():
 		return
 	print(f"[Discord] Logged in as {Discord_manager.bot.user}")
 
-	# Synchronize all chans, so the DB can recover from missed events or temporary disconnections
 	# Don’t add non-essential circular dependencies to this module
 	from DB_manager import Register_Discord_chan
+	# Synchronize all chans, so the DB can recover from missed events or temporary disconnections
 	for Connected_server in Discord_manager.bot.guilds:
 		Project = Get_project_from_Discord_server(Connected_server.id)
 		if Project and Project["History"]["Enable"]:
