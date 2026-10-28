@@ -28,8 +28,6 @@ intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# TODO: make this cache compatible with multi-projects
-#Discord_chans = DB_manager.Get_registered_Discord_chans(History_chans_table)
 IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
@@ -321,11 +319,10 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 async def on_message(Message):
 
 	Project = None
+	# In relation to the history, the DMs are ignored for now
 	if Message.guild is not None:
 		Project = Gears.Get_project_from_Discord_server(Message.guild.id)
 	History_enabled = Project and Project["History"]["Enable"]
-	# TODO: make this cache compatible with multi-projects
-	#global Discord_chans
 	Discord_chan = Message.channel.id
 	Bridge = None
 	if IRC_enabled:
@@ -351,16 +348,6 @@ async def on_message(Message):
 			Text = Match.group(2)
 
 	if History_enabled:
-		# Ignore DMs
-		if Message.guild is not None:
-			Chans_table = Project["History"]["Chans_table"]
-			Discord_chans = DB_manager.Get_registered_Discord_chans(Chans_table)
-			if Discord_chan not in Discord_chans:
-				DB_manager.Register_Discord_chan(Chans_table,
-						Discord_chan, Message.channel.position, Message.channel.name
-				)
-				# TODO: make this cache compatible with multi-projects
-				#Discord_chans[Discord_chan] = [Message.channel.position, Message.channel.name]
 		await History.Message_added(
 				Project["History"]["Table"], Project["History"]["Storage_folder"],
 				Author_name, Discord_chan, Message, Text, Relayed_message
