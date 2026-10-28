@@ -16,14 +16,10 @@ IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
 	IRC_task = None
-Projects_by_server = {
-		int(Project["Discord_server"]): Project
-		for Project in Config["Projects"]
-}
-History_projects = [
-		Project for Project in Config["Projects"]
-		if Project["History"].get("Enable", False)
-]
+Projects_by_server = {}
+for Project in Config["Projects"]:
+	ID = int(Project["Discord_server"])
+	Projects_by_server[ID] = Project
 History_sync_tasks = {}
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
@@ -53,14 +49,14 @@ async def Start_bot():
 	from DB_manager import Register_Discord_chan
 	for Connected_server in Discord_manager.bot.guilds:
 		Project = Get_project_from_Discord_server(Connected_server.id)
-		if Project in History_projects:
+		if Project and Project["History"]["Enable"]:
 			Chans_table = Project["History"]["Chans_table"]
 			for Chan in Connected_server.channels:
 				Register_Discord_chan(Chans_table, Chan.id, Chan.position, Chan.name)
 
 	# Start background tasks
-	for Project in History_projects:
-		if Project["History"].get("Sync_old", False):
+	for Project in Projects_by_server.values():
+		if Project["History"]["Enable"] and Project["History"]["Sync_old"]:
 			Name = Project["Name"]
 			Task = History_sync_tasks.get(Name)
 			if Task is None or Task.done():
