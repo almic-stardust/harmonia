@@ -7,20 +7,20 @@ from Config_manager import Config
 import DB_manager
 
 Display_history = FastAPI()
+# Duplication from the Gear module, to avoid a dependency on it
+List_of_projects = {}
+for Project in Config["Projects"]:
+	ID = int(Project["Discord_server"])
+	List_of_projects[ID] = Project
 
 def Get_history_tables(Server_ID):
 	"""Return the history and channel tables for an enabled project."""
-	# Duplication from the Gear module, to avoid a dependency on it
-	Projects_by_server = {
-			int(Project["Discord_server"]): Project
-			for Project in Config["Projects"]
-	}
 	try:
-		Project = Projects_by_server.get(int(Server_ID))
+		Project = List_of_projects.get(int(Server_ID))
 	except (TypeError, ValueError):
 		raise HTTPException(
 				status_code=404,
-				detail="Invalide server ID."
+				detail="Invalid server ID."
 		)
 	if not Project or not Project["History"]["Enable"]:
 		raise HTTPException(
