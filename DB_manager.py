@@ -32,7 +32,11 @@ def History_update_filename(Table, Old_filename, New_filename):
 				SELECT message_id, content_history
 				FROM {Table}
 				WHERE JSON_SEARCH(content_history, 'one', %s) IS NOT NULL """,
-				(Old_filename,)
+				# For Cursor.execute(Query, Values) the second argument must be a sequence of
+				# parameters, even if there is only one value. In some functions, parameters must be
+				# added conditionally, a tuple won’t work in those case, so use a list everywhere
+				# for consistency.
+				[Old_filename]
 		)
 		Result = Cursor.fetchone()
 		if not Result:
@@ -65,7 +69,7 @@ def History_update_filename(Table, Old_filename, New_filename):
 		Cursor.execute(f"""
 				UPDATE {Table} SET content_history = %s
 				WHERE message_id = %s""",
-				(json.dumps(Content_history), Message_ID)
+				[json.dumps(Content_history), Message_ID]
 		)
 		# Autocommit could leave the DB in a partially updated state: a batch of related updates
 		# could be only partially applied, because one of them raised an exception. Therefore, it’s
@@ -88,7 +92,7 @@ def History_addition(Table, Date, Chan_ID, Message_ID, Replied_message_ID, Disco
 		Cursor.execute(f"""
 				SELECT message_id FROM {Table}
 				WHERE message_id = %s""",
-				(Message_ID,)
+				[Message_ID]
 		)
 		Result = Cursor.fetchone()
 		if Result:
@@ -108,11 +112,11 @@ def History_addition(Table, Date, Chan_ID, Message_ID, Replied_message_ID, Disco
 					chan_id, message_id, reply_to,
 					user, content_history, relayed)
 				VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-				(
+				[
 					Date,
 					Chan_ID, Message_ID, Replied_message_ID,
 					Discord_username, Content_history, Relayed
-				)
+				]
 		)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -133,7 +137,7 @@ def History_edition(Table, Keep, Message_ID, Date, New_text, Deleted_filenames):
 		Cursor.execute(f"""
 				SELECT content_history FROM {Table}
 				WHERE message_id = %s""",
-				(Message_ID,)
+				[Message_ID]
 		)
 		Result = Cursor.fetchone()
 		if not Result:
@@ -194,7 +198,7 @@ def History_deletion(Table, Keep, Message_ID, Date, Deleted_attachments):
 		Cursor.execute(f"""
 				SELECT content_history FROM {Table}
 				WHERE message_id = %s""",
-				(Message_ID,)
+				[Message_ID]
 		)
 		Result = Cursor.fetchone()
 		if not Result:
@@ -250,7 +254,8 @@ def Sync_history_add_period(Server_ID, Chan_ID, Oldest, Newest):
 				SELECT oldest_message_id, newest_message_id
 				FROM history_sync
 				WHERE server_id=%s AND chan_id=%s""",
-				(Server_ID, Chan_ID))
+				[Server_ID, Chan_ID]
+		)
 		Period = Cursor.fetchone()
 		# First synchronization of this chan
 		if Period is None:
@@ -262,7 +267,7 @@ def Sync_history_add_period(Server_ID, Chan_ID, Oldest, Newest):
 						newest_message_id
 					)
 					VALUES (%s, %s, %s, %s)""",
-					(Server_ID, Chan_ID, Oldest, Newest)
+					[Server_ID, Chan_ID, Oldest, Newest]
 			)
 		# Extend the synchronized interval
 		else:
@@ -279,7 +284,7 @@ def Sync_history_add_period(Server_ID, Chan_ID, Oldest, Newest):
 					UPDATE history_sync
 					SET oldest_message_id=%s, newest_message_id=%s
 					WHERE server_id=%s AND chan_id=%s""",
-					(New_oldest, New_newest, Server_ID, Chan_ID)
+					[New_oldest, New_newest, Server_ID, Chan_ID]
 			)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -297,7 +302,7 @@ def Sync_history_find_next_gap(Server_ID, Chan_ID):
 				SELECT oldest_message_id, newest_message_id FROM history_sync
 				WHERE server_id = %s AND chan_id = %s
 				ORDER BY newest_message_id DESC""",
-				(Server_ID, Chan_ID)
+				[Server_ID, Chan_ID]
 		)
 		Periods = Cursor.fetchall()
 		if not Periods:
@@ -337,7 +342,8 @@ def History_fetch_message(Table, Message_ID):
 					expired,
 					deletion_date
 				FROM {Table} WHERE message_id = %s""",
-				(Message_ID,))
+				[Message_ID]
+		)
 		Result = Cursor.fetchone()
 
 		Infos_message = None
@@ -447,7 +453,7 @@ def Register_Discord_chan(Table, ID, Position, Name):
 				ON DUPLICATE KEY UPDATE
 					position = VALUES(position),
 					name = VALUES(name)""",
-				(ID, Position, Name)
+				[ID, Position, Name]
 		)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -515,7 +521,7 @@ def Mark_message_expired(Table, Message_ID):
 		Cursor.execute(f"""
 				UPDATE {Table} SET expired = TRUE
 				WHERE message_id = %s""",
-				(Message_ID,)
+				[Message_ID]
 		)
 		Connection.commit()
 	except MySQLdb.Error as Error:
@@ -563,7 +569,7 @@ def Users_check_presence(Table, Infos_user):
 				Cursor.execute(f"""
 						SELECT * FROM {Table}
 						WHERE {Other_column} = %s""",
-						(Fields[Column],)
+						[Fields[Column]]
 				)
 				Results = Cursor.fetchall()
 				if len(Results) > 0:
@@ -790,7 +796,7 @@ def Polls_create(Table, User, Question, Choices):
 		Cursor.execute(f"""
 				INSERT INTO {Table} (user, question, choices)
 				VALUES (%s, %s, %s)""",
-				(User, Question, json.dumps(Choices))
+				[User, Question, json.dumps(Choices)]
 		)
 		Connection.commit()
 		return Cursor.lastrowid
@@ -810,7 +816,7 @@ def Polls_close(Table, Poll_ID):
 		Cursor.execute(f"""
 				UPDATE {Table} SET active = FALSE
 				WHERE id = %s""",
-				(Poll_ID,)
+				[Poll_ID]
 		)
 		if Cursor.rowcount == 0:
 			return False
@@ -832,7 +838,7 @@ def Polls_delete(Table, Poll_ID):
 		Cursor.execute(f"""
 				DELETE FROM {Table}
 				WHERE id = %s""",
-				(Poll_ID,)
+				[Poll_ID]
 		)
 		if Cursor.rowcount == 0:
 			return False
@@ -854,7 +860,7 @@ def Polls_fetch(Table, Poll_ID):
 		Cursor.execute(f"""
 				SELECT * FROM {Table}
 				WHERE id = %s""",
-				(Poll_ID,)
+				[Poll_ID]
 		)
 		Result = Cursor.fetchone()
 		if not Result:
