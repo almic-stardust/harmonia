@@ -80,52 +80,52 @@ for Section, Keys in Optional.items():
 
 # History is configured independently for each Discord server
 if not Config["Discord_servers"] or not isinstance(Config["Discord_servers"], list):
-    print('[Config] Error: You must define as least one Discord server (as a YAML list)')
-    sys.exit(1)
+	print('[Config] Error: You must define as least one Discord server (as a YAML list)')
+	sys.exit(1)
 Server_names_already_processed = set()
 Server_IDs_already_processed = set()
 for Index, Server in enumerate(Config["Discord_servers"]):
-    if not isinstance(Server, dict):
-        print(f"[Config] Error: The entry {Index+1} of the section “Discord_servers” must be a YAML mapping.")
-        sys.exit(1)
-    if "Name" not in Server or Server["Name"] in (None, ""):
-        print(f"[Config] Error: The entry {Index+1} of the section “Discord_servers” is missing required key “Name”.")
-        sys.exit(1)
-    Name = str(Server["Name"])
-    if Name in Server_names_already_processed:
-        print(f"[Config] Error: Duplicate server name “{Name}”.")
-        sys.exit(1)
-    Server_names_already_processed.add(Name)
-    for Key in ("Discord_ID", "History"):
-        if Key not in Server or Server[Key] in (None, ""):
-            print(f"[Config] Error: “{Name}” is missing required key “{Key}”.")
-            sys.exit(1)
-    try:
-        Server_ID = int(Server["Discord_ID"])
-    except (TypeError, ValueError):
-        print(f"[Config] Error: “{Name}.Discord_ID” must be a Discord server ID.")
-        sys.exit(1)
-    if Server_ID <= 0 or Server_ID in Server_IDs_already_processed:
-        print(f"[Config] Error: Invalid or duplicate Discord server ID in “{Name}”.")
-        sys.exit(1)
-    Server["Discord_ID"] = Server_ID
-    Server_IDs_already_processed.add(Server_ID)
-    if not isinstance(Server["History"], dict):
-        print(f"[Config] Error: “{Name}.History” must be a YAML mapping.")
-        sys.exit(1)
-    History = Server["History"]
-    if "Enable" in History and History["Enable"] == True:
-        for Key in ("Sync_old", "Table", "Chans_table", "Storage_folder", "Storage_url"):
-            if Key not in History or History[Key] in (None, ""):
-                print(f"[Config] Error: History is enabled for server “{Name}”, but key “{Key}” is missing or empty.")
-                sys.exit(1)
-        for Key in ("Table", "Chans_table"):
-            if not str(History[Key]).isidentifier():
-                print(f"[Config] Error: “{Name}.History.{Key}” must be a valid SQL table identifier.")
-                sys.exit(1)
-    else:
-        print(f"[Config] Error: “{Name}.History.Enable” is missing or invalid (must be True or False)).")
-        sys.exit(1)
+	if not isinstance(Server, dict):
+		print(f"[Config] Error: The entry {Index+1} of the section “Discord_servers” must be a YAML mapping.")
+		sys.exit(1)
+	if "Name" not in Server or Server["Name"] in (None, ""):
+		print(f"[Config] Error: The entry {Index+1} of the section “Discord_servers” is missing required key “Name”.")
+		sys.exit(1)
+	Name = str(Server["Name"])
+	if Name in Server_names_already_processed:
+		print(f"[Config] Error: Duplicate server name “{Name}”.")
+		sys.exit(1)
+	Server_names_already_processed.add(Name)
+	for Key in ("Discord_ID", "History"):
+		if Key not in Server or Server[Key] in (None, ""):
+			print(f"[Config] Error: “{Name}” is missing required key “{Key}”.")
+			sys.exit(1)
+	try:
+		Server_ID = int(Server["Discord_ID"])
+	except (TypeError, ValueError):
+		print(f"[Config] Error: “{Name}.Discord_ID” must be a Discord server ID.")
+		sys.exit(1)
+	if Server_ID <= 0 or Server_ID in Server_IDs_already_processed:
+		print(f"[Config] Error: Invalid or duplicate Discord server ID in “{Name}”.")
+		sys.exit(1)
+	Server["Discord_ID"] = Server_ID
+	Server_IDs_already_processed.add(Server_ID)
+	if not isinstance(Server["History"], dict):
+		print(f"[Config] Error: “{Name}.History” must be a YAML mapping.")
+		sys.exit(1)
+	History = Server["History"]
+	if "Enable" in History and History["Enable"] == True:
+		for Key in ("Sync_old", "Table", "Chans_table", "Storage_folder", "Storage_url"):
+			if Key not in History or History[Key] in (None, ""):
+				print(f"[Config] Error: History is enabled for server “{Name}”, but key “{Key}” is missing or empty.")
+				sys.exit(1)
+		for Key in ("Table", "Chans_table"):
+			if not str(History[Key]).isidentifier():
+				print(f"[Config] Error: “{Name}.History.{Key}” must be a valid SQL table identifier.")
+				sys.exit(1)
+	else:
+		print(f"[Config] Error: “{Name}.History.Enable” is missing or invalid (must be True or False)).")
+		sys.exit(1)
 
 Config["Enabled_sections"]["IRC"] = False
 if "IRC" in Config:
@@ -155,4 +155,4 @@ if Config["Enabled_sections"]["IRC"]:
 ###############################################################################
 
 with open("Localization.yaml", "r") as File:
-    L10n = yaml.safe_load(File)
+	L10n = yaml.safe_load(File)
