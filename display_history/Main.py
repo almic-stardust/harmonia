@@ -8,28 +8,27 @@ import DB_manager
 
 Display_history = FastAPI()
 # Duplication from the Gear module, to avoid a dependency on it
-List_of_projects = {}
-for Project in Config["Projects"]:
-	ID = int(Project["Discord_server"])
-	List_of_projects[ID] = Project
+List_of_servers = {}
+for Server in Config["Discord_servers"]:
+	ID = int(Server["Discord_ID"])
+	List_of_servers[ID] = Server
 
 def Get_history_tables(Server_ID):
-	"""Return the history and channel tables for an enabled project."""
 	try:
-		Project = List_of_projects.get(int(Server_ID))
+		Server = List_of_servers.get(int(Server_ID))
 	except (TypeError, ValueError):
 		raise HTTPException(
 				status_code=404,
 				detail="Invalid server ID."
 		)
-	if not Project or not Project["History"]["Enable"]:
+	if not Server or not Server["History"]["Enable"]:
 		raise HTTPException(
 				status_code=404,
-				detail="The history isn’t activated for this project."
+				detail="The history isn’t activated for this server."
 		)
 	return (
-			Project["History"]["Table"],
-			Project["History"]["Chans_table"]
+			Server["History"]["Table"],
+			Server["History"]["Chans_table"]
 	)
 
 @Display_history.get("/api/server/{Server_ID}/chans")
@@ -63,7 +62,7 @@ def Chan_page(Server_ID: str, Chan_ID: str):
 		return HTMLResponse(
 				"<!DOCTYPE html><html lang='en'>"
 				"<head><meta charset='UTF-8'><title>History unavailable</title></head>"
-				"<body><h1>The history isn’t activated for this project.</h1></body>"
+				"<body><h1>The history isn’t activated for this server.</h1></body>"
 				"</html>",
 				status_code=200
 		)

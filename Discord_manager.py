@@ -129,13 +129,13 @@ def Get_bridge_by_IRC_chan(IRC_chan):
 
 @bot.event
 async def on_guild_channel_update(Before, After):
-	Project = Gears.Get_project_from_Discord_server(After.guild.id)
-	if not Project or not Project["History"]["Enable"]:
+	Server = Gears.Get_server_from_Discord_ID(After.guild.id)
+	if not Server or not Server["History"]["Enable"]:
 		return
 	# Ignore changes unrelated to what is stored in the DB
 	if Before.position == After.position and Before.name == After.name:
 		return
-	Chans_table = Project["History"]["Chans_table"]
+	Chans_table = Server["History"]["Chans_table"]
 	DB_manager.Register_Discord_chan(Chans_table, After.id, After.position, After.name)
 
 ###############################################################################
@@ -318,11 +318,11 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 @bot.event
 async def on_message(Message):
 
-	Project = None
+	Server = None
 	# In relation to the history, the DMs are ignored for now
 	if Message.guild is not None:
-		Project = Gears.Get_project_from_Discord_server(Message.guild.id)
-	History_enabled = Project and Project["History"]["Enable"]
+		Server = Gears.Get_server_from_Discord_ID(Message.guild.id)
+	History_enabled = Server and Server["History"]["Enable"]
 	Discord_chan = Message.channel.id
 	Bridge = None
 	if IRC_enabled:
@@ -349,7 +349,7 @@ async def on_message(Message):
 
 	if History_enabled:
 		await History.Message_added(
-				Project["History"]["Table"], Project["History"]["Storage_folder"],
+				Server["History"]["Table"], Server["History"]["Storage_folder"],
 				Author_name, Discord_chan, Message, Text, Relayed_message
 		)
 
@@ -388,7 +388,7 @@ async def on_message(Message):
 		if Text:
 			Text += " | "
 		# Ensure base ends with exactly one "/"
-		URL_base = Project["History"]["Storage_url"].rstrip("/") + "/"
+		URL_base = Server["History"]["Storage_url"].rstrip("/") + "/"
 		Urls = []
 		for Attachment in Message.attachments:
 			Filenames_map = Map_pending_downloads.get(Attachment.id)
@@ -454,12 +454,12 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Bridge = Get_bridge_by_IRC_chan(IRC_chan)
 	if not Bridge:
 		return
-	Project = None
+	Server = None
 	Targets = await Gears.Get_target_chans(Bridge["Discord_chan"])
 	if Targets["Discord_chan"] and Targets["Discord_chan"].guild:
-		Project = Gears.Get_project_from_Discord_server(Targets["Discord_chan"].guild.id)
-	History_enabled = Project and Project["History"]["Enable"]
-	Storage_folder = Project["History"]["Storage_folder"]
+		Server = Gears.Get_server_from_Discord_ID(Targets["Discord_chan"].guild.id)
+	History_enabled = Server and Server["History"]["Enable"]
+	Storage_folder = Server["History"]["Storage_folder"]
 	Files_for_Discord = []
 
 	Pattern_URL = r"https?://\S+"
@@ -484,7 +484,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			# avoid keeping a version potentially degraded by Discord
 			Check_images = True
 			Downloaded_files = await History.Download_files(
-					Project["History"]["Table"], Other_sources_folder,
+					Server["History"]["Table"], Other_sources_folder,
 					Files_to_download, Max_size, Check_images
 			)
 			for Downloaded_file in Downloaded_files:
@@ -535,7 +535,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		if not Avatar_URL and History_enabled:
 			Avatar_filename = await Get_avatar_filename(Storage_folder, IRC_nick)
 			# Ensure base ends with exactly one "/"
-			URL_base = Project["History"]["Storage_url"].rstrip("/") + "/"
+			URL_base = Server["History"]["Storage_url"].rstrip("/") + "/"
 			Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
 		try:
 			Sent_message = await Webhook.send(
@@ -568,11 +568,11 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 async def on_raw_message_edit(Payload):
 	if Payload.guild_id is None:
 		return
-	Project = Gears.Get_project_from_Discord_server(Payload.guild_id)
-	if not Project or not Project["History"]["Enable"]:
+	Server = Gears.Get_server_from_Discord_ID(Payload.guild_id)
+	if not Server or not Server["History"]["Enable"]:
 		return
 	History.Message_edited(
-			Project["History"]["Table"], Project["History"]["Storage_folder"],
+			Server["History"]["Table"], Server["History"]["Storage_folder"],
 			Payload.message_id, Payload.data
 	)
 
@@ -580,10 +580,10 @@ async def on_raw_message_edit(Payload):
 async def on_raw_message_delete(Payload):
 	if Payload.guild_id is None:
 		return
-	Project = Gears.Get_project_from_Discord_server(Payload.guild_id)
-	if not Project or not Project["History"]["Enable"]:
+	Server = Gears.Get_server_from_Discord_ID(Payload.guild_id)
+	if not Server or not Server["History"]["Enable"]:
 		return
 	History.Message_edited(
-			Project["History"]["Table"], Project["History"]["Storage_folder"],
+			Server["History"]["Table"], Server["History"]["Storage_folder"],
 			Payload.message_id, Payload.data
 	)

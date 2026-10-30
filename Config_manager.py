@@ -78,53 +78,51 @@ for Section, Keys in Optional.items():
 # Special cases
 ###############################################################################
 
-# History is configured independently for each Discord project
-Projects = Config.get("Projects", [])
-if not isinstance(Projects, list) or not Projects:
-    print('[Config] Error: You must define as least one project (as a YAML list)')
+# History is configured independently for each Discord server
+Servers = Config.get("Discord_servers", [])
+if not isinstance(Servers, list) or not Servers:
+    print('[Config] Error: You must define as least one Discord server (as a YAML list)')
     sys.exit(1)
-
-Project_names = set()
-Project_servers = set()
-for Index, Project in enumerate(Projects):
-    Project_label = f"Projects[{Index}]"
-    if not isinstance(Project, dict):
-        print(f"[Config] Error: “{Project_label}” must be a mapping.")
+Server_names = set()
+Server_servers = set()
+for Index, Server in enumerate(Servers):
+    Server_label = f"Servers[{Index}]"
+    if not isinstance(Server, dict):
+        print(f"[Config] Error: “{Server_label}” must be a mapping.")
         sys.exit(1)
-    for Key in ("Name", "Discord_server", "History"):
-        if Key not in Project or Project[Key] in (None, ""):
-            print(f"[Config] Error: “{Project_label}” is missing required key “{Key}”.")
+    for Key in ("Name", "Discord_ID", "History"):
+        if Key not in Server or Server[Key] in (None, ""):
+            print(f"[Config] Error: “{Server_label}” is missing required key “{Key}”.")
             sys.exit(1)
-    Name = str(Project["Name"])
-    if Name in Project_names:
-        print(f"[Config] Error: Duplicate project name “{Name}”.")
+    Name = str(Server["Name"])
+    if Name in Server_names:
+        print(f"[Config] Error: Duplicate server name “{Name}”.")
         sys.exit(1)
-    Project_names.add(Name)
+    Server_names.add(Name)
     try:
-        Server_ID = int(Project["Discord_server"])
+        Server_ID = int(Server["Discord_ID"])
     except (TypeError, ValueError):
-        print(f"[Config] Error: “{Project_label}.Discord_server” must be a Discord server ID.")
+        print(f"[Config] Error: “{Server_label}.Discord_ID” must be a Discord server ID.")
         sys.exit(1)
-    if Server_ID <= 0 or Server_ID in Project_servers:
-        print(f"[Config] Error: Invalid or duplicate Discord server ID in “{Project_label}”.")
+    if Server_ID <= 0 or Server_ID in Server_servers:
+        print(f"[Config] Error: Invalid or duplicate Discord server ID in “{Server_label}”.")
         sys.exit(1)
-    Project["Discord_server"] = Server_ID
-    Project_servers.add(Server_ID)
-    if not isinstance(Project["History"], dict):
-        print(f"[Config] Error: “{Project_label}.History” must be a mapping.")
+    Server["Discord_ID"] = Server_ID
+    Server_servers.add(Server_ID)
+    if not isinstance(Server["History"], dict):
+        print(f"[Config] Error: “{Server_label}.History” must be a mapping.")
         sys.exit(1)
-    History = Project["History"]
+    History = Server["History"]
     History.setdefault("Enable", False)
     if History["Enable"]:
         for Key in ("Sync_old", "Table", "Chans_table", "Storage_folder", "Storage_url"):
             if Key not in History or History[Key] in (None, ""):
-                print(f"[Config] Error: History is enabled for project “{Name}”, but key “{Key}” is missing or empty.")
+                print(f"[Config] Error: History is enabled for server “{Name}”, but key “{Key}” is missing or empty.")
                 sys.exit(1)
         for Key in ("Table", "Chans_table"):
             if not str(History[Key]).isidentifier():
-                print(f"[Config] Error: “{Project_label}.History.{Key}” must be a valid SQL table identifier.")
+                print(f"[Config] Error: “{Server_label}.History.{Key}” must be a valid SQL table identifier.")
                 sys.exit(1)
-        Config["Enabled_sections"]["History"] = True
 
 Config["Enabled_sections"]["IRC"] = False
 if "IRC" in Config:

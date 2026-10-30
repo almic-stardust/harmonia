@@ -16,10 +16,10 @@ IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
 	IRC_task = None
-List_of_projects = {}
-for Project in Config["Projects"]:
-	ID = int(Project["Discord_server"])
-	List_of_projects[ID] = Project
+List_of_servers = {}
+for Server in Config["Discord_servers"]:
+	ID = int(Server["Discord_ID"])
+	List_of_servers[ID] = Server
 History_sync_tasks = {}
 Users_enabled = Config["Enabled_sections"]["Users"]
 if Users_enabled:
@@ -48,22 +48,22 @@ async def Start_bot():
 	from DB_manager import Register_Discord_chan
 	# Synchronize all chans, so the DB can recover from missed events or temporary disconnections
 	for Connected_server in Discord_manager.bot.guilds:
-		Project = Get_project_from_Discord_server(Connected_server.id)
-		if Project and Project["History"]["Enable"]:
-			Chans_table = Project["History"]["Chans_table"]
+		Server = Get_server_from_Discord_ID(Connected_server.id)
+		if Server and Server["History"]["Enable"]:
+			Chans_table = Server["History"]["Chans_table"]
 			for Chan in Connected_server.channels:
 				Register_Discord_chan(Chans_table, Chan.id, Chan.position, Chan.name)
 
 	# Start background tasks
-	for Project in List_of_projects.values():
-		if Project["History"]["Enable"] and Project["History"]["Sync_old"]:
-			Name = Project["Name"]
+	for Server in List_of_servers.values():
+		if Server["History"]["Enable"] and Server["History"]["Sync_old"]:
+			Name = Server["Name"]
 			Task = History_sync_tasks.get(Name)
 			if Task is None or Task.done():
 				History_sync_tasks[Name] = asyncio.create_task(
-						Synchronize_project_history(Project), name=f"HistorySynchronization:{Name}"
+						Synchronize_server_history(Server), name=f"HistorySynchronization:{Name}"
 				)
-		# TODO: make it compatible with multi-projects
+		# TODO: make it compatible with multi-servers
 		#if IRC_enabled and not Discord_manager.Reconcile_downloaded_files.is_running():
 		#	Discord_manager.Reconcile_downloaded_files.start()
 	if Users_enabled:
@@ -74,7 +74,7 @@ async def Start_bot():
 		# Start IRC loop only once
 		if IRC_task is None or IRC_task.done():
 			IRC_task = asyncio.create_task(IRC_manager.Run_IRC_loop())
-		# TODO: make it compatible with multi-projects
+		# TODO: make it compatible with multi-servers
 		#if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
 		#	if History_enabled and Users_enabled:
 		#		Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
@@ -103,7 +103,7 @@ async def Stop_bot():
 				except Exception as Error:
 					print(f"Error while stopping history synchronization for “{Name}”: {Error}")
 		History_sync_tasks.clear()
-		# TODO: desactivate it project by project
+		# TODO: desactivate it server by server
 		#if IRC_enabled and Discord_manager.Reconcile_downloaded_files.is_running():
 		#	Discord_manager.Reconcile_downloaded_files.cancel()
 		#	try:
@@ -168,29 +168,29 @@ async def Wait_for_events(*Events):
 # History synchronization
 ###############################################################################
 
-async def Synchronize_project_history(Project):
+async def Synchronize_server_history(Server):
 	# Don’t add non-essential circular dependencies to this module
 	from History import Synchronization
-	Table = Project["History"]["Table"]
-	Server_ID = Project["Discord_server"]
+	Table = Server["History"]["Table"]
+	Server_ID = Server["Discord_ID"]
 	while True:
 		try:
 			await Synchronization.coro(Table, Server_ID)
 		except asyncio.CancelledError:
 			raise
 		except Exception as Error:
-			print(f"[History] Synchronization failed for project “{Project['Name']}”: {Error}")
+			print(f"[History] Synchronization failed for server “{Server['Name']}”: {Error}")
 		await asyncio.sleep(3600)
 
 ###############################################################################
-# Projects
+# Servers
 ###############################################################################
 
-def Get_project_from_Discord_server(Server_ID):
+def Get_server_from_Discord_ID(Server_ID):
 	if Server_ID is None:
 		return None
 	try:
-		return List_of_projects.get(int(Server_ID))
+		return List_of_servers.get(int(Server_ID))
 	except (TypeError, ValueError):
 		return None
 

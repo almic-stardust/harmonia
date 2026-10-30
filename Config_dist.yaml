@@ -29,9 +29,9 @@ Localization:
     - English
     - French
 
-Projects:
-  - Name:                    "project1"
-    Discord_server:          ID_server1
+Discord_servers:
+  - Name:                    "server1"
+    Discord_ID:              ID_server1
     History:
       Enable:                True/False
       # When the bot is added to a new server, should it save the existing history?
@@ -41,8 +41,8 @@ Projects:
       Storage_folder:        "/path/to/bot_files/server1"
       Storage_url:           "https://domain.tld/bot_files/server1"
 
-  - Name:                    "project2"
-    Discord_server:          ID_server2
+  - Name:                    "server2"
+    Discord_ID:              ID_server2
     History:
       Enable:                True/False
       Sync_old:              True/False
