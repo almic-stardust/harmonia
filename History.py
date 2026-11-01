@@ -38,6 +38,12 @@ async def Download_files(Table, Storage_folder, Files_to_download, Max_size, Che
 		except OSError as Error:
 			print(f"[Discord_m] Error: Failed to create {Storage_folder}: {Error}")
 			sys.exit(1)
+	# Avoid unnecessary downloads when files cannot be saved
+	if not os.access(Storage_folder, os.W_OK):
+		print(
+			f"[History] Error: No write permission in {Storage_folder}"
+		)
+		sys.exit(1)
 	async with aiohttp.ClientSession() as Session:
 		for File_to_download in Files_to_download:
 			try:
@@ -69,6 +75,11 @@ async def Download_files(Table, Storage_folder, Files_to_download, Max_size, Che
 						Downloaded_filenames.append(Destination_filename)
 			except (aiohttp.ClientError, asyncio.TimeoutError) as Error:
 				print(f"[History] Warning: Could not retrieve {File_to_download['URL']}: {Error}")
+			except OSError as Error:
+				print(
+						"[History] Error: Could not save "
+						f"{File_to_download['URL']} to {File_path}: {Error}"
+				)
 	if Oversized_files:
 		print(f"[History] Warning: Oversized file\n{Oversized_files}")
 	return Downloaded_filenames
@@ -195,8 +206,15 @@ async def Download_from_Discord(Table, Storage_folder, Message):
 		# The file already exists → move it
 		if os.path.exists(Other_source_file_path):
 			Destination_path = os.path.join(Storage_folder, Destination_filename)
-			os.replace(Other_source_file_path, Destination_path)
-			Downloaded_filenames.append(Destination_filename)
+			try:
+				os.replace(Other_source_file_path, Destination_path)
+			except OSError as Error:
+				print(
+						"[History] Error: Could not move "
+						f"{Other_source_file_path} to {Destination_path}: {Error}"
+				)
+			else:
+				Downloaded_filenames.append(Destination_filename)
 		# Otherwise → queue it for download
 		else:
 			Attachments.append({
