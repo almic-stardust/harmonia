@@ -171,7 +171,7 @@ async def Wait_for_events(*Events):
 async def Synchronize_server_history(Server):
 	# Don’t add non-essential circular dependencies to this module
 	from History import Synchronization
-	Table = Server["History"]["Table"]
+	Table = Server["History"]["Messages_table"]
 	Server_ID = Server["Discord_ID"]
 	while True:
 		try:

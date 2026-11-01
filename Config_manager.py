@@ -115,11 +115,11 @@ for Index, Server in enumerate(Config["Discord_servers"]):
 		sys.exit(1)
 	History = Server["History"]
 	if "Enable" in History and History["Enable"] == True:
-		for Key in ("Sync_old", "Table", "Chans_table", "Storage_folder", "Storage_url"):
+		for Key in ("Sync_old", "Chans_table", "Messages_table", "Storage_folder", "Storage_url"):
 			if Key not in History or History[Key] in (None, ""):
 				print(f"[Config] Error: History is enabled for server “{Name}”, but key “{Key}” is missing or empty.")
 				sys.exit(1)
-		for Key in ("Table", "Chans_table"):
+		for Key in ("Chans_table", "Messages_table"):
 			if not str(History[Key]).isidentifier():
 				print(f"[Config] Error: “{Name}.History.{Key}” must be a valid SQL table identifier.")
 				sys.exit(1)

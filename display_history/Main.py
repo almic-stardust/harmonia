@@ -27,14 +27,14 @@ def Get_history_tables(Server_ID):
 				detail="The history isn’t activated for this server."
 		)
 	return (
-			Server["History"]["Table"],
-			Server["History"]["Chans_table"]
+			Server["History"]["Chans_table"],
+			Server["History"]["Messages_table"]
 	)
 
 @Display_history.get("/api/server/{Server_ID}/chans")
 def API_chans(Server_ID: str):
-	_, History_chans_table = Get_history_tables(Server_ID)
-	Registered_chans = DB_manager.Get_registered_Discord_chans(History_chans_table)
+	Chans_table, _ = Get_history_tables(Server_ID)
+	Registered_chans = DB_manager.Get_registered_Discord_chans(Chans_table)
 	Chans = []
 	for Chan_ID, Infos_chan in Registered_chans.items():
 		# Infos_chan[0] = position | Infos_chan[1] = name
@@ -70,8 +70,8 @@ def Chan_page(Server_ID: str, Chan_ID: str):
 
 @Display_history.get("/api/messages")
 def API_messages(Server_ID: str, Chan_ID: str, Before: str|None = None):
-	History_table, _ = Get_history_tables(Server_ID)
-	Messages = DB_manager.History_messages_to_display(History_table, Chan_ID, Before)
+	_, Messages_table = Get_history_tables(Server_ID)
+	Messages = DB_manager.History_messages_to_display(Messages_table, Chan_ID, Before)
 	Next_cursor = Messages[-1]["creation_date"] if Messages else None
 	Messages.reverse()
 	return {

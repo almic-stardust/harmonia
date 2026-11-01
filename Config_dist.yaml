@@ -36,8 +36,8 @@ Discord_servers:
       Enable:                True/False
       # When the bot is added to a new server, should it save the existing history?
       Sync_old:              True/False
-      Table:                 "bot_server1_history"
       Chans_table:           "bot_server1_chans"
+      Messages_table:        "bot_server1_messages"
       Storage_folder:        "/path/to/bot_files/server1"
       Storage_url:           "https://domain.tld/bot_files/server1"
 
@@ -46,8 +46,8 @@ Discord_servers:
     History:
       Enable:                True/False
       Sync_old:              True/False
-      Table:                 "bot_server2_history"
       Chans_table:           "bot_server2_chans"
+      Messages_table:        "bot_server2_messages"
       Storage_folder:        "/path/to/bot_files/server2"
       Storage_url:           "https://domain.tld/bot_files/server2"
 

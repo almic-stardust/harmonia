@@ -349,7 +349,7 @@ async def on_message(Message):
 
 	if History_enabled:
 		await History.Message_added(
-				Server["History"]["Table"], Server["History"]["Storage_folder"],
+				Server["History"]["Messages_table"], Server["History"]["Storage_folder"],
 				Author_name, Discord_chan, Message, Text, Relayed_message
 		)
 
@@ -484,7 +484,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			# avoid keeping a version potentially degraded by Discord
 			Check_images = True
 			Downloaded_files = await History.Download_files(
-					Server["History"]["Table"], Other_sources_folder,
+					Server["History"]["Messages_table"], Other_sources_folder,
 					Files_to_download, Max_size, Check_images
 			)
 			for Downloaded_file in Downloaded_files:
@@ -572,7 +572,7 @@ async def on_raw_message_edit(Payload):
 	if not Server or not Server["History"]["Enable"]:
 		return
 	History.Message_edited(
-			Server["History"]["Table"], Server["History"]["Storage_folder"],
+			Server["History"]["Messages_table"], Server["History"]["Storage_folder"],
 			Payload.message_id, Payload.data
 	)
 
@@ -584,6 +584,6 @@ async def on_raw_message_delete(Payload):
 	if not Server or not Server["History"]["Enable"]:
 		return
 	History.Message_edited(
-			Server["History"]["Table"], Server["History"]["Storage_folder"],
+			Server["History"]["Messages_table"], Server["History"]["Storage_folder"],
 			Payload.message_id, Payload.data
 	)

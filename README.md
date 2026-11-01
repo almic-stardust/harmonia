@@ -66,10 +66,10 @@ When you’ll upgrade your Linux distribution, the Python version will change an
 #### Database
 
 Create a base according to your Config.yaml, then create these tables. The creation\_date field of
-the bot\_server\_history table prevents the SQL requests of some functions from requiring a JSON
+the bot\_server\_messages table prevents the SQL requests of some functions from requiring a JSON
 extraction.
 
-	CREATE TABLE bot_server_history (
+	CREATE TABLE bot_server_messages (
 	    creation_date               TIMESTAMP NOT NULL,
 	    chan_id                     BIGINT UNSIGNED NOT NULL,
 	    message_id                  BIGINT UNSIGNED NOT NULL PRIMARY KEY,
@@ -162,10 +162,10 @@ Here is the procedure to set up this feature.
 
 For performance, create composite indexes in the DB:
 
-	CREATE INDEX Index_messages ON bot_server_history (server_id, chan_id, creation_date);
-	CREATE INDEX Index_replies ON bot_server_history (reply_to);
-	CREATE INDEX Index_deletions ON bot_server_history (server_id, chan_id, deletion_date);
-	CREATE INDEX Index_expiration ON bot_server_history (relayed, expired, creation_date);
+	CREATE INDEX Index_messages ON bot_server_messages (server_id, chan_id, creation_date);
+	CREATE INDEX Index_replies ON bot_server_messages (reply_to);
+	CREATE INDEX Index_deletions ON bot_server_messages (server_id, chan_id, deletion_date);
+	CREATE INDEX Index_expiration ON bot_server_messages (relayed, expired, creation_date);
 
 The ASGI server I use is Uvicorn. On the system where you want to run it:
 
