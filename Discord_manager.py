@@ -157,47 +157,6 @@ def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
 # Handling messages
 ###############################################################################
 
-# Automatically delete messages relayed from IRC to Discord by the bot. Depending on the user’s
-# request : either after one month, one year (default), or not at all
-@tasks.loop(hours=24)
-async def Delete_expired_IRC_messages_from_Discord():
-	Users = DB_manager.Users_fetch_users(Users_table)
-	try:
-		Rows = DB_manager.Messages_potentially_expired(History_table)
-		for Row in Rows:
-			Expiration_period = Discord_expiration_for_IRC_user(Row["user"], Users)
-			# An expiration period of 0 means no expiration
-			if Expiration_period == 0:
-				continue
-			# Times stored in the DB are in UTC
-			Now = datetime.datetime.now(UTC)
-			Date_creation = Row["creation_date"].replace(tzinfo=UTC)
-			Message_duration = Now - Date_creation
-			if Message_duration > datetime.timedelta(days=Expiration_period):
-				# See comment in Gears.Get_target_chans()
-				Chan = bot.get_channel(Row["chan_id"])
-				if not Chan:
-					Chan = await bot.fetch_channel(Row["chan_id"])
-				Message_ID = Row["message_id"]
-				try:
-					Message = await Chan.fetch_message(Message_ID)
-				# If the DB is restored from a backup, it then contains messages that had already
-				# been deleted from Discord
-				except discord.NotFound:
-					print(f"[Discord_m] Expired messages: Message {Message_ID} was already deleted.")
-					DB_manager.Mark_message_expired(History_table, Message_ID)
-					continue
-				# Chans can be deleted or become inaccessible
-				except discord.Forbidden:
-					print(f"[Discord_m] Expired messages: Message {Message_ID} has become inaccessible.")
-					DB_manager.Mark_message_expired(History_table, Message_ID)
-					continue
-				await Message.delete()
-				DB_manager.Mark_message_expired(History_table, Message_ID)
-				print(f"[Discord_m] Deleted expired message {Message_ID}.")
-	except Exception as Error:
-		print(f"[Discord_m] Error for expired messages: {Error}")
-
 # Handling files whose names have been changed by Discord: check once a day if there are files in
 # the folder other_sources, and if so, overwrite the Discord version with the original file.
 #	The files whose names aren’t modified by Discord will be managed in History.py, but others will
@@ -246,6 +205,47 @@ async def Reconcile_downloaded_files():
 			del Map_pending_downloads[Attachment_id]
 	except Exception as Error:
 		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
+
+# Automatically delete messages relayed from IRC to Discord by the bot. Depending on the user’s
+# request : either after one month, one year (default), or not at all
+@tasks.loop(hours=24)
+async def Delete_expired_IRC_messages_from_Discord():
+	Users = DB_manager.Users_fetch_users(Users_table)
+	try:
+		Rows = DB_manager.Messages_potentially_expired(History_table)
+		for Row in Rows:
+			Expiration_period = Discord_expiration_for_IRC_user(Row["user"], Users)
+			# An expiration period of 0 means no expiration
+			if Expiration_period == 0:
+				continue
+			# Times stored in the DB are in UTC
+			Now = datetime.datetime.now(UTC)
+			Date_creation = Row["creation_date"].replace(tzinfo=UTC)
+			Message_duration = Now - Date_creation
+			if Message_duration > datetime.timedelta(days=Expiration_period):
+				# See comment in Gears.Get_target_chans()
+				Chan = bot.get_channel(Row["chan_id"])
+				if not Chan:
+					Chan = await bot.fetch_channel(Row["chan_id"])
+				Message_ID = Row["message_id"]
+				try:
+					Message = await Chan.fetch_message(Message_ID)
+				# If the DB is restored from a backup, it then contains messages that had already
+				# been deleted from Discord
+				except discord.NotFound:
+					print(f"[Discord_m] Expired messages: Message {Message_ID} was already deleted.")
+					DB_manager.Mark_message_expired(History_table, Message_ID)
+					continue
+				# Chans can be deleted or become inaccessible
+				except discord.Forbidden:
+					print(f"[Discord_m] Expired messages: Message {Message_ID} has become inaccessible.")
+					DB_manager.Mark_message_expired(History_table, Message_ID)
+					continue
+				await Message.delete()
+				DB_manager.Mark_message_expired(History_table, Message_ID)
+				print(f"[Discord_m] Deleted expired message {Message_ID}.")
+	except Exception as Error:
+		print(f"[Discord_m] Error for expired messages: {Error}")
 
 def Split_message(Message):
 	# Discord limits message size → split the message into fragments of 2000 characters or less

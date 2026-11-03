@@ -63,9 +63,6 @@ async def Start_bot():
 				History_sync_tasks[Name] = asyncio.create_task(
 						Synchronize_server_history(Server), name=f"HistorySynchronization:{Name}"
 				)
-		# TODO: make it compatible with multi-servers
-		#if IRC_enabled and not Discord_manager.Reconcile_downloaded_files.is_running():
-		#	Discord_manager.Reconcile_downloaded_files.start()
 	if Users_enabled:
 		if not Synchronize_users.is_running():
 			Synchronize_users.start()
@@ -74,10 +71,15 @@ async def Start_bot():
 		# Start IRC loop only once
 		if IRC_task is None or IRC_task.done():
 			IRC_task = asyncio.create_task(IRC_manager.Run_IRC_loop())
-		# TODO: make it compatible with multi-servers
-		#if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
-		#	if History_enabled and Users_enabled:
-		#		Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
+		#for Server in List_of_servers.values():
+		#	History_enabled = Server["History"]["Enable"]
+		#	if History_enabled and not Discord_manager.Reconcile_downloaded_files.is_running():
+		#		# TODO: make it compatible with multi-servers
+		#		Discord_manager.Reconcile_downloaded_files.start()
+		#	if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
+		#		if History_enabled and Users_enabled:
+		#			# TODO: make it compatible with multi-servers
+		#			Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
 
 ###############################################################################
 # Shutdown
