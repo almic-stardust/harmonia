@@ -40,9 +40,7 @@ async def Download_files(Table, Storage_folder, Files_to_download, Max_size, Che
 			sys.exit(1)
 	# Avoid unnecessary downloads when files cannot be saved
 	if not os.access(Storage_folder, os.W_OK):
-		print(
-			f"[History] Error: No write permission in {Storage_folder}"
-		)
+		print(f"[History] Error: No write permission in {Storage_folder}")
 		sys.exit(1)
 	async with aiohttp.ClientSession() as Session:
 		for File_to_download in Files_to_download:
@@ -189,7 +187,7 @@ async def Download_from_Discord(Table, Storage_folder, Message):
 	for Attachment, Destination_filename in Assignments:
 		# When Discord changes the filename, duplicates (see the comment just below) can only be
 		# handled in Discord_manager.py
-		Register_destination_in_MPD(Attachment.id, Destination_filename)
+		Register_destination_in_MPD(Attachment.id, Storage_folder, Destination_filename)
 
 		# Check if the filename is already present in the other_sources folder, as it may have
 		# been downloaded from another source than Discord. And if the attachments are images, the

@@ -166,27 +166,34 @@ def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
 #	comes across a race condition.
 @tasks.loop(hours=24)
 async def Reconcile_downloaded_files():
+
+	global Map_pending_downloads
 	try:
-		global Map_pending_downloads
-		Storage_folder = Config["History"].get("Storage_folder")
-		Other_sources_folder = os.path.join(Storage_folder, "other_sources")
-		if not os.path.exists(Storage_folder):
-			print(f"[Discord_m] Warning: The folder for the attachments isn’t accessible.")
-			return
-		if not os.path.exists(Other_sources_folder):
-			print(f"[Discord_m] Creating the folder for other sources attachments.")
-			try:
-				os.makedirs(Other_sources_folder, exist_ok=True)
-			except OSError as Error:
-				print(f"[Discord_m] Error: Failed to create {Other_sources_folder}: {Error}")
-				sys.exit(1)
+
 		# list() prevents runtime modification errors
 		for Attachment_id, Filenames_map in list(Map_pending_downloads.items()):
-			if not Filenames_map or "Original_filename" not in Filenames_map \
-					or "Destination_filename" not in Filenames_map:
+			if not Filenames_map or "Original_filename" not in Filenames_map or \
+					"Storage_folder" not in Filenames_map or \
+					"Destination_filename" not in Filenames_map:
 				continue
+			Storage_folder = Filenames_map["Storage_folder"]
+			if not os.path.exists(Storage_folder):
+				print(f"[Discord_m] Warning: Storage folder {Storage_folder} isn’t accessible.")
+				sys.exit(1)
+			Other_sources_folder = os.path.join(Storage_folder, "other_sources")
+			if not os.path.exists(Other_sources_folder):
+				print(f"[Discord_m] Creating the folder for other sources attachments.")
+				try:
+					os.makedirs(Other_sources_folder, exist_ok=True)
+				except OSError as Error:
+					print(f"[Discord_m] Error: Failed to create {Other_sources_folder}: {Error}")
+					sys.exit(1)
+			if not os.access(Other_sources_folder, os.W_OK):
+				print(f"[Discord_m] Error: No write permission in {Other_sources_folder}")
+				sys.exit(1)
 			Original_path = os.path.join(Other_sources_folder, Filenames_map["Original_filename"])
 			Destination_path = os.path.join(Storage_folder, Filenames_map["Destination_filename"])
+
 			# Address the rare cases where the task runs precisely when a file with a name modified
 			# by Discord is being processed in History.py. If the file has already been downloaded
 			# in other_sources, but hasn’t yet passed through Discord, then the task could move the
@@ -196,13 +203,23 @@ async def Reconcile_downloaded_files():
 			# be processed during the next execution of the task.
 			if not os.path.exists(Destination_path):
 				continue
+
 			if os.path.exists(Original_path):
-				# Replace the file downloaded from Discord with the original one
-				os.replace(Original_path, Destination_path)
+				try:
+					# Replace the file downloaded from Discord with the original one
+					os.replace(Original_path, Destination_path)
+				except OSError as Error:
+					print(
+							"[Discord_m] Error: Could not replace "
+							f"{Destination_path} with {Original_path}: {Error}"
+					)
+					continue
+
 			# If the file was in other_sources: once processed, its key is no longer needed.
 			# If the file wasn’t there: that means its name wasn’t changed by Discord, and it had
 			# already been moved in Storage_folder by History.py. So we can also delete its key.
 			del Map_pending_downloads[Attachment_id]
+
 	except Exception as Error:
 		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
 
@@ -404,6 +421,7 @@ async def on_message(Message):
 	# To prevent (or rather limit) flood towards IRC
 	Now = time.monotonic()
 	Buffer_key = (Author.id, Discord_chan)
+	# Get the existing entry for this message, or create a new one if it doesn’t exist
 	Buffer = Users_buffers.setdefault(Buffer_key, {"messages": [], "task": None})
 	Buffer["messages"].append((Now, Text))
 	# Start the rate limiter only once
@@ -414,15 +432,17 @@ async def on_message(Message):
 		)
 
 # Register the original filename in Map_pending_downloads
-def Register_original_in_MPD(Attachment_id, Original_filename):
+def Register_original_in_MPD(Attachment_id, Storage_folder, Original_filename):
 	global Map_pending_downloads
 	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
+	Entry["Storage_folder"] = Storage_folder
 	Entry["Original_filename"] = Original_filename
 
 # Register the destination filename in Map_pending_downloads
-def Register_destination_in_MPD(Attachment_id, Destination_filename):
+def Register_destination_in_MPD(Attachment_id, Storage_folder, Destination_filename):
 	global Map_pending_downloads
 	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
+	Entry["Storage_folder"] = Storage_folder
 	Entry["Destination_filename"] = Destination_filename
 
 async def Get_avatar_filename(Storage_folder, Author_name, Discord_ID=None):
@@ -562,7 +582,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			Attachment_id = Attachment.id
 			# In this case, Destination_filename points to the original filename in other_sources
 			Original_filename = Files_to_download[Index]["Destination_filename"]
-			Register_original_in_MPD(Attachment_id, Original_filename)
+			Register_original_in_MPD(Attachment_id, Storage_folder, Original_filename)
 
 @bot.event
 async def on_raw_message_edit(Payload):
