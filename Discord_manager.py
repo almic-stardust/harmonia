@@ -157,72 +157,6 @@ def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
 # Handling messages
 ###############################################################################
 
-# Handling files whose names have been changed by Discord: check once a day if there are files in
-# the folder other_sources, and if so, overwrite the Discord version with the original file.
-#	The files whose names aren’t modified by Discord will be managed in History.py, but others will
-#	remain in the folder other_sources. Original filenames can’t be known from History.py, it’s
-#	called by on_message() via History.Message_added(). And handling files with modified names here
-#	in Discord_manager.py, either inside on_message() or at the end of Relay_IRC_message(), that
-#	comes across a race condition.
-@tasks.loop(hours=24)
-async def Reconcile_downloaded_files():
-
-	global Map_pending_downloads
-	try:
-
-		# list() prevents runtime modification errors
-		for Attachment_id, Filenames_map in list(Map_pending_downloads.items()):
-			if not Filenames_map or "Original_filename" not in Filenames_map or \
-					"Storage_folder" not in Filenames_map or \
-					"Destination_filename" not in Filenames_map:
-				continue
-			Storage_folder = Filenames_map["Storage_folder"]
-			if not os.path.exists(Storage_folder):
-				print(f"[Discord_m] Warning: Storage folder {Storage_folder} isn’t accessible.")
-				sys.exit(1)
-			Other_sources_folder = os.path.join(Storage_folder, "other_sources")
-			if not os.path.exists(Other_sources_folder):
-				print(f"[Discord_m] Creating the folder for other sources attachments.")
-				try:
-					os.makedirs(Other_sources_folder, exist_ok=True)
-				except OSError as Error:
-					print(f"[Discord_m] Error: Failed to create {Other_sources_folder}: {Error}")
-					sys.exit(1)
-			if not os.access(Other_sources_folder, os.W_OK):
-				print(f"[Discord_m] Error: No write permission in {Other_sources_folder}")
-				sys.exit(1)
-			Original_path = os.path.join(Other_sources_folder, Filenames_map["Original_filename"])
-			Destination_path = os.path.join(Storage_folder, Filenames_map["Destination_filename"])
-
-			# Address the rare cases where the task runs precisely when a file with a name modified
-			# by Discord is being processed in History.py. If the file has already been downloaded
-			# in other_sources, but hasn’t yet passed through Discord, then the task could move the
-			# original from other_sources to Storage_folder, just before the version from Discord
-			# arrives in Storage_folder.
-			# If this confluence of circumstances occurs, don’t deal with this file this time. It’ll
-			# be processed during the next execution of the task.
-			if not os.path.exists(Destination_path):
-				continue
-
-			if os.path.exists(Original_path):
-				try:
-					# Replace the file downloaded from Discord with the original one
-					os.replace(Original_path, Destination_path)
-				except OSError as Error:
-					print(
-							"[Discord_m] Error: Could not replace "
-							f"{Destination_path} with {Original_path}: {Error}"
-					)
-					continue
-
-			# If the file was in other_sources: once processed, its key is no longer needed.
-			# If the file wasn’t there: that means its name wasn’t changed by Discord, and it had
-			# already been moved in Storage_folder by History.py. So we can also delete its key.
-			del Map_pending_downloads[Attachment_id]
-
-	except Exception as Error:
-		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")
-
 # Automatically delete messages relayed from IRC to Discord by the bot. Depending on the user’s
 # request : either after one month, one year (default), or not at all
 @tasks.loop(hours=24)
@@ -431,20 +365,6 @@ async def on_message(Message):
 				Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name)
 		)
 
-# Register the original filename in Map_pending_downloads
-def Register_original_in_MPD(Attachment_id, Storage_folder, Original_filename):
-	global Map_pending_downloads
-	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
-	Entry["Storage_folder"] = Storage_folder
-	Entry["Original_filename"] = Original_filename
-
-# Register the destination filename in Map_pending_downloads
-def Register_destination_in_MPD(Attachment_id, Storage_folder, Destination_filename):
-	global Map_pending_downloads
-	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
-	Entry["Storage_folder"] = Storage_folder
-	Entry["Destination_filename"] = Destination_filename
-
 async def Get_avatar_filename(Storage_folder, Author_name, Discord_ID=None):
 	Avatars_folder = os.path.join(Storage_folder, "avatars")
 	if not os.path.exists(Avatars_folder):
@@ -607,3 +527,87 @@ async def on_raw_message_delete(Payload):
 			Server["History"]["Messages_table"], Server["History"]["Storage_folder"],
 			Payload.message_id, Payload.data
 	)
+
+###############################################################################
+# Handling files
+###############################################################################
+
+# Register the original filename in Map_pending_downloads
+def Register_original_in_MPD(Attachment_id, Storage_folder, Original_filename):
+	global Map_pending_downloads
+	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
+	Entry["Storage_folder"] = Storage_folder
+	Entry["Original_filename"] = Original_filename
+
+# Register the destination filename in Map_pending_downloads
+def Register_destination_in_MPD(Attachment_id, Storage_folder, Destination_filename):
+	global Map_pending_downloads
+	Entry = Map_pending_downloads.setdefault(Attachment_id, {})
+	Entry["Storage_folder"] = Storage_folder
+	Entry["Destination_filename"] = Destination_filename
+
+# Handling files whose names have been changed by Discord: check once a day if there are files in
+# the folder other_sources, and if so, overwrite the Discord version with the original file.
+#	The files whose names aren’t modified by Discord will be managed in History.py, but others will
+#	remain in the folder other_sources. Original filenames can’t be known from History.py, it’s
+#	called by on_message() via History.Message_added(). And handling files with modified names here
+#	in Discord_manager.py, either inside on_message() or at the end of Relay_IRC_message(), that
+#	comes across a race condition.
+@tasks.loop(hours=24)
+async def Reconcile_downloaded_files():
+
+	global Map_pending_downloads
+	try:
+
+		# list() prevents runtime modification errors
+		for Attachment_id, Filenames_map in list(Map_pending_downloads.items()):
+			if not Filenames_map or "Original_filename" not in Filenames_map or \
+					"Storage_folder" not in Filenames_map or \
+					"Destination_filename" not in Filenames_map:
+				continue
+			Storage_folder = Filenames_map["Storage_folder"]
+			if not os.path.exists(Storage_folder):
+				print(f"[Discord_m] Warning: Storage folder {Storage_folder} isn’t accessible.")
+				sys.exit(1)
+			Other_sources_folder = os.path.join(Storage_folder, "other_sources")
+			if not os.path.exists(Other_sources_folder):
+				print(f"[Discord_m] Creating the folder for other sources attachments.")
+				try:
+					os.makedirs(Other_sources_folder, exist_ok=True)
+				except OSError as Error:
+					print(f"[Discord_m] Error: Failed to create {Other_sources_folder}: {Error}")
+					sys.exit(1)
+			if not os.access(Other_sources_folder, os.W_OK):
+				print(f"[Discord_m] Error: No write permission in {Other_sources_folder}")
+				sys.exit(1)
+			Original_path = os.path.join(Other_sources_folder, Filenames_map["Original_filename"])
+			Destination_path = os.path.join(Storage_folder, Filenames_map["Destination_filename"])
+
+			# Address the rare cases where the task runs precisely when a file with a name modified
+			# by Discord is being processed in History.py. If the file has already been downloaded
+			# in other_sources, but hasn’t yet passed through Discord, then the task could move the
+			# original from other_sources to Storage_folder, just before the version from Discord
+			# arrives in Storage_folder.
+			# If this confluence of circumstances occurs, don’t deal with this file this time. It’ll
+			# be processed during the next execution of the task.
+			if not os.path.exists(Destination_path):
+				continue
+
+			if os.path.exists(Original_path):
+				try:
+					# Replace the file downloaded from Discord with the original one
+					os.replace(Original_path, Destination_path)
+				except OSError as Error:
+					print(
+							"[Discord_m] Error: Could not replace "
+							f"{Destination_path} with {Original_path}: {Error}"
+					)
+					continue
+
+			# If the file was in other_sources: once processed, its key is no longer needed.
+			# If the file wasn’t there: that means its name wasn’t changed by Discord, and it had
+			# already been moved in Storage_folder by History.py. So we can also delete its key.
+			del Map_pending_downloads[Attachment_id]
+
+	except Exception as Error:
+		print(f"[Discord_m] Reconcile_downloaded_files(): {Error}")

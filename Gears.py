@@ -104,15 +104,14 @@ async def Stop_bot():
 				except Exception as Error:
 					print(f"Error while stopping history synchronization for “{Name}”: {Error}")
 		History_sync_tasks.clear()
-		# TODO: desactivate it server by server
-		#if IRC_enabled and Discord_manager.Reconcile_downloaded_files.is_running():
-		#	Discord_manager.Reconcile_downloaded_files.cancel()
-		#	try:
-		#		await Discord_manager.Reconcile_downloaded_files.get_task()
-		#	except asyncio.CancelledError:
-		#		pass
-		#	except Exception as Error:
-		#		print(f"Error while stopping Reconcile_downloaded_files(): {Error}")
+		if IRC_enabled and Discord_manager.Reconcile_downloaded_files.is_running():
+			Discord_manager.Reconcile_downloaded_files.cancel()
+			try:
+				await Discord_manager.Reconcile_downloaded_files.get_task()
+			except asyncio.CancelledError:
+				pass
+			except Exception as Error:
+				print(f"Error while stopping Reconcile_downloaded_files(): {Error}")
 	if Users_enabled:
 		if Synchronize_users.is_running():
 			Synchronize_users.cancel()
