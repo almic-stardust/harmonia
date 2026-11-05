@@ -75,10 +75,9 @@ async def Start_bot():
 			History_enabled = Server["History"]["Enable"]
 			if History_enabled and not Discord_manager.Reconcile_downloaded_files.is_running():
 				Discord_manager.Reconcile_downloaded_files.start()
-		#	if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
-		#		if History_enabled and Users_enabled:
-		#			# TODO: make it compatible with multi-servers
-		#			Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
+			if not Discord_manager.Delete_expired_IRC_messages_from_Discord.is_running():
+				if History_enabled and Users_enabled:
+					Discord_manager.Delete_expired_IRC_messages_from_Discord.start()
 
 ###############################################################################
 # Shutdown

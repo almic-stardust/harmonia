@@ -162,41 +162,53 @@ def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
 @tasks.loop(hours=24)
 async def Delete_expired_IRC_messages_from_Discord():
 	Users = DB_manager.Users_fetch_users(Users_table)
-	try:
-		Rows = DB_manager.Messages_potentially_expired(History_table)
-		for Row in Rows:
-			Expiration_period = Discord_expiration_for_IRC_user(Row["user"], Users)
-			# An expiration period of 0 means no expiration
-			if Expiration_period == 0:
-				continue
-			# Times stored in the DB are in UTC
-			Now = datetime.datetime.now(UTC)
-			Date_creation = Row["creation_date"].replace(tzinfo=UTC)
-			Message_duration = Now - Date_creation
-			if Message_duration > datetime.timedelta(days=Expiration_period):
-				# See comment in Gears.Get_target_chans()
-				Chan = bot.get_channel(Row["chan_id"])
-				if not Chan:
-					Chan = await bot.fetch_channel(Row["chan_id"])
-				Message_ID = Row["message_id"]
-				try:
-					Message = await Chan.fetch_message(Message_ID)
-				# If the DB is restored from a backup, it then contains messages that had already
-				# been deleted from Discord
-				except discord.NotFound:
-					print(f"[Discord_m] Expired messages: Message {Message_ID} was already deleted.")
-					DB_manager.Mark_message_expired(History_table, Message_ID)
+	Now = datetime.datetime.now(UTC)
+	for Guild in bot.guilds:
+		Server = Gears.Get_server_from_Discord_ID(Guild.id)
+		# Skip servers without enabled message history
+		if not Server or not Server["History"]["Enable"]:
+			continue
+		Messages_table = Server["History"]["Messages_table"]
+		try:
+			Rows = DB_manager.Messages_potentially_expired(Messages_table)
+			for Row in Rows:
+				Expiration_period = Discord_expiration_for_IRC_user(Row["user"], Users)
+				# An expiration period of 0 means no expiration
+				if Expiration_period == 0:
 					continue
-				# Chans can be deleted or become inaccessible
-				except discord.Forbidden:
-					print(f"[Discord_m] Expired messages: Message {Message_ID} has become inaccessible.")
-					DB_manager.Mark_message_expired(History_table, Message_ID)
-					continue
-				await Message.delete()
-				DB_manager.Mark_message_expired(History_table, Message_ID)
-				print(f"[Discord_m] Deleted expired message {Message_ID}.")
-	except Exception as Error:
-		print(f"[Discord_m] Error for expired messages: {Error}")
+				# Times stored in the DB are in UTC
+				Date_creation = Row["creation_date"].replace(tzinfo=UTC)
+				Message_duration = Now - Date_creation
+				if Message_duration > datetime.timedelta(days=Expiration_period):
+					# See comment in Gears.Get_target_chans()
+					Chan = bot.get_channel(Row["chan_id"])
+					if not Chan:
+						Chan = await bot.fetch_channel(Row["chan_id"])
+					Message_ID = Row["message_id"]
+					try:
+						Message = await Chan.fetch_message(Message_ID)
+					# If the DB is restored from a backup, it then contains messages that had
+					# already been deleted from Discord
+					except discord.NotFound:
+						print(
+								"[Discord_m] Expired messages:"
+								f"Message {Message_ID} was already deleted."
+						)
+						DB_manager.Mark_message_expired(Messages_table, Message_ID)
+						continue
+					# Chans can be deleted, or made private and become inaccessible for the bot
+					except discord.Forbidden:
+						print(
+								"[Discord_m] Expired messages:"
+								f"Message {Message_ID} has become inaccessible."
+						)
+						DB_manager.Mark_message_expired(Messages_table, Message_ID)
+						continue
+					await Message.delete()
+					DB_manager.Mark_message_expired(Messages_table, Message_ID)
+					print(f"[Discord_m] Deleted expired message {Message_ID}.")
+		except Exception as Error:
+			print(f"[Discord_m] Error for expired messages: {Error}")
 
 def Split_message(Message):
 	# Discord limits message size → split the message into fragments of 2000 characters or less
