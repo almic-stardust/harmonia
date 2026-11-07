@@ -85,8 +85,11 @@ def Split_into_IRC_messages(Message):
 	Message = Translate_Discord_formatting_to_IRC(Message)
 	# Messages on Discord can contain several lines. When that’s the case, start by splitting the
 	# Discord message along the breaking lines, before possibly splitting each line again if it
-	# exceeds the limit
-	for Line in Message.splitlines():
+	# exceeds the limit.
+	# Using Message.splitlines() would split the message on italic markers, as the IRC control code
+	# for italics (\x1D) is treated by .splitlines() as a line-delimiting character. Therefore,
+	# split on the usual line separators, except \x1D.
+	for Line in re.split(r"\r\n|[\n\r\v\f\x1c\x1e\x85\u2028\u2029]", Message):
 		Current_fragment = ""
 		# Split the line into words using spaces as separators, then add the words one by one until
 		# the limit is reached.
@@ -304,7 +307,7 @@ class Connection_handler(pydle.Client):
 			return
 		# Time-limiter
 		async with self.Send_lock:
-			for Line in Message.splitlines():
+			for Line in re.split(r"\r\n|[\n\r\v\f\x1c\x1e\x85\u2028\u2029]", Message):
 				# No need to send a blank line
 				if not Line.strip():
 					continue
