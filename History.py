@@ -373,37 +373,3 @@ def Message_deleted(Table, Storage_folder, Message_ID):
 	if Stored_filenames:
 		Deleted_filenames = Delete_attachments(Keep, Storage_folder, Stored_filenames)
 	DB_manager.History_deletion(Table, Keep, Message_ID, Date, Deleted_filenames)
-
-###############################################################################
-# Synchronization
-###############################################################################
-
-@tasks.loop(hours=1)
-async def Synchronization(Table):
-	from Discord_manager import bot
-	Server = bot.get_guild(Config["Discord"]["Server"])
-	for Chan in Server.text_channels:
-		# Find one gap that still needs synchronization
-		Gap = DB_manager.Sync_history_find_next_gap(Server.id, Chan.id)
-		if Gap is None:
-			continue
-		if Gap["Oldest"] is None:
-			# Get the 10 most recent messages
-			History = Chan.history(limit=10, oldest_first=False)
-		else:
-			ID_oldest_message = discord.Object(id=Gap["Oldest"])
-			History = Chan.history(before=ID_oldest_message, limit=10, oldest_first=False)
-		Newest = None
-		# History is an asynchronous iterator
-		async for Message in History:
-			# First message seen
-			if Newest is None:
-				Newest = Message.id
-			# Last message seen (overwritten until the loop is finished)
-			Oldest = Message.id
-			Author_name = Gears.Get_Discord_pseudo(Message.author)
-			await Message_added(Table,
-				Author_name, Chan.id, Message, Message.content, Relayed=False
-			)
-		if Oldest is not None:
-			DB_manager.Sync_history_add_period(Server.id, Chan.id, Oldest, Newest)

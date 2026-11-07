@@ -55,14 +55,6 @@ async def Start_bot():
 				Register_Discord_chan(Chans_table, Chan.id, Chan.position, Chan.name)
 
 	# Start background tasks
-	for Server in List_of_servers.values():
-		if Server["History"]["Enable"] and Server["History"]["Sync_old"]:
-			Name = Server["Name"]
-			Task = History_sync_tasks.get(Name)
-			if Task is None or Task.done():
-				History_sync_tasks[Name] = asyncio.create_task(
-						Synchronize_server_history(Server), name=f"HistorySynchronization:{Name}"
-				)
 	if Users_enabled:
 		if not Synchronize_users.is_running():
 			Synchronize_users.start()
@@ -92,25 +84,6 @@ async def Stop_bot():
 	Shutdown_in_progress.set()
 
 	# Stop background tasks
-	if len(History_sync_tasks) > 0:
-		for Name, Task in list(History_sync_tasks.items()):
-			if not Task.done():
-				Task.cancel()
-				try:
-					await Task
-				except asyncio.CancelledError:
-					pass
-				except Exception as Error:
-					print(f"Error while stopping history synchronization for “{Name}”: {Error}")
-		History_sync_tasks.clear()
-		if IRC_enabled and Discord_manager.Reconcile_downloaded_files.is_running():
-			Discord_manager.Reconcile_downloaded_files.cancel()
-			try:
-				await Discord_manager.Reconcile_downloaded_files.get_task()
-			except asyncio.CancelledError:
-				pass
-			except Exception as Error:
-				print(f"Error while stopping Reconcile_downloaded_files(): {Error}")
 	if Users_enabled:
 		if Synchronize_users.is_running():
 			Synchronize_users.cancel()
@@ -162,24 +135,6 @@ async def Wait_for_events(*Events):
 			Tasks.append(asyncio.create_task(Event))
 	First_done, Pending_tasks = await asyncio.wait(Tasks, return_when=asyncio.FIRST_COMPLETED)
 	return First_done, Pending_tasks
-
-###############################################################################
-# History synchronization
-###############################################################################
-
-async def Synchronize_server_history(Server):
-	# Don’t add non-essential circular dependencies to this module
-	from History import Synchronization
-	Table = Server["History"]["Messages_table"]
-	Server_ID = Server["Discord_ID"]
-	while True:
-		try:
-			await Synchronization.coro(Table, Server_ID)
-		except asyncio.CancelledError:
-			raise
-		except Exception as Error:
-			print(f"[History] Synchronization failed for server “{Server['Name']}”: {Error}")
-		await asyncio.sleep(3600)
 
 ###############################################################################
 # Servers
