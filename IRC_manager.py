@@ -21,6 +21,51 @@ Instance = None
 # Handling messages
 ###############################################################################
 
+def Translate_Discord_formatting_to_IRC(Message):
+	# Map Discord MarkDown to IRC control codes
+	Replacements = [
+		(r"\*\*(.*?)\*\*", "\x02\\1\x02"),	# Bold
+		(r"\*(.*?)\*", "\x1D\\1\x1D"),		# Italic
+		(r"__(.*?)__", "\x1F\\1\x1F")		# Underline
+	]
+	for Pattern, Replacement in Replacements:
+		# “count=0” replaces all matches
+		Message = re.sub(Pattern, Replacement, Message, count=0)
+	return Message
+
+def Translate_IRC_formatting_to_Discord(Message):
+	# Map IRC control codes to Discord MarkDown
+	Message = Message.strip()
+	Replacements = [
+		(r"\x02(.*?)\x02", r"**\1**"),  # Bold
+		(r"\x1D(.*?)\x1D", r"*\1*"),	# Italic
+		(r"\x1F(.*?)\x1F", r"__\1__"),  # Underline
+		(r"\x0F", "")]					# Remove the control code to reset formatting 
+	for Pattern, Replacement in Replacements:
+		Message = re.sub(Pattern, Replacement, Message)
+	return Message
+
+def Escape_Discord_formatting(Message):
+	# Prevent IRC messages from triggering Discord Markdown formatting
+	Discord_formatting_characters = [
+			"\\",	# Escape character
+			"*",	# Italic (single) and bold (double)
+			"_",	# Italic (single) and underline (double)
+			"~",	# Strikethrough
+			"|",	# Spoilers
+			"`",	# Inline and block code
+			">",	# Block quotes
+			"#",	# Headings
+			"[",	# Links
+			"]",	# Links
+			"(",	# Links
+			")",	# Links
+			"-"		# Subtext syntax (-#)
+	]
+	for Character in Discord_formatting_characters:
+		Message = Message.replace(Character, "\\" + Character)
+	return Message
+
 def Translate_IRC_colors_to_Discord(Message):
 	mIRC_colors = {
 		"00": "black",
@@ -50,51 +95,6 @@ def Translate_IRC_colors_to_Discord(Message):
 	# Replace mIRC codes with Discord-compatible formatting
 	return re.sub(mIRC_color_pattern, Replace_colors, Message)
 
-def Translate_IRC_formatting_to_Discord(Message):
-	# Map IRC control codes to Discord MarkDown
-	Message = Message.strip()
-	Replacements = [
-		(r"\x02(.*?)\x02", r"**\1**"),  # Bold
-		(r"\x1D(.*?)\x1D", r"*\1*"),	# Italic
-		(r"\x1F(.*?)\x1F", r"__\1__"),  # Underline
-		(r"\x0F", "")]					# Reset formatting (remove it)
-	for Pattern, Replacement in Replacements:
-		Message = re.sub(Pattern, Replacement, Message)
-	return Message
-
-def Escape_Discord_formatting(Message):
-	# Prevent IRC messages from triggering Discord Markdown formatting
-	Discord_formatting_characters = [
-			"\\",	# Escape character
-			"*",	# Italic (single) and bold (double)
-			"_",	# Italic (single) and underline (double)
-			"~",	# Strikethrough
-			"|",	# Spoilers
-			"`",	# Inline and block code
-			">",	# Block quotes
-			"#",	# Headings
-			"[",	# Links
-			"]",	# Links
-			"(",	# Links
-			")",	# Links
-			"-"		# Subtext syntax (-#)
-	]
-	for Character in Discord_formatting_characters:
-		Message = Message.replace(Character, "\\" + Character)
-	return Message
-
-def Translate_Discord_formatting_to_IRC(Message):
-	# Map Discord MarkDown to IRC control codes
-	Replacements = [
-		(r"\*\*(.*?)\*\*", "\x02\\1\x02"),	# Bold
-		(r"\*(.*?)\*", "\x1D\\1\x1D"),		# Italic
-		(r"__(.*?)__", "\x1F\\1\x1F")		# Underline
-	]
-	for Pattern, Replacement in Replacements:
-		# “count=0” replaces all matches
-		Message = re.sub(Pattern, Replacement, Message, count=0)
-	return Message
-
 def Split_into_IRC_messages(Message):
 	# IRC has a variable message length: 512 - (control bytes + len(nick+user+host+chan))
 	# Control bytes = 14 | Safety buffer in case of unexpected syntax added by a server = 10
@@ -108,8 +108,8 @@ def Split_into_IRC_messages(Message):
 	# Discord message along the breaking lines, before possibly splitting each line again if it
 	# exceeds the limit.
 	# Using Message.splitlines() would split the message on italic markers, as the IRC control code
-	# for italics (\x1D) is treated by .splitlines() as a line-delimiting character. Therefore,
-	# split on the usual line separators, except \x1D.
+	# for italic (\x1D) is treated by .splitlines() as a line-delimiting character. Therefore, split
+	# on the usual line separators, except \x1D.
 	for Line in re.split(r"\r\n|[\n\r\v\f\x1c\x1e\x85\u2028\u2029]", Message):
 		Current_fragment = ""
 		# Split the line into words using spaces as separators, then add the words one by one until
