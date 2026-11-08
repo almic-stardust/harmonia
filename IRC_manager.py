@@ -62,6 +62,27 @@ def Translate_IRC_formatting_to_Discord(Message):
 		Message = re.sub(Pattern, Replacement, Message)
 	return Message
 
+def Escape_Discord_formatting(Message):
+	# Prevent IRC messages from triggering Discord Markdown formatting
+	Discord_formatting_characters = [
+			"\\",	# Escape character
+			"*",	# Italic (single) and bold (double)
+			"_",	# Italic (single) and underline (double)
+			"~",	# Strikethrough
+			"|",	# Spoilers
+			"`",	# Inline and block code
+			">",	# Block quotes
+			"#",	# Headings
+			"[",	# Links
+			"]",	# Links
+			"(",	# Links
+			")",	# Links
+			"-"		# Subtext syntax (-#)
+	]
+	for Character in Discord_formatting_characters:
+		Message = Message.replace(Character, "\\" + Character)
+	return Message
+
 def Translate_Discord_formatting_to_IRC(Message):
 	# Map Discord MarkDown to IRC control codes
 	Replacements = [

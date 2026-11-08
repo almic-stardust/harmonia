@@ -240,6 +240,8 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 		return
 	Messages = []
 	for _, Message in Buffer["messages"]:
+		# Use Split_into_IRC_messages() because the rate limiter needs to reason in terms of
+		# messages to be sent over IRC
 		Messages.extend(IRC_manager.Split_into_IRC_messages(Message))
 	# Nothing to relay
 	if not Messages:
@@ -457,6 +459,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 				Message = Message.replace(Downloaded_file["URL"], "")
 
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
+	Message = IRC_manager.Escape_Discord_formatting(Message)
 
 	Webhook_URL = Bridge.get("Webhook")
 	if Webhook_URL:
