@@ -110,6 +110,7 @@ extraction.
 	    irc_pseudo                  VARCHAR(255) NULL,
 	    forum_pseudo                VARCHAR(255) NULL,
 	    discord_username            VARCHAR(255) NULL,
+	    discord_id                  BIGINT UNSIGNED NULL,
 	    pseudo_displayed_on_discord VARCHAR(255) NULL,
 	    discord_expiration_for_irc  INT UNSIGNED NULL,
 	    history_keep_all            BOOLEAN NULL,

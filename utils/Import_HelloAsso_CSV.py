@@ -162,6 +162,7 @@ with open(Filename, newline="", encoding="utf-8-sig") as CSV_file:
 			Infos_user["IRC_pseudo"] =					None
 			Infos_user["Forum_pseudo"] =				None
 			Infos_user["Discord_username"] =			None
+			Infos_user["Discord_ID"] =					None
 			Infos_user["Pseudo_displayed_on_Discord"] = None
 			Infos_user["Discord_expiration_for_IRC"] =	None
 			Infos_user["History_keep_all"] =			True

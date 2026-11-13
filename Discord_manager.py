@@ -411,7 +411,8 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Server = None
 	Targets = await Gears.Get_target_chans(Bridge["Discord_chan"])
 	if Targets["Discord_chan"] and Targets["Discord_chan"].guild:
-		Server = Gears.Get_server_from_Discord_ID(Targets["Discord_chan"].guild.id)
+		Discord_server = Targets["Discord_chan"].guild
+		Server = Gears.Get_server_from_Discord_ID(Discord_server.id)
 	History_enabled = Server and Server["History"]["Enable"]
 	Storage_folder = Server["History"]["Storage_folder"]
 	Files_for_Discord = []
@@ -461,31 +462,104 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 	Message = IRC_manager.Escape_Discord_formatting(Message)
 
+	if Users_enabled:
+		Users = DB_manager.Users_fetch_users(Users_table)
+		Infos_user = None
+		for User in Users.values():
+			if User["IRC_pseudo"] == IRC_nick:
+				Infos_user = User
+				break
+		if Infos_user:
+			# If a user have a Discord ID saved in the DB, but they have changed their username on
+			# Discord, while the DB still contains the previous username
+			if Infos_user["Discord_ID"]:
+				Discord_user = None
+				if Discord_server:
+					# Search in the bot’s cache using the Discord ID
+					Discord_user = Discord_server.get_member(Infos_user["Discord_ID"])
+					if not Discord_user:
+						try:
+							Discord_user = await Discord_server.fetch_member(
+									Infos_user["Discord_ID"]
+							)
+						except discord.NotFound:
+							print(
+									"[Discord_m] Warning: The user with Discord ID "
+									f"{Infos_user['Discord_ID']} (previously registered as "
+									f"“{Infos_user['Discord_username']}”) is no longer present "
+									f"on server {Server['Name']}."
+							)
+						except discord.Forbidden:
+							print(
+									f"[Discord_m] Error: While retrieving the user for Discord ID "
+									f"{Infos_user['Discord_ID']} on server {Server['Name']}: "
+									"permission denied."
+							)
+					if Discord_user:
+						Current_username = Discord_user.name
+						Previous_username = Infos_user["Discord_username"]
+						if Current_username != Previous_username:
+							print(
+									"[Discord_m] Warning: Discord username mismatch for IRC user "
+									f"“{IRC_nick}”: the DB contains “{Previous_username}”, but the "
+									f"user with Discord user ID {Discord_user.id} currently uses "
+									f"“{Current_username}”."
+							)
+			# If the user has a Discord username saved in the DB, but their record doesn’t contain
+			# the Discord ID yet, then retrieve and store it. This will save the bot administrator
+			# from having to enable the developer mode just to fill in users’ Discord IDs.
+			if Discord_server and Infos_user["Discord_username"] and not Infos_user["Discord_ID"]:
+				# Search in the bot’s cache using the Discord username
+				Discord_user = discord.utils.get(
+						Discord_server.members, name=Infos_user["Discord_username"]
+				)
+				if not Discord_user:
+					try:
+						# Retrieve the server’s members (expensive for large servers), then search
+						# by username
+						async for Member in Discord_server.fetch_members(limit=None):
+							if Member.name == Infos_user["Discord_username"]:
+								Discord_user = Member
+								break
+					except discord.Forbidden:
+						print(
+								"[Discord_m] Error: While retrieving the member list of server "
+								f"{Server['Name']}: permission denied."
+						)
+					except discord.HTTPException as Error:
+						print(
+								"[Discord_m] Error: Failed to retrieve the member list of server "
+								f"{Server['Name']}: {Error}"
+						)
+				# Store the Discord ID
+				if Discord_user:
+					Infos_user["Discord_ID"] = Discord_user.id
+					DB_manager.Users_manage_user(Users_table, "Update", Infos_user)
+				else:
+					print(
+							f"[Discord_m] Error: While handling IRC user “{IRC_nick}”: the DB "
+							"indicates that this IRC user should be matched with the Discord user "
+							f"“{Infos_user['Discord_username']}”, but there is no user with this "
+							f"Discord username on the server {Server['Name']}."
+					)
+
 	Webhook_URL = Bridge.get("Webhook")
 	if Webhook_URL:
 		Webhook = discord.Webhook.from_url(Webhook_URL, session=HTTP_session)
 		Author_name = IRC_nick
 		Avatar_URL = None
-		if Users_enabled:
-			Users = DB_manager.Users_fetch_users(Users_table)
-			User = None
-			for Infos_user in Users.values():
-				if Infos_user["IRC_pseudo"] == IRC_nick:
-					User = Infos_user
-					break
-			if User:
-				if User["Pseudo_displayed_on_Discord"]:
-					Author_name = User["Pseudo_displayed_on_Discord"]
-				Avatar_URL = User.get("Avatar_URL")
-				if not Avatar_URL:
-					Server = bot.get_guild(Config["Discord"]["Server"])
-					Discord_user = None
-					if User["Discord_username"]:
-						Discord_user = discord.utils.get(
-								Server.members, name=User["Discord_username"]
-						)
-					if Discord_user:
-						Avatar_URL = Discord_user.display_avatar.url
+		if Infos_user:
+			if Infos_user["Pseudo_displayed_on_Discord"]:
+				Author_name = Infos_user["Pseudo_displayed_on_Discord"]
+			Avatar_URL = Infos_user.get("Avatar_URL")
+			if Discord_server and not Avatar_URL:
+				Discord_user = None
+				if Infos_user["Discord_username"]:
+					Discord_user = discord.utils.get(
+							Discord_server.members, name=Infos_user["Discord_username"]
+					)
+				if Discord_user:
+					Avatar_URL = Discord_user.display_avatar.url
 		# There might be an avatar stored on the server, but only if the history was enabled
 		if not Avatar_URL and History_enabled:
 			Avatar_filename = await Get_avatar_filename(Storage_folder, IRC_nick)

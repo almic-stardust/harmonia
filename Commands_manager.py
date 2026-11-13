@@ -788,6 +788,7 @@ async def Polls_adhesion(Targets, User, Arguments, Context=None):
 		Infos_user["IRC_pseudo"] =					None
 		Infos_user["Forum_pseudo"] =				None
 		Infos_user["Discord_username"] =			None
+		Infos_user["Discord_id"] =					None
 		Infos_user["Pseudo_displayed_on_Discord"] = None
 		Infos_user["Discord_expiration_for_IRC"] =	None
 		Infos_user["History_keep_all"] =			True

@@ -597,6 +597,7 @@ def Users_fetch_users(Table):
 					"IRC_pseudo":					Result["irc_pseudo"],
 					"Forum_pseudo":					Result["forum_pseudo"],
 					"Discord_username":				Result["discord_username"],
+					"Discord_ID":					Result["discord_id"],
 					"Pseudo_displayed_on_Discord":	Result["pseudo_displayed_on_discord"],
 					"Discord_expiration_for_IRC":	Result["discord_expiration_for_irc"],
 					"History_keep_all":				Keep,
@@ -641,6 +642,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					irc_pseudo,
 					forum_pseudo,
 					discord_username,
+					discord_id,
 					pseudo_displayed_on_discord,
 					discord_expiration_for_irc,
 					history_keep_all,
@@ -648,7 +650,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					renewals,
 					contributions,
 					last_medium)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 	if Action == "Update":
 		User_ID = Infos_user["ID"]
 		Query = f"""
@@ -663,6 +665,7 @@ def Users_manage_user(Table, Action, Infos_user):
 					irc_pseudo = %s,
 					forum_pseudo = %s,
 					discord_username = %s,
+					discord_id = %s,
 					pseudo_displayed_on_discord = %s,
 					discord_expiration_for_irc = %s,
 					history_keep_all = %s,
@@ -685,6 +688,7 @@ def Users_manage_user(Table, Action, Infos_user):
 			Infos_user["IRC_pseudo"],
 			Infos_user["Forum_pseudo"],
 			Infos_user["Discord_username"],
+			Infos_user["Discord_ID"],
 			Infos_user["Pseudo_displayed_on_Discord"],
 			Infos_user["Discord_expiration_for_IRC"],
 			Infos_user["History_keep_all"],
