@@ -189,6 +189,31 @@ def Determine_language(User):
 			Language = Users[User_ID]["Language"]
 	return Language
 
+async def Get_Discord_user(Discord_server, Infos_user):
+	# get_member() gets the member object from the bot’s cache. fetch_member() gets it from
+	# Discord, meaning a network request
+	Discord_user = Discord_server.get_member(Infos_user["Discord_ID"])
+	if not Discord_user:
+		Server = Get_server_from_Discord_ID(Payload.guild_id)
+		try:
+			Discord_user = await Discord_server.fetch_member(
+					Infos_user["Discord_ID"]
+			)
+		except discord.NotFound:
+			print(
+					"[Discord_m] Warning: The user with Discord ID "
+					f"{Infos_user['Discord_ID']} (previously registered as "
+					f"“{Infos_user['Discord_username']}”) is no longer present "
+					f"on server {Server['Name']}."
+			)
+		except discord.Forbidden:
+			print(
+					f"[Discord_m] Error: While retrieving the user for Discord ID "
+					f"{Infos_user['Discord_ID']} on server {Server['Name']}: "
+					"permission denied."
+			)
+	return Discord_user
+
 ###############################################################################
 # Chans
 ###############################################################################

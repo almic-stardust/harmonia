@@ -379,27 +379,48 @@ async def on_message(Message):
 				Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name)
 		)
 
-async def Get_avatar_filename(Storage_folder, Author_name, Discord_ID=None):
-	Avatars_folder = os.path.join(Storage_folder, "avatars")
-	if not os.path.exists(Avatars_folder):
-		try:
-			os.makedirs(Avatars_folder, exist_ok=True)
-		except OSError as Error:
-			print(f"[Discord_m] Error: Failed to create {Avatars_folder}: {Error}")
-			sys.exit(1)
-	Filename = f"{Author_name}.png"
-	Avatar_path = os.path.join(Avatars_folder, Filename)
-	if os.path.exists(Avatar_path):
-		return Filename
-	# Generate RoboHash URL: can use username, ID, or any stable seed
-	# Styles are available: robohash.org/<Seed>.png?set=setX (1 = robots, default. 2 = monsters)
-	Avatar_URL = f"https://robohash.org/{Author_name}.png?size=150x150"
-	async with aiohttp.ClientSession() as Session:
-		async with Session.get(Avatar_URL) as Response:
-			if Response.status == 200:
-				with open(Avatar_path, "wb") as f:
-					f.write(await Response.read())
-	return Filename
+async def Get_avatar_URL(IRC_nick, Infos_user, Discord_server):
+	# In this function IRC is always enabled, since it’s called from Relay_IRC_message()
+	Avatar_URL = None
+	if Infos_user:
+		Avatar_URL = Infos_user.get("Avatar_URL")
+		# If there is no avatar stored in the DB
+		if Discord_server and not Avatar_URL:
+			# If the next step is reached, the Storage_folder variable will be needed 
+			Server = Gears.Get_server_from_Discord_ID(Discord_server.id)
+			Storage_folder = Server["History"]["Storage_folder"]
+			# If this IRC user has an associated Discord account in the DB, check whether that
+			# Discord account has an avatar
+			if Infos_user["Discord_ID"] and not Avatar_URL:
+				Discord_user = await Gears.Get_Discord_user(Discord_server, Infos_user)
+				if Discord_user:
+					Avatar_URL = Discord_user.display_avatar.url
+	# If this IRC user has no information in the DB
+	if Storage_folder and not Avatar_URL:
+		Avatars_folder = os.path.join(Storage_folder, "avatars")
+		if not os.path.exists(Avatars_folder):
+			try:
+				os.makedirs(Avatars_folder, exist_ok=True)
+			except OSError as Error:
+				print(f"[Discord_m] Error: Failed to create {Avatars_folder}: {Error}")
+				sys.exit(1)
+		Avatar_filename = f"{IRC_nick}.png"
+		Avatar_path = os.path.join(Avatars_folder, Avatar_filename)
+		if not os.path.exists(Avatar_path):
+			# Generate RoboHash URL: can use username, ID, or any stable seed
+			# Styles are available: robohash.org/<Seed>.png?set=setX where X can be:
+			#	1) robots (default)
+			#	2) monsters
+			Avatar_URL = f"https://robohash.org/{IRC_nick}.png?size=150x150"
+			async with aiohttp.ClientSession() as Session:
+				async with Session.get(Avatar_URL) as Response:
+					if Response.status == 200:
+						with open(Avatar_path, "wb") as File:
+							File.write(await Response.read())
+		# Ensure base ends with exactly one "/"
+		URL_base = Server["History"]["Storage_url"].rstrip("/") + "/"
+		Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
+	return Avatar_URL
 
 async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 
@@ -408,6 +429,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Bridge = Get_bridge_by_IRC_chan(IRC_chan)
 	if not Bridge:
 		return
+	Discord_server = None
 	Server = None
 	Targets = await Gears.Get_target_chans(Bridge["Discord_chan"])
 	if Targets["Discord_chan"] and Targets["Discord_chan"].guild:
@@ -462,9 +484,9 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	Message = IRC_manager.Translate_IRC_formatting_to_Discord(Message)
 	Message = IRC_manager.Escape_Discord_formatting(Message)
 
+	Infos_user = None
 	if Users_enabled:
 		Users = DB_manager.Users_fetch_users(Users_table)
-		Infos_user = None
 		for User in Users.values():
 			if User["IRC_pseudo"] == IRC_nick:
 				Infos_user = User
@@ -475,26 +497,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 			if Infos_user["Discord_ID"]:
 				Discord_user = None
 				if Discord_server:
-					# Search in the bot’s cache using the Discord ID
-					Discord_user = Discord_server.get_member(Infos_user["Discord_ID"])
-					if not Discord_user:
-						try:
-							Discord_user = await Discord_server.fetch_member(
-									Infos_user["Discord_ID"]
-							)
-						except discord.NotFound:
-							print(
-									"[Discord_m] Warning: The user with Discord ID "
-									f"{Infos_user['Discord_ID']} (previously registered as "
-									f"“{Infos_user['Discord_username']}”) is no longer present "
-									f"on server {Server['Name']}."
-							)
-						except discord.Forbidden:
-							print(
-									f"[Discord_m] Error: While retrieving the user for Discord ID "
-									f"{Infos_user['Discord_ID']} on server {Server['Name']}: "
-									"permission denied."
-							)
+					Discord_user = await Gears.Get_Discord_user(Discord_server, Infos_user)
 					if Discord_user:
 						Current_username = Discord_user.name
 						Previous_username = Infos_user["Discord_username"]
@@ -547,25 +550,9 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	if Webhook_URL:
 		Webhook = discord.Webhook.from_url(Webhook_URL, session=HTTP_session)
 		Author_name = IRC_nick
-		Avatar_URL = None
-		if Infos_user:
-			if Infos_user["Pseudo_displayed_on_Discord"]:
-				Author_name = Infos_user["Pseudo_displayed_on_Discord"]
-			Avatar_URL = Infos_user.get("Avatar_URL")
-			if Discord_server and not Avatar_URL:
-				Discord_user = None
-				if Infos_user["Discord_username"]:
-					Discord_user = discord.utils.get(
-							Discord_server.members, name=Infos_user["Discord_username"]
-					)
-				if Discord_user:
-					Avatar_URL = Discord_user.display_avatar.url
-		# There might be an avatar stored on the server, but only if the history was enabled
-		if not Avatar_URL and History_enabled:
-			Avatar_filename = await Get_avatar_filename(Storage_folder, IRC_nick)
-			# Ensure base ends with exactly one "/"
-			URL_base = Server["History"]["Storage_url"].rstrip("/") + "/"
-			Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
+		if Infos_user["Pseudo_displayed_on_Discord"]:
+			Author_name = Infos_user["Pseudo_displayed_on_Discord"]
+		Avatar_URL = await Get_avatar_URL(IRC_nick, Infos_user, Discord_server)
 		try:
 			Sent_message = await Webhook.send(
 					Message, username=Author_name, avatar_url=Avatar_URL, files=Files_for_Discord,
