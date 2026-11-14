@@ -303,11 +303,18 @@ def Message_edited(Table, Storage_folder, Message_ID, Payload):
 	# Times stored in the DB are in UTC
 	Date = datetime.datetime.now(UTC).replace(tzinfo=None)
 	Content_history = Infos_message["Content_history"]
-	# The keys are ISO timestamps, so lexicographic order matches chronological order
-	Date_last_edit = max(Content_history)
 
+	# Find the most recent entry containing text
+	Text_entries = []
+	for Entry in Content_history:
+		# Since History_addition() always creates the initial entry with a “Text” key, the
+		# Text_entries variable should never be empty
+		if "Text" in Content_history[Entry]:
+			Text_entries.append(Entry)
+	# The keys are ISO timestamps, so lexicographic order matches chronological order
+	Date_last_text_edit = max(Text_entries)
 	# Check if the text has changed
-	Old_text = Content_history[Date_last_edit]["Text"]
+	Old_text = Content_history[Date_last_text_edit]["Text"]
 	if "content" in Payload:
 		New_text = Payload["content"]
 	else:

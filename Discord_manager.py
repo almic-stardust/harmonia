@@ -436,7 +436,8 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 		Discord_server = Targets["Discord_chan"].guild
 		Server = Gears.Get_server_from_Discord_ID(Discord_server.id)
 	History_enabled = Server and Server["History"]["Enable"]
-	Storage_folder = Server["History"]["Storage_folder"]
+	if History_enabled:
+		Storage_folder = Server["History"]["Storage_folder"]
 	Files_for_Discord = []
 
 	Pattern_URL = r"https?://\S+"
@@ -550,7 +551,7 @@ async def Relay_IRC_message(IRC_chan, IRC_nick, Message):
 	if Webhook_URL:
 		Webhook = discord.Webhook.from_url(Webhook_URL, session=HTTP_session)
 		Author_name = IRC_nick
-		if Infos_user["Pseudo_displayed_on_Discord"]:
+		if Infos_user and Infos_user["Pseudo_displayed_on_Discord"]:
 			Author_name = Infos_user["Pseudo_displayed_on_Discord"]
 		Avatar_URL = await Get_avatar_URL(IRC_nick, Infos_user, Discord_server)
 		try:
