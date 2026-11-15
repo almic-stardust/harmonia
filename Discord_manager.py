@@ -353,7 +353,7 @@ async def on_message(Message):
 		if Text:
 			Text += " | "
 		# Ensure base ends with exactly one "/"
-		URL_base = Server["History"]["Storage_url"].rstrip("/") + "/"
+		URL_base = Server["History"]["Storage_URL"].rstrip("/") + "/"
 		Urls = []
 		for Attachment in Message.attachments:
 			Filenames_map = Map_pending_downloads.get(Attachment.id)
@@ -418,7 +418,7 @@ async def Get_avatar_URL(IRC_nick, Infos_user, Discord_server):
 						with open(Avatar_path, "wb") as File:
 							File.write(await Response.read())
 		# Ensure base ends with exactly one "/"
-		URL_base = Server["History"]["Storage_url"].rstrip("/") + "/"
+		URL_base = Server["History"]["Storage_URL"].rstrip("/") + "/"
 		Avatar_URL = URL_base + "avatars/" + quote(Avatar_filename)
 	return Avatar_URL
 

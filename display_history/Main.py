@@ -80,7 +80,7 @@ def API_messages(Server_ID: str, Chan_ID: str, Before: str|None = None):
 	}
 
 @Display_history.get("/api/storage-url")
-def API_storage_URL(Server_ID: str):
+def API_Storage_URL(Server_ID: str):
 	for Server in Config["Discord_servers"]:
 		if str(Server["Discord_ID"]) == str(Server_ID):
 			if not Server["History"]["Enable"]:
@@ -88,5 +88,5 @@ def API_storage_URL(Server_ID: str):
 						status_code=404,
 						detail="History is not enabled for this server"
 				)
-			return {"Storage_url": Server["History"]["Storage_url"]}
+			return {"Storage_URL": Server["History"]["Storage_URL"]}
 	raise HTTPException(status_code=404, detail="Server not found")

@@ -39,7 +39,7 @@ Discord_servers:
       Chans_table:           "bot_server1_chans"
       Messages_table:        "bot_server1_messages"
       Storage_folder:        "/path/to/bot_files/server1"
-      Storage_url:           "https://domain.tld/bot_files/server1"
+      Storage_URL:           "https://domain.tld/bot_files/server1"
 
   - Name:                    "server2"
     Discord_ID:              ID_server2
@@ -49,7 +49,7 @@ Discord_servers:
       Chans_table:           "bot_server2_chans"
       Messages_table:        "bot_server2_messages"
       Storage_folder:        "/path/to/bot_files/server2"
-      Storage_url:           "https://domain.tld/bot_files/server2"
+      Storage_URL:           "https://domain.tld/bot_files/server2"
 
 Users:
   Table:                     "project_users"

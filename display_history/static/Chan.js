@@ -18,13 +18,13 @@ let Next_cursor = null;
 // Date of the message at the top of the page
 let UTaM_top_page = null;
 
-async function Load_storage_URL(){
+async function Load_Storage_URL(){
 	const Params = new URLSearchParams({Server_ID});
 	const Response = await fetch(`/api/storage-url?${Params}`);
 	if (!Response.ok)
 		throw new Error("Couldn’t retrieve Storage_URL");
 	const Data = await Response.json();
-	Storage_URL = Data.Storage_url.replace(/\/+$/, "") + "/";
+	Storage_URL = Data.Storage_URL.replace(/\/+$/, "") + "/";
 }
 
 async function Load_chans(){
@@ -648,8 +648,8 @@ document.addEventListener("keydown", Event => {
 	}
 });
 
-// Load_messages() need to wait for Load_storage_URL() to finish
-await Load_storage_URL();
+// Load_messages() need to wait for Load_Storage_URL() to finish
+await Load_Storage_URL();
 // Load_messages() don’t need to wait for Load_chans() to finish
 Load_chans();
 // Load_messages() depends on the result of another asynchronous function
