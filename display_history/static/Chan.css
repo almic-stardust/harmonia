@@ -132,7 +132,7 @@ body.no_scroll {
 }
 .message_edited_label {
 	color: #808080;
-	font-size: 0.5em;
+	font-size: 0.75em;
 }
 .message_previous_version {
 	display: block;
@@ -194,4 +194,20 @@ body.no_scroll {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+.attachment_item {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.2em;
+}
+.deleted_attachment img,
+.deleted_attachment .file_attachment {
+	border: 5px solid #d22;
+	box-sizing: border-box;
+}
+.attachment_deletion_date {
+	color: #d22;
+	font-size: 0.75em;
+	line-height: 1.2;
 }

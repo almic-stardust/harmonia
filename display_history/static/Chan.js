@@ -1,4 +1,4 @@
-(() => {
+(async() => {
 
 const Messages_container = document.getElementById("messages");
 if (!Messages_container)
@@ -9,12 +9,23 @@ const Messages = document.getElementById("messages");
 const URL_variables = window.location.pathname.split("/");
 const Server_ID = URL_variables[2];
 const Chan_ID = URL_variables[3];
+// Each server has its own URL for files
+let Storage_URL = "";
 // Prevent concurrent loads when the user scrolls quickly and hits the top repeatedly
 let Is_loading = false;
 // Cursor used when fetching messages older than the currently oldest one
 let Next_cursor = null;
 // Date of the message at the top of the page
 let UTaM_top_page = null;
+
+async function Load_storage_URL(){
+	const Params = new URLSearchParams({Server_ID});
+	const Response = await fetch(`/api/storage-url?${Params}`);
+	if (!Response.ok)
+		throw new Error("Couldn’t retrieve Storage_URL");
+	const Data = await Response.json();
+	Storage_URL = Data.Storage_url.replace(/\/+$/, "") + "/";
+}
 
 async function Load_chans(){
 	const Response = await fetch(`/api/server/${Server_ID}/chans`);
@@ -78,6 +89,13 @@ function Format_date(Date_object){
 	const Time_part = `${Hour}:${Minutes}`;
 	const Full_timestamp = `${Date_part} ${Hour}:${Minutes}:${Seconds}`;
 	return {Date_part, Time_part, Full_timestamp};
+}
+
+function Format_deletion_date(Timestamp){
+	const Date_object = DB_to_local_time(Timestamp);
+	if (!Date_object)
+		return "";
+	return Format_date(Date_object).Full_timestamp;
 }
 
 function Create_date_separator(Date_object){
@@ -144,7 +162,7 @@ function Normalize_content(Text){
 	return Safe
 }
 
-function Get_content_history_text(Content_history){
+function Get_message_text(Content_history){
 	if (!Content_history)
 		return "";
 
@@ -216,6 +234,65 @@ function Get_content_history_text(Content_history){
 	return HTML;
 }
 
+function Get_message_attachments(Content_history){
+	if (!Content_history)
+		return [];
+	// The API may return content_history as a JSON string
+	if (typeof Content_history === "string"){
+		try{
+			Content_history = JSON.parse(Content_history);
+		}catch(Error){
+			console.error("Could not parse content_history:", Error);
+			return [];
+		}
+	}
+	if (typeof Content_history !== "object" || Array.isArray(Content_history))
+		return [];
+
+	const Attachments = new Map();
+	// Process entries chronologically, from oldest to newest
+	const Entries = Object.entries(Content_history)
+		.sort(([Timestamp_A], [Timestamp_B]) =>
+			Timestamp_A.localeCompare(Timestamp_B)
+		);
+
+	Entries.forEach(([Timestamp, Entry]) => {
+		if (!Entry || typeof Entry !== "object")
+			return;
+
+		// Register attachments present in this entry
+		if (Array.isArray(Entry.Attachments)){
+			Entry.Attachments.forEach(Filename => {
+				if (!Filename)
+					return;
+				Attachments.set(Filename, {
+					Filename,
+					Deleted: false,
+					Deletion_timestamp: null
+				});
+			});
+		}
+
+		// Mark attachments deleted in this entry
+		if (Array.isArray(Entry.Deleted_attachments)){
+			Entry.Deleted_attachments.forEach(Filename => {
+				if (!Filename)
+					return;
+				Attachments.set(Filename, {
+					Filename,
+					Deleted: true,
+					Deletion_timestamp: Timestamp
+				});
+			});
+		}
+	});
+	return Array.from(Attachments.values());
+}
+
+function Get_attachment_URL(Filename){
+	return Storage_URL + encodeURI(Filename);
+}
+
 function Is_file_an_image(Path){
 	if (!Path)
 		return false;
@@ -229,78 +306,99 @@ function File_icon(Path){
 	const Extension = Path.split(".").pop().toLowerCase();
 	if (Extension === "pdf")
 		Icon = "📄";
-	if (Extension === "zip" || Extension === "rar" || Extension === "7z")
-		Icon = "🗜️";
 	if (Extension === "txt")
 		Icon = "📃";
+	if (Extension === "zip" || Extension === "rar" || Extension === "7z")
+		Icon = "🗜️";
 	return Icon;
 }
 
 function Create_message_element(Message, Date_object){
 	const Date_message = Format_date(Date_object);
-
 	let HTML_attachments = "";
-	if (Message.attachments !== null){
-		let Files = [];
-		try{
-			// We do “|| []” to prevent the Files variable from becoming null
-			Files = JSON.parse(Message.attachments) || [];
-		}catch(Error){
-			Files = [];
+	// Retrieve every attachment mentioned anywhere in the message history
+	const Files = Get_message_attachments(Message.content_history);
+
+	if (Files.length){
+		const Image_files = Files.filter(File => Is_file_an_image(File.Filename));
+		const Other_files = Files.filter(File => !Is_file_an_image(File.Filename));
+		HTML_attachments = `<div class="attachments">`;
+		// Just one image = max-height 350px
+		if (Image_files.length === 1 && !Other_files.length)
+			Image_class = "one_image";
+		// Multiple images, or one image and other file(s) = 150x150px thumbnails
+		else
+			Image_class = "multiple_images";
+
+		// Display images
+		if (Image_files.length){
+			let HTML_images = "";
+			Image_files.forEach(File => {
+				const Filename = File.Filename;
+				const Deleted_class = File.Deleted ? " deleted_attachment" : "";
+				let Hover_name = Filename.split("/").pop();
+				// If the filename starts with “YYYYMMDD—”, don’t display it on hover
+				Hover_name = Hover_name.replace(/^\d{8}—/, "");
+				Hover_name = Hover_name.replace(/_/g, " ");
+				// Remove extension
+				Hover_name = Hover_name.replace(/\.[^.]+$/, "");
+				Hover_name = Escape_HTML(Hover_name);
+				let Deletion_label = "";
+				if (File.Deleted && File.Deletion_timestamp){
+					const Deletion_date = Format_deletion_date(File.Deletion_timestamp);
+					Deletion_label = `<span class="attachment_deletion_date">
+							🗑️${Escape_HTML(Deletion_date)}</span>`;
+				}
+				HTML_images += `
+						<div class="attachment_item${Deleted_class}">
+							<img src="${Get_attachment_URL(Filename)}"
+								title="${Hover_name}" loading="lazy">
+							${Deletion_label}
+						</div>
+				`;
+			});
+			HTML_attachments += `<div class="${Image_class}">${HTML_images}</div>`;
 		}
-		if (Array.isArray(Files) && Files.length){
-			const Image_files = Files.filter(File => Is_file_an_image(File));
-			const Other_files = Files.filter(File => !Is_file_an_image(File));
-			HTML_attachments = `<div class="attachments">`;
-			// Just one image = max-height 350px
-			if (Image_files.length == 1 && !Other_files.length)
-				Image_class = "one_image";
-			// Multiple images, or one image and other file(s) = 150x150px thumbnails
-			else
-				Image_class = "multiple_images";
-			if (Image_files.length){
-				let HTML_images = "";
-				Image_files.forEach(File => {
-					let Hover_name = File.split("/").pop();
-					// If the filename starts with “YYYYMMDD—”, don’t display it on hover
-					Hover_name = Hover_name.replace(/^\d{8}—/, "");
-					Hover_name = Hover_name.replace(/_/g, " ");
-					// Remove extension
-					Hover_name = Hover_name.replace(/\.[^.]+$/, "");
-					Hover_name = Escape_HTML(Hover_name);
-					HTML_images += `<img src="/bot_files/${encodeURI(File)}"
-							title="${Hover_name}" loading="lazy">`;
-				});
-				HTML_attachments += `<div class="${Image_class}">${HTML_images}</div>`;
-			}
-			// Non-image files
-			if (Other_files.length){
-				let HTML_files = `<div class="file_attachments">`;
-				Other_files.forEach(File => {
-					const Icon = File_icon(File);
-					const Filename = File.split("/").pop();
-					const Hover_name = Escape_HTML(Filename);
-					let Displayed_name = Filename.replace(/^\d{8}—/, "");
-					// Limit displayed filename to 30 characters (add ellipsis if truncated)
-					if (Displayed_name.length > 30)
-						Displayed_name = Displayed_name.slice(0, 29) + "…";
-					// Escape_HTML last, so as not to cut inside entities like &amp;
-					Displayed_name = Escape_HTML(Displayed_name);
-					HTML_files += `
-						<a class="file_attachment" href="/bot_files/${encodeURI(File)}"
-								target="_blank">
-							<span class="file_icon">${Icon}</span>
-							<span class="file_name" title="${Hover_name}">
-								&nbsp;${Displayed_name}
-							</span>
-						</a>
-					`;
-				});
-				HTML_files += `</div>`;
-				HTML_attachments += HTML_files;
-			}
-			HTML_attachments += `</div>`;
+
+		// Display non-image files
+		if (Other_files.length){
+			let HTML_files = `<div class="file_attachments">`;
+			Other_files.forEach(File => {
+				const Filename = File.Filename;
+				const Icon = File_icon(Filename);
+				const Display_filename = Filename.split("/").pop();
+				const Deleted_class = File.Deleted ? " deleted_attachment" : "";
+				const Hover_name = Escape_HTML(Display_filename);
+				let Displayed_name = Display_filename.replace(/^\d{8}—/, "");
+				// Limit displayed filename to 30 characters (add ellipsis if truncated)
+				if (Displayed_name.length > 30)
+					Displayed_name = Displayed_name.slice(0, 29) + "…";
+				// Escape HTML after truncation, to avoid cutting inside HTML entities like &amp;
+				Displayed_name = Escape_HTML(Displayed_name);
+				let Deletion_label = "";
+				if (File.Deleted && File.Deletion_timestamp){
+					const Deletion_date = Format_deletion_date(File.Deletion_timestamp);
+					Deletion_label = `<span class="attachment_deletion_date">
+							🗑️${Escape_HTML(Deletion_date)}</span>`;
+				}
+				HTML_files += `
+						<div class="attachment_item${Deleted_class}">
+							<a class="file_attachment"
+									href="${Get_attachment_URL(Filename)}"
+									target="_blank" rel="noopener noreferrer">
+								<span class="file_icon">${Icon}</span>
+								<span class="file_name" title="${Hover_name}"> 
+									&nbsp;${Displayed_name}
+								</span>
+							</a>
+							${Deletion_label}
+						</div>
+				`;
+			});
+			HTML_files += `</div>`;
+			HTML_attachments += HTML_files;
 		}
+		HTML_attachments += `</div>`;
 	}
 
 	const Div = document.createElement("div");
@@ -313,7 +411,7 @@ function Create_message_element(Message, Date_object){
 			<span class="user">${Escape_HTML(Message.user)}</span>
 		</div>
 		<div class="content_block">
-			<span class="content">${Get_content_history_text(Message.content_history)}</span>
+			<span class="content">${Get_message_text(Message.content_history)}</span>
 			${HTML_attachments}
 		</div>
 	`;
@@ -550,9 +648,12 @@ document.addEventListener("keydown", Event => {
 	}
 });
 
+// Load_messages() need to wait for Load_storage_URL() to finish
+await Load_storage_URL();
+// Load_messages() don’t need to wait for Load_chans() to finish
 Load_chans();
-// Load the last 50 messages
-Load_messages(true);
+// Load_messages() depends on the result of another asynchronous function
+await Load_messages(true);
 Messages_container.focus();
 
 })();
