@@ -68,7 +68,8 @@ function Unix_time_at_midnight(Date_object){
 		return null;
 	// A Date object corresponding to that day at midnight
 	Calendar_date = new Date(
-			Date_object.getFullYear(), Date_object.getMonth(), Date_object.getDate())
+			Date_object.getFullYear(), Date_object.getMonth(), Date_object.getDate()
+	)
 	// getTime() returns the time between Unix epoch and that day at midnight, in milliseconds.
 	// Since we want to speed up comparisons, we can divide by 1000 to get a Unix time in seconds,
 	// and again by 100, because a Unix time at midnight will always end with two 0.
@@ -315,10 +316,17 @@ function File_icon(Path){
 
 function Create_message_element(Message, Date_object){
 	const Date_message = Format_date(Date_object);
+
+	const Is_deleted = Boolean(Message.deletion_date);
+	const Message_deletion_date = Is_deleted ? Format_deletion_date(Message.deletion_date) : "";
+	const Deleted_class = Is_deleted ? " deleted_message" : "";
+	const Deletion_label = Message_deletion_date
+		? `<span class="message_deletion_label"> (deleted ${Escape_HTML(Message_deletion_date)})</span>`
+		: "";
+
 	let HTML_attachments = "";
 	// Retrieve every attachment mentioned anywhere in the message history
 	const Files = Get_message_attachments(Message.content_history);
-
 	if (Files.length){
 		const Image_files = Files.filter(File => Is_file_an_image(File.Filename));
 		const Other_files = Files.filter(File => !Is_file_an_image(File.Filename));
@@ -345,9 +353,9 @@ function Create_message_element(Message, Date_object){
 				Hover_name = Escape_HTML(Hover_name);
 				let Deletion_label = "";
 				if (File.Deleted && File.Deletion_timestamp){
-					const Deletion_date = Format_deletion_date(File.Deletion_timestamp);
+					const Attachment_deletion_date = Format_deletion_date(File.Deletion_timestamp);
 					Deletion_label = `<span class="attachment_deletion_date">
-							🗑️${Escape_HTML(Deletion_date)}</span>`;
+							🗑️${Escape_HTML(Attachment_deletion_date)}</span>`;
 				}
 				HTML_images += `
 						<div class="attachment_item${Deleted_class}">
@@ -377,9 +385,9 @@ function Create_message_element(Message, Date_object){
 				Displayed_name = Escape_HTML(Displayed_name);
 				let Deletion_label = "";
 				if (File.Deleted && File.Deletion_timestamp){
-					const Deletion_date = Format_deletion_date(File.Deletion_timestamp);
+					const Attachment_deletion_date = Format_deletion_date(File.Deletion_timestamp);
 					Deletion_label = `<span class="attachment_deletion_date">
-							🗑️${Escape_HTML(Deletion_date)}</span>`;
+							🗑️${Escape_HTML(Attachment_deletion_date)}</span>`;
 				}
 				HTML_files += `
 						<div class="attachment_item${Deleted_class}">
@@ -402,7 +410,7 @@ function Create_message_element(Message, Date_object){
 	}
 
 	const Div = document.createElement("div");
-	Div.className = "message";
+	Div.className = `message${Deleted_class}`;
 	Div.innerHTML = `
 		<div class="metadata">
 			<span class="time"
@@ -411,7 +419,7 @@ function Create_message_element(Message, Date_object){
 			<span class="user">${Escape_HTML(Message.user)}</span>
 		</div>
 		<div class="content_block">
-			<span class="content">${Get_message_text(Message.content_history)}</span>
+			<span class="content">${Get_message_text(Message.content_history)}${Deletion_label}</span>
 			${HTML_attachments}
 		</div>
 	`;

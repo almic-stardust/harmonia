@@ -343,8 +343,7 @@ def History_messages_to_display(Table, Chan_ID, Before=None, Limit=50):
 				creation_date,
 				deletion_date
 			FROM {Table}
-			WHERE chan_id = %s
-			AND deletion_date IS NULL"""
+			WHERE chan_id = %s"""
 		Values = [Chan_ID]
 		if Before is not None:
 			Query += " AND creation_date < %s"

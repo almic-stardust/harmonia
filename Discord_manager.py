@@ -600,9 +600,9 @@ async def on_raw_message_delete(Payload):
 	Server = Gears.Get_server_from_Discord_ID(Payload.guild_id)
 	if not Server or not Server["History"]["Enable"]:
 		return
-	History.Message_edited(
+	History.Message_deleted(
 			Server["History"]["Messages_table"], Server["History"]["Storage_folder"],
-			Payload.message_id, Payload.data
+			Payload.message_id
 	)
 
 ###############################################################################

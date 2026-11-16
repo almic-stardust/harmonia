@@ -140,6 +140,19 @@ body.no_scroll {
 	margin-top: 6px;
 }
 
+.message.deleted_message {
+    color: #808080;
+}
+.message.deleted_message .content,
+.message.deleted_message .user,
+.message.deleted_message .time {
+    color: #808080;
+}
+.message_deletion_label {
+	color: #d22;
+    font-size: 0.75em;
+}
+
 #lightbox {
 	position: fixed;
 	top: 0;
