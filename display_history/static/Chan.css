@@ -141,42 +141,16 @@ body.no_scroll {
 }
 
 .message.deleted_message {
-    color: #808080;
+	color: #808080;
 }
 .message.deleted_message .content,
 .message.deleted_message .user,
 .message.deleted_message .time {
-    color: #808080;
+	color: #808080;
 }
 .message_deletion_label {
 	color: #d22;
-    font-size: 0.75em;
-}
-
-#lightbox {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: rgba(0,0,0,0.90);
-	display: none;
-	align-items: center;
-	justify-content: center;
-	z-index: 9999;
-}
-#lightbox img {
-	max-width: 100%;
-	max-height: 100%;
-	object-fit: contain;
-	cursor: zoom-out;
-}
-#lightbox_image {
-	cursor: grab;					/* shows hand when hover */
-	transition: transform 0.05s ease-out; /* smooth zoom */
-}
-#lightbox_image:active {
-	cursor: grabbing;
+	font-size: 0.75em;
 }
 
 .file_attachments {
@@ -223,4 +197,30 @@ body.no_scroll {
 	color: #d22;
 	font-size: 0.75em;
 	line-height: 1.2;
+}
+
+#lightbox {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0,0,0,0.90);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+}
+#lightbox img {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	cursor: zoom-out;
+}
+#lightbox_image {
+	cursor: grab;					/* shows hand when hover */
+	transition: transform 0.05s ease-out; /* smooth zoom */
+}
+#lightbox_image:active {
+	cursor: grabbing;
 }
