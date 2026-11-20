@@ -10,9 +10,9 @@ import datetime
 from zoneinfo import ZoneInfo
 import asyncio
 import aiohttp
+from urllib.parse import quote
 import os
 import re
-from urllib.parse import quote
 
 from Config_manager import Config, L10n
 import DB_manager
@@ -32,6 +32,7 @@ IRC_enabled = Config["Enabled_sections"]["IRC"]
 if IRC_enabled:
 	import IRC_manager
 Users_enabled = Config["Enabled_sections"]["Users"]
+Users_table = None
 if Users_enabled:
 	Users_table = Config["Users"]["Table"]
 # Times stored in the DB are in UTC
@@ -284,7 +285,7 @@ async def Rate_limiter_for_IRC(Buffer_key, Bridge, Author, Author_name):
 async def on_message(Message):
 
 	Server = None
-	# In relation to the history, the DMs are ignored for now
+	# For now, DMs aren’t included in the history
 	if Message.guild is not None:
 		Server = Gears.Get_server_from_Discord_ID(Message.guild.id)
 	History_enabled = Server and Server["History"]["Enable"]
@@ -295,7 +296,10 @@ async def on_message(Message):
 	Author = Message.author
 	Author_name = Gears.Get_Discord_pseudo(Author)
 	if History_enabled:
-		await History.Save_Discord_avatar(Author_name, Author, Server["History"]["Storage_folder"])
+		await History.Save_Discord_avatar(
+				Author, Author_name,
+				Server["History"]["Storage_folder"], Server["History"]["Storage_URL"], Users_table
+		)
 	Text = Message.content
 	User_join = False
 	if Message.type == discord.MessageType.new_member:

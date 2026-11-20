@@ -710,6 +710,31 @@ def Users_manage_user(Table, Action, Infos_user):
 		Cursor.close()
 		Connection.close()
 
+def Users_update_avatar_URL(Table, Discord_ID, Avatar_URL):
+	Connection = Connect_DB()
+	Cursor = Connection.cursor()
+	try:
+		if not Table.isidentifier():
+			raise ValueError(f"[DB] Error: {Table} is an invalid table name.")
+		Cursor.execute(
+				f"SELECT id FROM {Table} WHERE discord_id = %s",
+				[Discord_ID]
+		)
+		if not Cursor.fetchone():
+			return False
+		Cursor.execute(
+				f"UPDATE {Table} SET avatar_url = %s WHERE discord_id = %s",
+				[Avatar_URL, Discord_ID]
+		)
+		Connection.commit()
+		return True
+	except MySQLdb.Error as Error:
+		print(f"[DB] Error: {Error}")
+		sys.exit(1)
+	finally:
+		Cursor.close()
+		Connection.close()
+
 def Polls_create(Table, User, Question, Choices):
 	Connection = Connect_DB()
 	Cursor = Connection.cursor()
