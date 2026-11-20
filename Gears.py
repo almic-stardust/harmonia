@@ -189,12 +189,13 @@ def Determine_language(User):
 			Language = Users[User_ID]["Language"]
 	return Language
 
-async def Get_Discord_user(Discord_server, Infos_user):
+async def Get_Discord_user_on_server(Discord_server, Infos_user):
 	# get_member() gets the member object from the bot’s cache. fetch_member() gets it from
 	# Discord, meaning a network request
 	Discord_user = Discord_server.get_member(Infos_user["Discord_ID"])
 	if not Discord_user:
-		Server = Get_server_from_Discord_ID(Payload.guild_id)
+		# Needed in case of error messages
+		Server = Get_server_from_Discord_ID(Discord_server.guild_id)
 		try:
 			Discord_user = await Discord_server.fetch_member(
 					Infos_user["Discord_ID"]

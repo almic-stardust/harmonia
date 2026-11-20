@@ -261,6 +261,35 @@ def Delete_attachments(Keep, Storage_folder, Attachments):
 	return Deleted_filenames
 
 ###############################################################################
+# Handling avatars
+###############################################################################
+
+async def Save_Discord_avatar(Discord_name, Discord_user, Storage_folder):
+	# Only save custom avatars, not Discord's default avatars
+	Avatar = Discord_user.avatar
+	Discord_ID = Discord_user.id
+	if not Avatar:
+		return None
+	Avatar_folder = os.path.join(Storage_folder, "avatars")
+	try:
+		os.makedirs(Avatar_folder, exist_ok=True)
+		Extension = "gif" if Avatar.is_animated() else "png"
+		Avatar_filename = f"Discord_{Discord_name}_{Discord_ID}-{Avatar.key}.{Extension}"
+		Avatar_path = os.path.join(Avatar_folder, Avatar_filename)
+		# Avoid downloading an avatar that is already stored
+		if not os.path.exists(Avatar_path):
+			Avatar_data = await Avatar.read()
+			with open(Avatar_path, "wb") as File:
+				File.write(Avatar_data)
+		return Avatar_path
+	except (discord.HTTPException, OSError) as Error:
+		print(
+				"[History] Warning: Could not save the avatar of "
+				f"{Discord_name} ({Discord_ID}): {Error}"
+		)
+		return None
+
+###############################################################################
 # Handling messages
 ###############################################################################
 
