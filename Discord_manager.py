@@ -154,6 +154,25 @@ def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
 			break
 	return Expiration_period
 
+# on_user_update(Before, After) handles changes to a user’s global avatar.
+# on_member_update(Before, After) handles changes to a member’s server-specific avatar
+@bot.event
+async def on_user_update(Before, After):
+	# Ignore updates unrelated to the global avatar
+	if Before.avatar == After.avatar:
+		return
+	for Discord_server in bot.guilds:
+		Member = Discord_server.get_member(After.id)
+		if Member is None:
+			continue
+		Server = Gears.Get_server_from_Discord_ID(Discord_server.id)
+		if not Server or not Server["History"]["Enable"]:
+			continue
+		await History.Save_Discord_avatar(
+			Member, Gears.Get_Discord_pseudo(Member),
+			Server["History"]["Storage_folder"], Server["History"]["Storage_URL"], Users_table
+		)
+
 ###############################################################################
 # Handling messages
 ###############################################################################
@@ -164,8 +183,8 @@ def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
 async def Delete_expired_IRC_messages_from_Discord():
 	Users = DB_manager.Users_fetch_users(Users_table)
 	Now = datetime.datetime.now(UTC)
-	for Guild in bot.guilds:
-		Server = Gears.Get_server_from_Discord_ID(Guild.id)
+	for Discord_server in bot.guilds:
+		Server = Gears.Get_server_from_Discord_ID(Discord_server.id)
 		# Skip servers without enabled message history
 		if not Server or not Server["History"]["Enable"]:
 			continue

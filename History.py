@@ -268,6 +268,8 @@ async def Save_Discord_avatar(Discord_user, Discord_name, Storage_folder, Storag
 	Avatar = Discord_user.avatar
 	# Only save custom avatars, not Discord’s default avatars
 	if not Avatar:
+		# When a user delete their avatar, reset the avatar_url field in the DB
+		DB_manager.Users_update_avatar_URL(Users_table, Discord_ID, None)
 		return
 	Discord_ID = Discord_user.id
 	Avatar_folder = os.path.join(Storage_folder, "avatars")
