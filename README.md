@@ -65,11 +65,15 @@ When you’ll upgrade your Linux distribution, the Python version will change an
 
 #### Database
 
-Create a base according to your Config.yaml, then create these tables. The creation\_date field of
-the bot\_server\_messages table prevents the SQL requests of some functions from requiring a JSON
-extraction.
+Create a base, and a user with the following privileges on the base:
 
-	CREATE TABLE bot_server_messages (
+	SELECT, INSERT, UPDATE, DELETE
+
+Fill in the mysqlclient section in your Config.yaml with the corresponding informations, then create
+the tables below. The creation\_date field of the bot\_server\_messages table prevents the SQL
+requests of some functions from requiring a JSON extraction.
+
+	CREATE TABLE bot_server1_messages (
 	    creation_date               TIMESTAMP NOT NULL,
 	    chan_id                     BIGINT UNSIGNED NOT NULL,
 	    message_id                  BIGINT UNSIGNED NOT NULL PRIMARY KEY,
@@ -83,22 +87,13 @@ extraction.
 	    deletion_date               TIMESTAMP NULL
 	);
 
-	CREATE TABLE bot_server_chans (
+	CREATE TABLE bot_server1_chans (
 	    id                          BIGINT UNSIGNED NOT NULL PRIMARY KEY,
 	    position                    INT UNSIGNED NOT NULL,
 	    name                        VARCHAR(100) NOT NULL
 	);
 
-	CREATE TABLE history_sync (
-	    server_id                   BIGINT UNSIGNED NOT NULL,
-	    chan_id                     BIGINT UNSIGNED NOT NULL,
-	    oldest_message_id           BIGINT UNSIGNED NOT NULL,
-	    newest_message_id           BIGINT UNSIGNED NOT NULL,
-	    complete_backlog            BOOLEAN NOT NULL DEFAULT FALSE,
-	    PRIMARY KEY                 (server_id, chan_id)
-	);
-
-	CREATE TABLE bot_server_users (
+	CREATE TABLE bot_users (
 	    pseudo                      VARCHAR(255) NULL,
 	    id                          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	    mail                        VARCHAR(255) NOT NULL,
@@ -120,7 +115,7 @@ extraction.
 	    last_medium                 VARCHAR(255) NULL
 	);
 
-	CREATE TABLE bot_server_polls (
+	CREATE TABLE bot_polls (
 	    id                          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	    creation_date               TIMESTAMP NOT NULL DEFAULT current_timestamp(),
 	    user                        VARCHAR(255) NOT NULL,
@@ -131,24 +126,22 @@ extraction.
 	    active                      BOOLEAN NOT NULL DEFAULT TRUE
 	);
 
-For performance, create composite indexes in the DB:
-
-	CREATE INDEX Index_newest_messages ON history_sync (server_id, chan_id, newest_message_id);
-
-#### Last steps
+#### Configuration
 
 	% git https://github.com/almic-stardust/harmonia
 	% cd harmonia
 
-Adjust the configuration to your needs:
+Example of configuration file to modify:
 
-Config\_dist.yaml  
-Example of configuration file to modify. Rename it as Config.yaml
+	% mv Config_dist.yaml Config.yaml
 
-The features are optional. If you do not need history, IRC, users or polls management, simply remove these sections from your Config.yaml
+Adjust the configuration to your needs. The Discord and mysqlclient sections are required, and the
+Discord\_servers section must contain at least one entry. The other sections are optional, if you
+don’t need a feature simply remove the corresponding section.
 
-Localization\_dist.yaml  
-Example of localization file, to be adapted if necessary. Rename it as Localization.yaml
+Example of localization file, to be adapted if necessary:
+
+	% mv Localization_dist.yaml Localization.yaml
 
 Finally, you can start the bot:
 
@@ -163,24 +156,24 @@ Here is the procedure to set up this feature.
 
 For performance, create composite indexes in the DB:
 
-	CREATE INDEX Index_messages ON bot_server_messages (server_id, chan_id, creation_date);
-	CREATE INDEX Index_replies ON bot_server_messages (reply_to);
-	CREATE INDEX Index_deletions ON bot_server_messages (server_id, chan_id, deletion_date);
-	CREATE INDEX Index_expiration ON bot_server_messages (relayed, expired, creation_date);
+	CREATE INDEX Index_messages ON bot_server1_messages (server_id, chan_id, creation_date);
+	CREATE INDEX Index_replies ON bot_server1_messages (reply_to);
+	CREATE INDEX Index_deletions ON bot_server1_messages (server_id, chan_id, deletion_date);
+	CREATE INDEX Index_expiration ON bot_server1_messages (relayed, expired, creation_date);
 
 The ASGI server I use is Uvicorn. On the system where you want to run it:
 
 	# apt install uvicorn
-	% python3 -m uvicorn --host localhost --port 60090 --proxy-headers --forwarded-allow-ips=localhost --reload Main:Display_history
+	% python3 -m uvicorn --host localhost --port 60100 --proxy-headers --forwarded-allow-ips=localhost --reload Main:Display_history
 
 Or, if you must have the very latest version:
 
 	% python3 -m venv ~/.local/uvicorn-python3.13
 	% ~/.local/uvicorn-python3.13/bin/pip install uvicorn fastapi PyYAML mysqlclient
-	% ~/.local/uvicorn-python3.13/bin/uvicorn --host localhost --port 60090 --proxy-headers --forwarded-allow-ips=localhost --reload Main:Display_history
+	% ~/.local/uvicorn-python3.13/bin/uvicorn --host localhost --port 60100 --proxy-headers --forwarded-allow-ips=localhost --reload Main:Display_history
 
 Then you need to configure nginx (for example), with a site acting as a reverse proxy towards
-localhost:60090. You also need a nginx alias /static/ for harmonia/display\_history/static/ and
+localhost:60100. You also need a nginx alias /static/ for harmonia/display\_history/static/ and
 another nginx alias /attachments/ for the storage folder specified in Config.yaml. Once this is
 done, the history should be accessible at:
 
@@ -188,15 +181,11 @@ done, the history should be accessible at:
 
 It could be useful to create a SystemD unit, so that Uvicorn starts when the system boots. If you
 read French, I wrote a [tutorial for Uvicorn](https://almic.fr/blog/2026/01/19/asgi-uvicorn/)
-(nginx configuration, TLS certificate, and SystemD service).
-
-Now the history should also be accessible at:
-
-	http://LAN_IP:60081/chan/server_id/chan_id
+(nginx configuration and SystemD unit).
 
 # Import a user base from HelloAsso
 
-A script is provided to import CSV files supplied by HelloAsso.
+A script is provided to import CSV files supplied by HelloAsso, and populate the bot\_users table.
 
 	% cd harmonia/utils
 	% for File in Config_manager.py Config.yaml Localization.yaml DB_manager.py ; ln -s ../$File
