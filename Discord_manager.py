@@ -143,17 +143,6 @@ async def on_guild_channel_update(Before, After):
 # Handling users
 ###############################################################################
 
-def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
-	# Default period of one year for unregistered users or users without a preference
-	Expiration_period = 365
-	for User_ID in Users:
-		Infos_user = Users[User_ID]
-		if Infos_user["IRC_pseudo"] == IRC_pseudo:
-			if Infos_user["Discord_expiration_for_IRC"] is not None:
-				Expiration_period = Infos_user["Discord_expiration_for_IRC"]
-			break
-	return Expiration_period
-
 # on_user_update(Before, After) handles changes to a user’s global avatar.
 # on_member_update(Before, After) handles changes to a member’s server-specific avatar
 @bot.event
@@ -172,6 +161,17 @@ async def on_user_update(Before, After):
 			Member, Gears.Get_Discord_pseudo(Member),
 			Server["History"]["Storage_folder"], Server["History"]["Storage_URL"], Users_table
 		)
+
+def Discord_expiration_for_IRC_user(IRC_pseudo, Users):
+	# Default period of one year for unregistered users or users without a preference
+	Expiration_period = 365
+	for User_ID in Users:
+		Infos_user = Users[User_ID]
+		if Infos_user["IRC_pseudo"] == IRC_pseudo:
+			if Infos_user["Discord_expiration_for_IRC"] is not None:
+				Expiration_period = Infos_user["Discord_expiration_for_IRC"]
+			break
+	return Expiration_period
 
 ###############################################################################
 # Handling messages
