@@ -13,16 +13,16 @@ Config["Enabled_sections"] = {}
 ###############################################################################
 
 Required = {
+	"Discord": (
+		"Bot_owner",
+		"Token",
+		"Bot_name",
+	),
 	"mysqlclient": (
 		"host",
 		"user",
 		"password",
 		"database",
-	),
-	"Discord": (
-		"Bot_owner",
-		"Token",
-		"Bot_name",
 	),
 }
 
