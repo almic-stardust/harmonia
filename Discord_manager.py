@@ -314,11 +314,6 @@ async def on_message(Message):
 		Bridge = Get_bridge_by_Discord_chan(Discord_chan)
 	Author = Message.author
 	Author_name = Gears.Get_Discord_pseudo(Author)
-	if History_enabled:
-		await History.Save_Discord_avatar(
-				Author, Author_name,
-				Server["History"]["Storage_folder"], Server["History"]["Storage_URL"], Users_table
-		)
 	Text = Message.content
 	User_join = False
 	if Message.type == discord.MessageType.new_member:
@@ -329,6 +324,12 @@ async def on_message(Message):
 	# If the message comes from IRC to Discord, through a webhook
 	if Message.webhook_id is not None:
 		Relayed_message = True
+	# Regardless of the IRC author, messages relayed via webhook all have the same Message.author.id
+	if History_enabled and not Relayed_message:
+		await History.Save_Discord_avatar(
+				Author, Author_name,
+				Server["History"]["Storage_folder"], Server["History"]["Storage_URL"], Users_table
+		)
 	# If the message comes from IRC to Discord, without a webhook
 	if Author == bot.user and Bridge and Text.startswith("<**"):
 		Match = re.match(r"<\*\*(.*?)\*\*>\s*(.*)", Text)
@@ -435,6 +436,8 @@ async def Get_avatar_URL(Discord_server, IRC_nick, Infos_user):
 				sys.exit(1)
 		Avatar_filename = f"{IRC_nick}.png"
 		Avatar_path = os.path.join(Avatar_folder, Avatar_filename)
+		# If a new avatar for an IRC user is placed directly in Storage_folder, the old avatar can
+		# remain in Discord’s cache for a while
 		if not os.path.exists(Avatar_path):
 			# Generate RoboHash URL: can use username, ID, or any stable seed.
 			# Styles are available: ”robohash.org/<Seed>.png?set=setX”, where X can be:
