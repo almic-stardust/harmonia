@@ -314,7 +314,10 @@ async def on_message(Message):
 		Bridge = Get_bridge_by_Discord_chan(Discord_chan)
 	Author = Message.author
 	Author_name = Gears.Get_Discord_pseudo(Author)
-	Text = Message.content
+	if Message.type == discord.MessageType.pins_add:
+		Text = Message.system_content
+	else:
+		Text = Message.content
 	User_join = False
 	if Message.type == discord.MessageType.new_member:
 		User_join = True
