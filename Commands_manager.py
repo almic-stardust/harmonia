@@ -151,12 +151,12 @@ async def Roll_Dice(Targets, User, Dice, From_Discord=False):
 		Dice = Dice.lower()
 		Number_rolls, Faces = map(int, Dice.split("d"))
 		Error_found = False
-		if Faces > 1000:
-			Error_found = True
-			Output = L10n["CM_Roll_error_faces"][Language]
-		if Number_rolls > 10000:
+		if not 1 <= Number_rolls <= 10000:
 			Error_found = True
 			Output = L10n["CM_Roll_error_rolls"][Language]
+		elif not 1 <= Faces <= 1000:
+			Error_found = True
+			Output = L10n["CM_Roll_error_faces"][Language]
 		if Error_found:
 			if IRC_enabled:
 				Output_IRC += Output

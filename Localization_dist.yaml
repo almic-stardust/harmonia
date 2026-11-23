@@ -33,12 +33,12 @@ CM_No_help_irc:
 CM_Roll_help_usage:
   English: "Error: The argument for this command must be XdY, with X being the number of dice, and Y being the number of faces for each die."
   French: "Erreur : L'argument pour cette commande doit être sous la forme XdY, où X est le nombre de dés, et Y le nombre de faces de chaque dé."
-CM_Roll_error_faces:
-  English: "Error: It is not possible to roll dice with more than 1000 faces."
-  French: "Erreur : Il n'est pas possible de lancer des dés de plus de 1000 faces."
 CM_Roll_error_rolls:
-  English: "Error: It is not possible to roll more than 10000 dice at once."
-  French: "Erreur : Il n'est pas possible de lancer plus de 10000 dés d'un seul coup."
+  English: "Error: The number of dice to roll must be between 1 and 10,000."
+  French: "Erreur : Le nombre de dés à lancer doit être compris entre 1 et 10 000."
+CM_Roll_error_faces:
+  English: "Error: Dice must have between 1 and 1,000 faces."
+  French: "Erreur : Les dés doivent avoir entre 1 et 1 000 faces."
 CM_Roll_summary:
   English: "Min {Min} | Average {Average:.1f} | Max {Max} | Total {Total}"
   French: "Min {Min} | Moyenne {Average:.1f} | Max {Max} | Total {Total}"
